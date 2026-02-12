@@ -1,0 +1,432 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Tenancy ───────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  phone     String?
+  avatarUrl String?
+  role      UserRole @default(CLIENT)
+
+  provider Provider?
+
+  appointments    Appointment[]
+  sentMessages    Message[]       @relation("MessageSender")
+  reviews         Review[]
+  favoriteProviders FavoriteProvider[]
+  accountEvents   AccountActivityEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clerkId])
+}
+
+enum UserRole {
+  CLIENT
+  PROVIDER
+  ADMIN
+}
+
+model Provider {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id])
+  slug        String  @unique
+  businessName String
+  bio         String?
+  locationAddress String?
+  locationLat Float?
+  locationLng Float?
+  coverImageUrl String?
+  instagramUrl  String?
+  tiktokUrl     String?
+  isVerified    Boolean @default(false)
+
+  // Payment preferences
+  acceptsCard    Boolean @default(true)
+  acceptsApplePay Boolean @default(false)
+  acceptsGooglePay Boolean @default(false)
+  acceptsCashAppPay Boolean @default(false)
+  acceptsCash    Boolean @default(true)
+
+  // Booking preferences
+  instantBook    Boolean @default(true)
+  requireInspirationPhoto Boolean @default(false)
+  arrivalGraceMinutes Int @default(15)
+
+  // Cancellation policy
+  cancellationHours Int @default(24)
+  noShowFeePercent  Int @default(100)
+
+  // Stripe
+  stripeAccountId String?
+
+  services        Service[]
+  availabilityRules AvailabilityRule[]
+  timeOffs        TimeOff[]
+  appointments    Appointment[]
+  threads         Thread[]
+  mediaAssets     MediaAsset[]
+  payments        Payment[]
+  payouts         Payout[]
+  exportJobs      ExportJob[]
+  favoritedBy     FavoriteProvider[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([locationLat, locationLng])
+}
+
+model FavoriteProvider {
+  id         String   @id @default(cuid())
+  userId     String
+  providerId String
+  user       User     @relation(fields: [userId], references: [id])
+  provider   Provider @relation(fields: [providerId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, providerId])
+}
+
+// ─── Catalog ───────────────────────────────────────────────
+
+model Service {
+  id          String  @id @default(cuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id])
+  name        String
+  description String?
+  priceInCents Int
+  durationMinutes Int
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  // Deposit settings
+  depositType    DepositType @default(NONE)
+  depositValue   Int         @default(0) // cents for FLAT, percentage for PERCENT
+
+  addOns       AddOn[]
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+enum DepositType {
+  NONE
+  FLAT
+  PERCENT
+}
+
+model AddOn {
+  id          String  @id @default(cuid())
+  serviceId   String
+  service     Service @relation(fields: [serviceId], references: [id])
+  name        String
+  priceInCents Int
+  durationMinutes Int @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serviceId])
+}
+
+// ─── Scheduling ────────────────────────────────────────────
+
+model AvailabilityRule {
+  id         String  @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  dayOfWeek  Int     // 0=Sunday, 6=Saturday
+  startTime  String  // "09:00" (HH:mm)
+  endTime    String  // "17:00" (HH:mm)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+model TimeOff {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  startDate  DateTime
+  endDate    DateTime
+  reason     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([startDate, endDate])
+}
+
+// ─── Appointments ──────────────────────────────────────────
+
+model Appointment {
+  id           String            @id @default(cuid())
+  providerId   String
+  provider     Provider          @relation(fields: [providerId], references: [id])
+  clientId     String
+  client       User              @relation(fields: [clientId], references: [id])
+  serviceId    String
+  service      Service           @relation(fields: [serviceId], references: [id])
+  status       AppointmentStatus @default(DRAFT)
+
+  startTime    DateTime
+  endTime      DateTime
+  totalInCents Int
+  depositInCents Int             @default(0)
+
+  // Client info (for web bookings without account)
+  clientName   String?
+  clientEmail  String?
+  clientPhone  String?
+
+  // Provider notes
+  notes        String?
+  isNewClient  Boolean @default(false)
+
+  // Inspiration photo
+  inspirationUrl String?
+
+  // Stripe
+  stripeSessionId   String?
+  stripePaymentIntentId String?
+
+  events   AppointmentEvent[]
+  payments Payment[]
+  thread   Thread?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([clientId])
+  @@index([startTime])
+  @@index([providerId, startTime])
+  @@index([status])
+}
+
+enum AppointmentStatus {
+  DRAFT
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model AppointmentEvent {
+  id            String   @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  type          String   // e.g. "created", "confirmed", "cancelled", "rescheduled", "payment_received"
+  actorId       String?  // userId who triggered, null for system
+  actorType     String?  // "client", "provider", "system"
+  metadata      Json?    // flexible extra data
+  createdAt     DateTime @default(now())
+
+  @@index([appointmentId])
+}
+
+// ─── Payments ──────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  providerId    String
+  provider      Provider      @relation(fields: [providerId], references: [id])
+  appointmentId String
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id])
+  amountInCents Int
+  type          PaymentType
+  status        PaymentStatus @default(PENDING)
+  method        PaymentMethod
+
+  stripePaymentIntentId String?
+  stripeRefundId        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([appointmentId])
+}
+
+enum PaymentType {
+  DEPOSIT
+  FULL
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  APPLE_PAY
+  GOOGLE_PAY
+  CASH_APP_PAY
+  CASH
+}
+
+model Payout {
+  id            String       @id @default(cuid())
+  providerId    String
+  provider      Provider     @relation(fields: [providerId], references: [id])
+  amountInCents Int
+  status        PayoutStatus @default(INITIATED)
+  stripePayoutId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+enum PayoutStatus {
+  INITIATED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ─── Messaging ─────────────────────────────────────────────
+
+model Thread {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id])
+  appointmentId String   @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+}
+
+model Message {
+  id       String  @id @default(cuid())
+  threadId String
+  thread   Thread  @relation(fields: [threadId], references: [id])
+  senderId String
+  sender   User    @relation("MessageSender", fields: [senderId], references: [id])
+  body     String
+  isSystem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId])
+}
+
+// ─── Reviews ───────────────────────────────────────────────
+
+model Review {
+  id            String @id @default(cuid())
+  appointmentId String @unique
+  clientId      String
+  client        User   @relation(fields: [clientId], references: [id])
+  rating        Int    // 1-5
+  body          String?
+  evidenceUrls  Json?  // string array
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+// ─── Media ─────────────────────────────────────────────────
+
+model MediaAsset {
+  id         String    @id @default(cuid())
+  providerId String
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  type       MediaType
+  url        String
+  thumbnailUrl String?
+  mimeType   String
+  sizeBytes  Int
+  sortOrder  Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([providerId])
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+// ─── Logs ──────────────────────────────────────────────────
+
+model AccountActivityEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // "login", "password_change", "email_change", etc.
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Exports ───────────────────────────────────────────────
+
+model ExportJob {
+  id         String       @id @default(cuid())
+  providerId String
+  provider   Provider     @relation(fields: [providerId], references: [id])
+  type       ExportType
+  status     ExportStatus @default(PENDING)
+  fileUrl    String?
+  error      String?
+
+  createdAt  DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([providerId])
+}
+
+enum ExportType {
+  CLIENTS
+  APPOINTMENTS
+  TRANSACTIONS
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

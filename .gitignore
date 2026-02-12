@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build
+.next/
+dist/
+out/
+build/
+.turbo/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
+
+# prisma
+packages/db/prisma/*.db
+
+# expo
+apps/mobile/.expo/
+apps/mobile/ios/
+apps/mobile/android/
+
+# sentry
+.sentryclirc
+
+# misc
+*.tsbuildinfo
