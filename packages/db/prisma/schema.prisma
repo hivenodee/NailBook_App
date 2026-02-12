@@ -375,6 +375,7 @@ model MediaAsset {
   mimeType   String
   sizeBytes  Int
   sortOrder  Int       @default(0)
+  isHidden   Boolean   @default(false)
 
   createdAt DateTime @default(now())
 

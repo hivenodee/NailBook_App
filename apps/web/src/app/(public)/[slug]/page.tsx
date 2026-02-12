@@ -20,6 +20,7 @@ async function getProvider(slug: string) {
         },
       },
       mediaAssets: {
+        where: { isHidden: false },
         orderBy: { sortOrder: "asc" },
         take: 20,
       },
@@ -103,9 +104,9 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         </section>
 
         {/* Portfolio grid — portfolio-first per design.md */}
-        {provider.mediaAssets.length > 0 && (
-          <section>
-            <h2 className="text-lg font-medium mb-grid-1">Portfolio</h2>
+        <section>
+          <h2 className="text-lg font-medium mb-grid-1">Portfolio</h2>
+          {provider.mediaAssets.length > 0 ? (
             <div className="grid grid-cols-3 gap-1 rounded-card overflow-hidden">
               {provider.mediaAssets.map((asset) => (
                 <div key={asset.id} className="aspect-square bg-border">
@@ -126,8 +127,12 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <div className="border-2 border-dashed border-border rounded-card p-grid-3 text-center">
+              <p className="text-text-muted text-sm">No portfolio photos yet</p>
+            </div>
+          )}
+        </section>
 
         {/* Services */}
         <section>

@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
-  "/:slug((?!api|_next|favicon).*)",
+  "/:slug((?!api|_next|favicon|dashboard).*)",
   "/:slug/book",
   "/:slug/confirmation",
   "/api/providers(.*)",
