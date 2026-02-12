@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
 import { createBookingSchema } from "@nailbook/shared";
 import { stripe } from "@/lib/stripe";
+import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,11 @@ export async function POST(request: NextRequest) {
 
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
-    include: { provider: true },
+    include: {
+      provider: {
+        include: { user: { select: { email: true } } },
+      },
+    },
   });
   if (!service) return error("Service not found", 404);
 
@@ -77,6 +82,23 @@ export async function POST(request: NextRequest) {
     depositInCents = Math.round(
       (service.priceInCents * service.depositValue) / 100
     );
+  }
+
+  // Validate payment method against provider settings and deposit
+  if (paymentMethod === "CASH" && depositInCents > 0) {
+    return error("Cash payments are not available for services that require a deposit", 400);
+  }
+
+  const methodFlagMap: Record<string, keyof typeof service.provider> = {
+    CARD: "acceptsCard",
+    APPLE_PAY: "acceptsApplePay",
+    GOOGLE_PAY: "acceptsGooglePay",
+    CASH_APP_PAY: "acceptsCashAppPay",
+    CASH: "acceptsCash",
+  };
+  const flag = methodFlagMap[paymentMethod];
+  if (flag && !service.provider[flag]) {
+    return error("This provider does not accept that payment method", 400);
   }
 
   // Determine client ID (authenticated or guest)
@@ -141,8 +163,31 @@ export async function POST(request: NextRequest) {
     return appt;
   });
 
-  // If cash, no Stripe needed
+  // If cash, no Stripe needed — send confirmation emails immediately
   if (paymentMethod === "CASH") {
+    const emailData: BookingEmailData = {
+      providerName: service.provider.businessName,
+      serviceName: service.name,
+      durationMinutes: service.durationMinutes,
+      startTime: start,
+      endTime: end,
+      totalInCents: service.priceInCents,
+      depositInCents,
+      paymentType: "CASH",
+      locationAddress: service.provider.locationAddress,
+      cancellationHours: service.provider.cancellationHours,
+      arrivalGraceMinutes: service.provider.arrivalGraceMinutes,
+      clientName,
+      clientEmail,
+    };
+    try {
+      await Promise.all([
+        sendClientConfirmation(emailData),
+        sendProviderNewBooking(service.provider.user.email, emailData),
+      ]);
+    } catch (e) {
+      console.error("[email] Failed to send cash booking emails:", e);
+    }
     return success(appointment, 201);
   }
 

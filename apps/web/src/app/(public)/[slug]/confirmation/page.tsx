@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useParams } from "next/navigation";
 
@@ -59,6 +59,14 @@ function buildGoogleCalendarUrl(appt: AppointmentData) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  PENDING_PAYMENT: { label: "Processing Payment", className: "bg-yellow-100 text-yellow-800" },
+  CONFIRMED: { label: "Confirmed", className: "bg-green-100 text-green-800" },
+  CANCELLED: { label: "Cancelled", className: "bg-red-100 text-red-800" },
+  COMPLETED: { label: "Completed", className: "bg-blue-100 text-blue-800" },
+  NO_SHOW: { label: "No Show", className: "bg-gray-100 text-gray-800" },
+};
+
 export default function ConfirmationPage(): React.JSX.Element {
   const searchParams = useSearchParams();
   const params = useParams();
@@ -67,44 +75,122 @@ export default function ConfirmationPage(): React.JSX.Element {
 
   const [appt, setAppt] = useState<AppointmentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
+  const pollCount = useRef(0);
 
+  const fetchAppointment = useCallback(async () => {
+    if (!appointmentId) return null;
+    const res = await fetch(`/api/appointments/${appointmentId}`);
+    const json = await res.json();
+    return json.data as AppointmentData | null;
+  }, [appointmentId]);
+
+  // Initial fetch
   useEffect(() => {
     if (!appointmentId) {
       setLoading(false);
       return;
     }
-    fetch(`/api/appointments/${appointmentId}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.data) setAppt(json.data);
-      })
+    fetchAppointment()
+      .then((data) => { if (data) setAppt(data); })
       .finally(() => setLoading(false));
-  }, [appointmentId]);
+  }, [appointmentId, fetchAppointment]);
+
+  // Poll while PENDING_PAYMENT (every 3s, max 60s = 20 polls)
+  useEffect(() => {
+    if (!appt || appt.status !== "PENDING_PAYMENT") return;
+
+    const interval = setInterval(async () => {
+      pollCount.current += 1;
+      if (pollCount.current >= 20) {
+        clearInterval(interval);
+        setTimedOut(true);
+        return;
+      }
+      const data = await fetchAppointment();
+      if (data) {
+        setAppt(data);
+        if (data.status !== "PENDING_PAYMENT") {
+          clearInterval(interval);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [appt?.status, fetchAppointment]);
+
+  const isPending = appt?.status === "PENDING_PAYMENT" && !timedOut;
+  const isConfirmed = appt?.status === "CONFIRMED" || appt?.status === "COMPLETED";
+  const isFailed = timedOut || (appt && !isPending && !isConfirmed);
 
   return (
     <main className="min-h-screen bg-background flex items-center justify-center px-grid-2">
       <div className="max-w-md w-full text-center space-y-grid-3">
-        <div className="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center mx-auto">
-          <svg
-            className="w-8 h-8 text-primary"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M4.5 12.75l6 6 9-13.5"
-            />
-          </svg>
-        </div>
+        {/* Status icon */}
+        {isPending && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-yellow-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold">Processing Payment</h1>
+            <p className="text-text-secondary">
+              Waiting for payment confirmation. This usually takes a few seconds...
+            </p>
+          </>
+        )}
 
-        <h1 className="text-2xl font-semibold">You&apos;re Booked!</h1>
-        <p className="text-text-secondary">
-          A confirmation has been sent to your email. Your nail tech will see
-          your appointment right away.
-        </p>
+        {isConfirmed && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center mx-auto">
+              <svg
+                className="w-8 h-8 text-primary"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 12.75l6 6 9-13.5"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold">You&apos;re Booked!</h1>
+            <p className="text-text-secondary">
+              A confirmation has been sent to your email. Your nail tech will see
+              your appointment right away.
+            </p>
+          </>
+        )}
+
+        {isFailed && (
+          <>
+            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto">
+              <svg
+                className="w-8 h-8 text-yellow-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold">Payment Not Completed</h1>
+            <p className="text-text-secondary">
+              We didn&apos;t receive a payment confirmation. You can try booking
+              again or contact the provider.
+            </p>
+          </>
+        )}
 
         {loading ? (
           <div className="bg-surface rounded-card p-grid-2 shadow-card text-left">
@@ -112,6 +198,15 @@ export default function ConfirmationPage(): React.JSX.Element {
           </div>
         ) : appt ? (
           <div className="bg-surface rounded-card p-grid-2 shadow-card text-left space-y-grid-1">
+            {/* Status badge */}
+            {STATUS_BADGE[appt.status] && (
+              <div className="flex justify-between text-sm">
+                <span className="text-text-muted">Status</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[appt.status].className}`}>
+                  {STATUS_BADGE[appt.status].label}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Service</span>
               <span className="font-medium">{appt.service.name}</span>
@@ -155,7 +250,7 @@ export default function ConfirmationPage(): React.JSX.Element {
         )}
 
         <div className="space-y-grid-1">
-          {appt ? (
+          {isConfirmed && appt ? (
             <a
               href={buildGoogleCalendarUrl(appt)}
               target="_blank"
@@ -164,6 +259,20 @@ export default function ConfirmationPage(): React.JSX.Element {
             >
               Add to Calendar
             </a>
+          ) : isFailed && appt ? (
+            <Link
+              href={`/${slug}/book?service=${appt.service.name}`}
+              className="block w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors text-center"
+            >
+              Try Again
+            </Link>
+          ) : isPending ? (
+            <button
+              disabled
+              className="w-full bg-primary text-white py-3 rounded-button font-medium opacity-50"
+            >
+              Waiting for payment confirmation...
+            </button>
           ) : (
             <button
               disabled

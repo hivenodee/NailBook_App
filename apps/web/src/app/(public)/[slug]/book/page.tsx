@@ -24,8 +24,38 @@ type ServiceData = {
     cancellationHours: number;
     arrivalGraceMinutes: number;
     acceptsCash: boolean;
+    acceptsCard: boolean;
+    acceptsApplePay: boolean;
+    acceptsGooglePay: boolean;
+    acceptsCashAppPay: boolean;
   };
 };
+
+type PaymentMethod = "CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_APP_PAY" | "CASH";
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  APPLE_PAY: "Apple Pay",
+  GOOGLE_PAY: "Google Pay",
+  CARD: "Card",
+  CASH_APP_PAY: "Cash App Pay",
+  CASH: "Cash",
+};
+
+function getAvailablePaymentMethods(service: ServiceData): PaymentMethod[] {
+  const methods: PaymentMethod[] = [];
+  const p = service.provider;
+  const hasDeposit = service.depositType !== "NONE";
+
+  // Digital methods listed first per design.md
+  if (p.acceptsApplePay) methods.push("APPLE_PAY");
+  if (p.acceptsGooglePay) methods.push("GOOGLE_PAY");
+  if (p.acceptsCard) methods.push("CARD");
+  if (p.acceptsCashAppPay) methods.push("CASH_APP_PAY");
+  // Cash only when no deposit required
+  if (p.acceptsCash && !hasDeposit) methods.push("CASH");
+
+  return methods;
+}
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -86,6 +116,9 @@ export default function BookPage(): React.JSX.Element {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
+  // Payment method
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+
   // Client details
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -128,7 +161,7 @@ export default function BookPage(): React.JSX.Element {
 
   // Submit booking
   const handleConfirm = async () => {
-    if (!serviceId || !selectedSlot) return;
+    if (!serviceId || !selectedSlot || !selectedPaymentMethod) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/appointments", {
@@ -140,10 +173,14 @@ export default function BookPage(): React.JSX.Element {
           clientName,
           clientEmail,
           clientPhone: clientPhone || undefined,
-          paymentMethod: "CASH", // Default to cash for now (no Stripe keys yet)
+          paymentMethod: selectedPaymentMethod,
         }),
       });
       const json = await res.json();
+      if (!res.ok) {
+        alert(json.error?.message || "Something went wrong. Please try again.");
+        return;
+      }
       if (json.data?.checkoutUrl) {
         window.location.href = json.data.checkoutUrl;
       } else {
@@ -157,7 +194,24 @@ export default function BookPage(): React.JSX.Element {
   };
 
   const depositAmount = service ? getDepositAmount(service) : 0;
+  const availableMethods = service ? getAvailablePaymentMethods(service) : [];
   const availableSlots = slots.filter((s) => s.available);
+
+  // Auto-select first available payment method when entering confirm step
+  useEffect(() => {
+    if (step === "confirm" && !selectedPaymentMethod && availableMethods.length > 0) {
+      setSelectedPaymentMethod(availableMethods[0]);
+    }
+  }, [step, selectedPaymentMethod, availableMethods]);
+
+  const isCash = selectedPaymentMethod === "CASH";
+  const confirmButtonText = submitting
+    ? "Booking..."
+    : isCash
+      ? "Confirm Booking"
+      : depositAmount > 0
+        ? `Pay ${formatPrice(depositAmount)} Deposit`
+        : `Pay ${formatPrice(service?.priceInCents ?? 0)}`;
 
   if (loading) {
     return (
@@ -405,15 +459,51 @@ export default function BookPage(): React.JSX.Element {
                   {formatPrice(service.priceInCents)}
                 </span>
               </div>
-              {depositAmount > 0 && (
+              {!isCash && depositAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-muted">Due now</span>
+                    <span className="font-semibold text-primary">
+                      {formatPrice(depositAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-muted">Due at appointment</span>
+                    <span className="font-medium">
+                      {formatPrice(service.priceInCents - depositAmount)}
+                    </span>
+                  </div>
+                </>
+              )}
+              {isCash && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">Deposit due now</span>
-                  <span className="font-semibold text-primary">
-                    {formatPrice(depositAmount)}
-                  </span>
+                  <span className="text-text-muted">Payment</span>
+                  <span className="font-medium">Pay at appointment</span>
                 </div>
               )}
             </div>
+
+            {/* Payment method selector */}
+            {availableMethods.length > 0 && (
+              <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
+                <p className="text-sm font-medium">Payment Method</p>
+                <div className="grid gap-2">
+                  {availableMethods.map((method) => (
+                    <button
+                      key={method}
+                      onClick={() => setSelectedPaymentMethod(method)}
+                      className={`flex items-center px-3 py-2.5 rounded-button text-sm font-medium transition-colors border ${
+                        selectedPaymentMethod === method
+                          ? "border-primary bg-primary-light text-primary"
+                          : "border-border bg-background text-text-secondary hover:border-primary/40"
+                      }`}
+                    >
+                      {PAYMENT_METHOD_LABELS[method]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-surface rounded-card p-grid-2 shadow-card text-xs text-text-muted space-y-1">
               <p>
@@ -436,11 +526,11 @@ export default function BookPage(): React.JSX.Element {
                 Back
               </button>
               <button
-                disabled={submitting}
+                disabled={submitting || !selectedPaymentMethod}
                 onClick={handleConfirm}
                 className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
-                {submitting ? "Booking..." : "Confirm Booking"}
+                {confirmButtonText}
               </button>
             </div>
           </section>

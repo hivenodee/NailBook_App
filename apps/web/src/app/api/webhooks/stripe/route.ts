@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
 import type Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -77,31 +77,56 @@ export async function POST(request: NextRequest) {
         });
       });
 
-      // Send confirmation email
+      // Send confirmation emails (client + provider)
       const appointment = await prisma.appointment.findUnique({
         where: { id: appointmentId },
-        include: { service: true, provider: true },
+        include: {
+          service: true,
+          provider: { include: { user: { select: { email: true } } } },
+        },
       });
 
-      if (appointment?.clientEmail) {
-        const depositStr =
-          appointment.depositInCents > 0
-            ? `$${(appointment.depositInCents / 100).toFixed(2)}`
-            : null;
+      if (appointment) {
+        const emailData: BookingEmailData = {
+          providerName: appointment.provider.businessName,
+          serviceName: appointment.service.name,
+          durationMinutes: appointment.service.durationMinutes,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          totalInCents: appointment.totalInCents,
+          depositInCents: appointment.depositInCents,
+          paymentType: paymentType === "DEPOSIT" ? "DEPOSIT" : "FULL",
+          locationAddress: appointment.provider.locationAddress,
+          cancellationHours: appointment.provider.cancellationHours,
+          arrivalGraceMinutes: appointment.provider.arrivalGraceMinutes,
+          clientName: appointment.clientName,
+          clientEmail: appointment.clientEmail,
+        };
+        try {
+          await Promise.all([
+            sendClientConfirmation(emailData),
+            sendProviderNewBooking(appointment.provider.user.email, emailData),
+          ]);
+        } catch (e) {
+          console.error("[email] Failed to send booking confirmation emails:", e);
+        }
+      }
+      break;
+    }
 
-        await sendBookingConfirmation(
-          appointment.clientEmail,
-          appointment.provider.businessName,
-          appointment.service.name,
-          appointment.startTime.toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-          depositStr
-        );
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const { appointmentId } = session.metadata || {};
+
+      if (appointmentId) {
+        await prisma.appointmentEvent.create({
+          data: {
+            appointmentId,
+            type: "checkout_expired",
+            actorType: "system",
+            metadata: { stripeEventId: event.id },
+          },
+        });
       }
       break;
     }
