@@ -35,8 +35,12 @@ export default async function DashboardLayout({
           </Link>
           <div className="flex gap-grid-2">
             <NavLink href="/dashboard">Today</NavLink>
+            <NavLink href="/dashboard/history">History</NavLink>
+            <NavLink href="/dashboard/services">Services</NavLink>
+            <NavLink href="/dashboard/availability">Hours</NavLink>
             <NavLink href="/dashboard/money">Money</NavLink>
             <NavLink href="/dashboard/portfolio">Portfolio</NavLink>
+            <NavLink href="/dashboard/profile">Profile</NavLink>
           </div>
         </div>
       </nav>

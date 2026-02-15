@@ -11,6 +11,13 @@ type TimeSlot = {
   available: boolean;
 };
 
+type AddOnData = {
+  id: string;
+  name: string;
+  priceInCents: number;
+  durationMinutes: number;
+};
+
 type ServiceData = {
   id: string;
   name: string;
@@ -18,6 +25,7 @@ type ServiceData = {
   durationMinutes: number;
   depositType: "NONE" | "FLAT" | "PERCENT";
   depositValue: number;
+  addOns: AddOnData[];
   provider: {
     businessName: string;
     slug: string;
@@ -65,6 +73,7 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "UTC",
   });
 }
 
@@ -76,10 +85,10 @@ function formatDate(date: Date) {
   });
 }
 
-function getDepositAmount(service: ServiceData) {
+function getDepositAmount(service: ServiceData, totalCents: number) {
   if (service.depositType === "FLAT") return service.depositValue;
   if (service.depositType === "PERCENT")
-    return Math.round((service.priceInCents * service.depositValue) / 100);
+    return Math.round((totalCents * service.depositValue) / 100);
   return 0;
 }
 
@@ -115,6 +124,9 @@ export default function BookPage(): React.JSX.Element {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+
+  // Add-on selection
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set());
 
   // Payment method
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
@@ -174,6 +186,7 @@ export default function BookPage(): React.JSX.Element {
           clientEmail,
           clientPhone: clientPhone || undefined,
           paymentMethod: selectedPaymentMethod,
+          addOnIds: selectedAddOns.length > 0 ? selectedAddOns.map((a) => a.id) : undefined,
         }),
       });
       const json = await res.json();
@@ -193,7 +206,21 @@ export default function BookPage(): React.JSX.Element {
     }
   };
 
-  const depositAmount = service ? getDepositAmount(service) : 0;
+  function toggleAddOn(id: string) {
+    setSelectedAddOnIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedAddOns = service?.addOns.filter((a) => selectedAddOnIds.has(a.id)) ?? [];
+  const addOnPriceCents = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0);
+  const addOnDurationMin = selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0);
+  const totalPriceCents = (service?.priceInCents ?? 0) + addOnPriceCents;
+  const totalDurationMin = (service?.durationMinutes ?? 0) + addOnDurationMin;
+  const depositAmount = service ? getDepositAmount(service, totalPriceCents) : 0;
   const availableMethods = service ? getAvailablePaymentMethods(service) : [];
   const availableSlots = slots.filter((s) => s.available);
 
@@ -211,7 +238,7 @@ export default function BookPage(): React.JSX.Element {
       ? "Confirm Booking"
       : depositAmount > 0
         ? `Pay ${formatPrice(depositAmount)} Deposit`
-        : `Pay ${formatPrice(service?.priceInCents ?? 0)}`;
+        : `Pay ${formatPrice(totalPriceCents)}`;
 
   if (loading) {
     return (
@@ -238,12 +265,12 @@ export default function BookPage(): React.JSX.Element {
             <div>
               <h3 className="font-medium text-sm">{service.name}</h3>
               <p className="text-xs text-text-muted">
-                {service.durationMinutes} min
+                {totalDurationMin} min
               </p>
             </div>
             <div className="text-right">
               <p className="font-medium text-sm">
-                {formatPrice(service.priceInCents)}
+                {formatPrice(totalPriceCents)}
               </p>
               {depositAmount > 0 && (
                 <p className="text-xs text-primary">
@@ -252,7 +279,63 @@ export default function BookPage(): React.JSX.Element {
               )}
             </div>
           </div>
+          {selectedAddOns.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {selectedAddOns.map((a) => (
+                <span key={a.id} className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full">
+                  +{a.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Add-ons selector */}
+        {service.addOns.length > 0 && (
+          <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3 space-y-grid-1">
+            <p className="text-sm font-medium">Add-ons</p>
+            {service.addOns.map((addon) => {
+              const isSelected = selectedAddOnIds.has(addon.id);
+              return (
+                <button
+                  key={addon.id}
+                  type="button"
+                  onClick={() => toggleAddOn(addon.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-button text-sm transition-colors border ${
+                    isSelected
+                      ? "border-primary bg-primary-light"
+                      : "border-border bg-background hover:border-primary/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        isSelected
+                          ? "bg-primary border-primary"
+                          : "border-border"
+                      }`}
+                    >
+                      {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className={isSelected ? "font-medium text-primary" : "text-text-secondary"}>
+                      {addon.name}
+                    </span>
+                  </div>
+                  <div className="text-right text-xs text-text-muted">
+                    <span>+{formatPrice(addon.priceInCents)}</span>
+                    {addon.durationMinutes > 0 && (
+                      <span className="ml-2">+{addon.durationMinutes} min</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-grid-2 mb-grid-4">
@@ -432,7 +515,7 @@ export default function BookPage(): React.JSX.Element {
                 <span className="font-medium">
                   {new Date(selectedSlot.startTime).toLocaleDateString(
                     "en-US",
-                    { weekday: "long", month: "long", day: "numeric" }
+                    { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }
                   )}
                 </span>
               </div>
@@ -445,18 +528,33 @@ export default function BookPage(): React.JSX.Element {
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Duration</span>
                 <span className="font-medium">
-                  {service.durationMinutes} min
+                  {totalDurationMin} min
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Name</span>
                 <span className="font-medium">{clientName}</span>
               </div>
+              {selectedAddOns.length > 0 && (
+                <>
+                  <hr className="border-border" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-muted">Base service</span>
+                    <span className="font-medium">{formatPrice(service.priceInCents)}</span>
+                  </div>
+                  {selectedAddOns.map((a) => (
+                    <div key={a.id} className="flex justify-between text-sm">
+                      <span className="text-text-muted">{a.name}</span>
+                      <span className="font-medium">+{formatPrice(a.priceInCents)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
               <hr className="border-border" />
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Total</span>
                 <span className="font-semibold">
-                  {formatPrice(service.priceInCents)}
+                  {formatPrice(totalPriceCents)}
                 </span>
               </div>
               {!isCash && depositAmount > 0 && (
@@ -470,7 +568,7 @@ export default function BookPage(): React.JSX.Element {
                   <div className="flex justify-between text-sm">
                     <span className="text-text-muted">Due at appointment</span>
                     <span className="font-medium">
-                      {formatPrice(service.priceInCents - depositAmount)}
+                      {formatPrice(totalPriceCents - depositAmount)}
                     </span>
                   </div>
                 </>

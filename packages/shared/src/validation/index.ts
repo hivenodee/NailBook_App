@@ -58,6 +58,8 @@ export const createBookingSchema = z.object({
   clientPhone: z.string().max(20).optional(),
   // Optional inspiration photo
   inspirationUrl: z.string().url().optional(),
+  // Selected add-ons
+  addOnIds: z.array(z.string().cuid()).max(20).optional(),
   paymentMethod: z.enum([
     "CARD",
     "APPLE_PAY",

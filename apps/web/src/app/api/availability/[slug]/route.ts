@@ -2,29 +2,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { BOOKING } from "@nailbook/shared";
+import { getAvailabilityCache, setAvailabilityCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
-
-// Optional Redis — works without it
-async function getCached(key: string) {
-  if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) return null;
-  try {
-    const { redis } = await import("@/lib/redis");
-    return await redis.get(key);
-  } catch {
-    return null;
-  }
-}
-
-async function setCache(key: string, value: unknown, ttl: number) {
-  if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) return;
-  try {
-    const { redis } = await import("@/lib/redis");
-    await redis.set(key, value, { ex: ttl });
-  } catch {
-    // Cache miss is fine
-  }
-}
 
 // GET /api/availability/:slug?date=2026-03-15
 export async function GET(
@@ -39,8 +19,7 @@ export async function GET(
   if (!provider) return error("Provider not found", 404);
 
   // Check cache
-  const cacheKey = `avail:${provider.id}:${dateStr}`;
-  const cached = await getCached(cacheKey);
+  const cached = await getAvailabilityCache(provider.id, dateStr);
   if (cached) return success(cached);
 
   const date = new Date(dateStr);
@@ -113,8 +92,7 @@ export async function GET(
     }
   }
 
-  // Cache for 60 seconds
-  await setCache(cacheKey, slots, 60);
+  await setAvailabilityCache(provider.id, dateStr, slots);
 
   return success(slots);
 }

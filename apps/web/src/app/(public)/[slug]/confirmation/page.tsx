@@ -31,6 +31,7 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "UTC",
   });
 }
 
@@ -39,6 +40,7 @@ function formatDate(iso: string) {
     weekday: "long",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
+import { invalidateAvailability } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     where: { id },
     include: {
       service: true,
+      addOns: { select: { id: true, name: true, priceInCents: true, durationMinutes: true } },
       provider: { select: { businessName: true, slug: true } },
       client: { select: { firstName: true, lastName: true, avatarUrl: true } },
       events: { orderBy: { createdAt: "asc" } },
@@ -110,5 +112,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
 
   if (!updated) return error("Invalid action", 400);
+
+  // Invalidate availability cache for the appointment's date
+  const datesToInvalidate = [appointment.startTime.toISOString().split("T")[0]];
+  if (action === "reschedule" && startTime) {
+    datesToInvalidate.push(new Date(startTime).toISOString().split("T")[0]);
+  }
+  await invalidateAvailability(appointment.providerId, ...datesToInvalidate);
+
   return success(updated);
 }

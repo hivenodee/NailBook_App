@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
+import { invalidateAvailability } from "@/lib/cache";
 import type Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +88,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (appointment) {
+        // Invalidate availability cache for the confirmed appointment's date
+        await invalidateAvailability(
+          appointment.providerId,
+          appointment.startTime.toISOString().split("T")[0],
+        );
+
         const emailData: BookingEmailData = {
           providerName: appointment.provider.businessName,
           serviceName: appointment.service.name,
@@ -119,6 +126,11 @@ export async function POST(request: NextRequest) {
       const { appointmentId } = session.metadata || {};
 
       if (appointmentId) {
+        const expiredAppt = await prisma.appointment.findUnique({
+          where: { id: appointmentId },
+          select: { providerId: true, startTime: true },
+        });
+
         await prisma.appointmentEvent.create({
           data: {
             appointmentId,
@@ -127,6 +139,14 @@ export async function POST(request: NextRequest) {
             metadata: { stripeEventId: event.id },
           },
         });
+
+        // Invalidate cache so the slot becomes available again
+        if (expiredAppt) {
+          await invalidateAvailability(
+            expiredAppt.providerId,
+            expiredAppt.startTime.toISOString().split("T")[0],
+          );
+        }
       }
       break;
     }

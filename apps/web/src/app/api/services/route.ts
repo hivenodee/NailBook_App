@@ -6,14 +6,19 @@ import { createServiceSchema } from "@nailbook/shared";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/services?providerId=xxx
+// GET /api/services?providerId=xxx&all=true
 export async function GET(request: NextRequest) {
-  const providerId = new URL(request.url).searchParams.get("providerId");
+  const { searchParams } = new URL(request.url);
+  const providerId = searchParams.get("providerId");
   if (!providerId) return error("providerId is required");
 
+  const includeAll = searchParams.get("all") === "true";
+
   const services = await prisma.service.findMany({
-    where: { providerId, isActive: true },
-    include: { addOns: { where: { isActive: true } } },
+    where: { providerId, ...(includeAll ? {} : { isActive: true }) },
+    include: {
+      addOns: includeAll ? { orderBy: { createdAt: "asc" } } : { where: { isActive: true } },
+    },
     orderBy: { sortOrder: "asc" },
   });
 

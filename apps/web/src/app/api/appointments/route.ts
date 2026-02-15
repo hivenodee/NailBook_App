@@ -5,6 +5,7 @@ import { success, error, parseBody } from "@/lib/api-utils";
 import { createBookingSchema } from "@nailbook/shared";
 import { stripe } from "@/lib/stripe";
 import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
+import { invalidateAvailability } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       service: true,
+      addOns: { select: { id: true, name: true, priceInCents: true, durationMinutes: true } },
       client: { select: { firstName: true, lastName: true, avatarUrl: true } },
       provider: {
         select: { businessName: true, slug: true },
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
   const result = await parseBody(request, createBookingSchema);
   if (result.error) return result.error;
 
-  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl } =
+  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds } =
     result.data;
 
   const service = await prisma.service.findUnique({
@@ -60,8 +62,24 @@ export async function POST(request: NextRequest) {
   });
   if (!service) return error("Service not found", 404);
 
+  // Validate and fetch selected add-ons
+  let selectedAddOns: { id: string; priceInCents: number; durationMinutes: number }[] = [];
+  if (addOnIds && addOnIds.length > 0) {
+    selectedAddOns = await prisma.addOn.findMany({
+      where: { id: { in: addOnIds }, serviceId, isActive: true },
+      select: { id: true, priceInCents: true, durationMinutes: true },
+    });
+    if (selectedAddOns.length !== addOnIds.length) {
+      return error("One or more add-ons are invalid", 400);
+    }
+  }
+
+  const addOnPriceCents = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0);
+  const addOnDurationMin = selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0);
+  const totalPriceCents = service.priceInCents + addOnPriceCents;
+
   const start = new Date(startTime);
-  const end = new Date(start.getTime() + service.durationMinutes * 60 * 1000);
+  const end = new Date(start.getTime() + (service.durationMinutes + addOnDurationMin) * 60 * 1000);
 
   // Check for overlapping confirmed appointments
   const overlap = await prisma.appointment.findFirst({
@@ -74,13 +92,13 @@ export async function POST(request: NextRequest) {
   });
   if (overlap) return error("Time slot is no longer available", 409);
 
-  // Calculate deposit
+  // Calculate deposit (based on total including add-ons)
   let depositInCents = 0;
   if (service.depositType === "FLAT") {
     depositInCents = service.depositValue;
   } else if (service.depositType === "PERCENT") {
     depositInCents = Math.round(
-      (service.priceInCents * service.depositValue) / 100
+      (totalPriceCents * service.depositValue) / 100
     );
   }
 
@@ -140,13 +158,16 @@ export async function POST(request: NextRequest) {
         status: paymentMethod === "CASH" ? "CONFIRMED" : "PENDING_PAYMENT",
         startTime: start,
         endTime: end,
-        totalInCents: service.priceInCents,
+        totalInCents: totalPriceCents,
         depositInCents,
         clientName,
         clientEmail,
         clientPhone,
         inspirationUrl,
         isNewClient: true,
+        ...(selectedAddOns.length > 0 && {
+          addOns: { connect: selectedAddOns.map((a) => ({ id: a.id })) },
+        }),
       },
     });
 
@@ -163,6 +184,9 @@ export async function POST(request: NextRequest) {
     return appt;
   });
 
+  // Invalidate availability cache for the booked date
+  await invalidateAvailability(service.providerId, start.toISOString().split("T")[0]);
+
   // If cash, no Stripe needed — send confirmation emails immediately
   if (paymentMethod === "CASH") {
     const emailData: BookingEmailData = {
@@ -171,7 +195,7 @@ export async function POST(request: NextRequest) {
       durationMinutes: service.durationMinutes,
       startTime: start,
       endTime: end,
-      totalInCents: service.priceInCents,
+      totalInCents: totalPriceCents,
       depositInCents,
       paymentType: "CASH",
       locationAddress: service.provider.locationAddress,
@@ -192,7 +216,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Create Stripe checkout session for deposit or full payment
-  const amountToCharge = depositInCents > 0 ? depositInCents : service.priceInCents;
+  const amountToCharge = depositInCents > 0 ? depositInCents : totalPriceCents;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",

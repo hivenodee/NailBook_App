@@ -143,6 +143,8 @@ model AddOn {
   durationMinutes Int @default(0)
   isActive    Boolean @default(true)
 
+  appointments Appointment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -214,6 +216,7 @@ model Appointment {
   stripeSessionId   String?
   stripePaymentIntentId String?
 
+  addOns   AddOn[]
   events   AppointmentEvent[]
   payments Payment[]
   thread   Thread?

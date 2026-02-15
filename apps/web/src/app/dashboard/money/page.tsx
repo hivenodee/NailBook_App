@@ -121,6 +121,7 @@ export default function MoneyPage() {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
+                        timeZone: "UTC",
                       })}
                     </p>
                   </div>

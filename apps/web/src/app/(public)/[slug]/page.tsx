@@ -154,6 +154,19 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                     <p className="text-sm text-text-muted mt-1">
                       {service.durationMinutes} min
                     </p>
+                    {service.addOns.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {service.addOns.map((addon) => (
+                          <span
+                            key={addon.id}
+                            className="text-xs bg-primary-light text-text-secondary px-2 py-0.5 rounded-full"
+                          >
+                            {addon.name} +${(addon.priceInCents / 100).toFixed(2)}
+                            {addon.durationMinutes > 0 && ` · +${addon.durationMinutes}min`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-medium">

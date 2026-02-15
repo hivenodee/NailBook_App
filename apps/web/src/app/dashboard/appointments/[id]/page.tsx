@@ -35,6 +35,7 @@ type Appointment = {
   isNewClient: boolean;
   inspirationUrl: string | null;
   service: { name: string; durationMinutes: number; priceInCents: number };
+  addOns: { id: string; name: string; priceInCents: number; durationMinutes: number }[];
   client: { firstName: string | null; lastName: string | null; avatarUrl: string | null };
   provider: { businessName: string; slug: string };
   events: AppointmentEvent[];
@@ -55,6 +56,7 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "UTC",
   });
 }
 
@@ -188,6 +190,16 @@ export default function AppointmentDetailPage() {
             <span className="text-text-muted">Service:</span>{" "}
             {appointment.service.name}
           </p>
+          {appointment.addOns.length > 0 && (
+            <div>
+              <span className="text-text-muted">Add-ons:</span>{" "}
+              {appointment.addOns.map((a) => (
+                <span key={a.id} className="inline-block text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full mr-1">
+                  {a.name} +${(a.priceInCents / 100).toFixed(2)}
+                </span>
+              ))}
+            </div>
+          )}
           <p>
             <span className="text-text-muted">Date:</span>{" "}
             {formatDateTime(appointment.startTime)}
