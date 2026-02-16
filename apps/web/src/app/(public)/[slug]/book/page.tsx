@@ -48,6 +48,9 @@ type ServiceData = {
     acceptsApplePay: boolean;
     acceptsGooglePay: boolean;
     acceptsCashAppPay: boolean;
+    booksOpen: boolean;
+    booksOpenAt: string | null;
+    bookingWindowDays: number;
   };
 };
 
@@ -117,6 +120,104 @@ function getNextDays(count: number): Date[] {
 
 function toDateStr(date: Date) {
   return date.toISOString().split("T")[0];
+}
+
+function BooksClosedCard({
+  booksOpenAt,
+  timezone,
+}: {
+  booksOpenAt: string | null;
+  timezone: string;
+}) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!booksOpenAt) return;
+    const target = new Date(booksOpenAt).getTime();
+
+    function update() {
+      const diff = target - Date.now();
+      if (diff <= 0) {
+        window.location.reload();
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+      });
+    }
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [booksOpenAt]);
+
+  return (
+    <div className="bg-surface rounded-card p-grid-3 shadow-card text-center space-y-grid-2">
+      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+        <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h2 className="text-lg font-semibold">Books Are Currently Closed</h2>
+
+      {booksOpenAt && timeLeft && (
+        <>
+          <p className="text-sm text-text-muted">Books open in</p>
+          <div className="flex justify-center gap-3">
+            {timeLeft.days > 0 && (
+              <div className="text-center">
+                <span className="text-2xl font-bold tabular-nums">{timeLeft.days}</span>
+                <p className="text-xs text-text-muted">days</p>
+              </div>
+            )}
+            <div className="text-center">
+              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.hours).padStart(2, "0")}</span>
+              <p className="text-xs text-text-muted">hours</p>
+            </div>
+            <div className="text-center">
+              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.minutes).padStart(2, "0")}</span>
+              <p className="text-xs text-text-muted">min</p>
+            </div>
+            <div className="text-center">
+              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.seconds).padStart(2, "0")}</span>
+              <p className="text-xs text-text-muted">sec</p>
+            </div>
+          </div>
+          <p className="text-xs text-text-muted">
+            Opens{" "}
+            {new Date(booksOpenAt).toLocaleString("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              timeZone: timezone,
+            })}
+          </p>
+        </>
+      )}
+
+      {!booksOpenAt && (
+        <p className="text-sm text-text-muted">
+          Check back later to book your appointment.
+        </p>
+      )}
+
+      {booksOpenAt && (
+        <p className="text-sm text-text-secondary">
+          Check back then to book your appointment.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function WaitlistForm({
@@ -298,7 +399,7 @@ export default function BookPage(): React.JSX.Element {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
-  const days = getNextDays(14);
+  const days = getNextDays(service?.provider.bookingWindowDays ?? 14);
 
   // Fetch service details + auto-select mandatory add-ons
   useEffect(() => {
@@ -531,6 +632,29 @@ export default function BookPage(): React.JSX.Element {
     return (
       <main className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-text-secondary">Service not found.</p>
+      </main>
+    );
+  }
+
+  // Books closed state
+  if (service.provider.booksOpen === false) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="max-w-lg mx-auto px-grid-2 py-grid-3">
+          <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-medium text-sm">{service.name}</h3>
+                <p className="text-xs text-text-muted">{service.durationMinutes} min</p>
+              </div>
+              <p className="font-medium text-sm">{formatPrice(service.priceInCents)}</p>
+            </div>
+          </div>
+          <BooksClosedCard
+            booksOpenAt={service.provider.booksOpenAt}
+            timezone={service.provider.timezone}
+          />
+        </div>
       </main>
     );
   }

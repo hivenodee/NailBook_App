@@ -264,6 +264,9 @@ export type CompletionEmailData = {
   timezone?: string;
   appointmentId?: string;
   slug?: string;
+  totalInCents?: number;
+  depositInCents?: number;
+  paymentUrl?: string;
 };
 
 export async function sendCompletionThankYou(
@@ -278,6 +281,14 @@ export async function sendCompletionThankYou(
       ? `${baseUrl}/${data.slug}/feedback/${data.appointmentId}`
       : "";
 
+  let balanceSection = "";
+  if (data.paymentUrl && data.totalInCents && data.depositInCents) {
+    const remaining = data.totalInCents - data.depositInCents;
+    if (remaining > 0) {
+      balanceSection = `\n\nYou have a remaining balance of ${formatPrice(remaining)}. Pay online: ${data.paymentUrl}`;
+    }
+  }
+
   const vars: Record<string, string> = {
     providerName: data.providerName,
     serviceName: data.serviceName,
@@ -285,6 +296,7 @@ export async function sendCompletionThankYou(
     clientEmail: data.clientEmail || "",
     dateTime: formatDateTime(data.startTime, data.timezone),
     feedbackUrl,
+    balanceSection,
   };
 
   await sendTemplateEmail(data.clientEmail, "COMPLETION", vars, providerId);
@@ -342,6 +354,42 @@ export async function sendWaitlistJoinedEmail(
   };
 
   await sendTemplateEmail(data.clientEmail, "WAITLIST_JOINED", vars, providerId);
+}
+
+// ─── Balance request email ────────────────────────────────
+
+export type BalanceRequestEmailData = {
+  providerName: string;
+  serviceName: string;
+  startTime: Date;
+  totalInCents: number;
+  depositInCents: number;
+  remainingInCents: number;
+  clientName?: string | null;
+  clientEmail?: string | null;
+  timezone?: string;
+  paymentUrl: string;
+};
+
+export async function sendBalanceRequest(
+  data: BalanceRequestEmailData,
+  providerId?: string,
+) {
+  if (!data.clientEmail) return;
+
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName || "Client",
+    clientEmail: data.clientEmail || "",
+    dateTime: formatDateTime(data.startTime, data.timezone),
+    total: formatPrice(data.totalInCents),
+    deposit: formatPrice(data.depositInCents),
+    remainingBalance: formatPrice(data.remainingInCents),
+    paymentUrl: data.paymentUrl,
+  };
+
+  await sendTemplateEmail(data.clientEmail, "BALANCE_REQUEST", vars, providerId);
 }
 
 // ─── Reminder email ───────────────────────────────────────

@@ -31,11 +31,19 @@ export const VARIABLES_BY_TYPE: Record<MessageTemplateType, readonly string[]> =
     "paymentLine",
   ],
   CANCELLATION: [...COMMON_VARS, "dateTime", "cancelledBy"],
-  COMPLETION: [...COMMON_VARS, "dateTime", "feedbackUrl"],
+  COMPLETION: [...COMMON_VARS, "dateTime", "feedbackUrl", "balanceSection"],
   REMINDER: [...COMMON_VARS, "dateTime", "hoursUntil"],
   FOLLOWUP: [...COMMON_VARS, "dateTime"],
   WAITLIST_AVAILABLE: [...COMMON_VARS, "date", "bookingUrl"],
   WAITLIST_JOINED: [...COMMON_VARS, "date", "time"],
+  BALANCE_REQUEST: [
+    ...COMMON_VARS,
+    "dateTime",
+    "total",
+    "deposit",
+    "remainingBalance",
+    "paymentUrl",
+  ],
 };
 
 // ─── Default templates (extracted from existing hardcoded emails) ──
@@ -96,7 +104,7 @@ We hope you loved your {{serviceName}} with {{providerName}}.
 Service: {{serviceName}}
 With: {{providerName}}
 Date: {{dateTime}}
-
+{{balanceSection}}
 Leave feedback: {{feedbackUrl}}`,
     smsBody:
       "Thanks for your visit! We hope you loved your {{serviceName}} with {{providerName}}.",
@@ -137,6 +145,21 @@ You've been added to the waitlist for {{serviceName}} with {{providerName}} on {
 We'll notify you as soon as a spot opens up. No action needed on your end until then.`,
     smsBody:
       "You're on the waitlist for {{serviceName}} with {{providerName}} on {{date}}.{{time}} We'll let you know when a spot opens up!",
+  },
+  BALANCE_REQUEST: {
+    emailSubject: "Remaining balance — {{providerName}}",
+    emailBody: `Hi {{clientName}},
+
+Thanks for your {{serviceName}} with {{providerName}} on {{dateTime}}.
+
+Here's your payment summary:
+Total: {{total}}
+Deposit paid: {{deposit}}
+Remaining balance: {{remainingBalance}}
+
+Pay your remaining balance online: {{paymentUrl}}`,
+    smsBody:
+      "Hi {{clientName}}, you have a remaining balance of {{remainingBalance}} for {{serviceName}} with {{providerName}}. Pay here: {{paymentUrl}}",
   },
 };
 
@@ -195,4 +218,7 @@ export const SAMPLE_VARS: Record<string, string> = {
   time: " at 2:00 PM",
   bookingUrl: "https://nailbook.app/glamour-nails/book?service=abc&date=2026-03-15",
   feedbackUrl: "https://nailbook.app/glamour-nails/feedback/abc123",
+  balanceSection: "",
+  remainingBalance: "$60.00",
+  paymentUrl: "https://nailbook.app/glamour-nails/pay/abc123",
 };

@@ -181,6 +181,26 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   if (action === "complete") {
+    // Build payment URL if there's a remaining balance
+    let paymentUrl: string | undefined;
+    let completionTotalInCents: number | undefined;
+    let completionDepositInCents: number | undefined;
+    if (appointment.depositInCents > 0 && appointment.totalInCents > appointment.depositInCents) {
+      // Check if balance already paid via BALANCE payments
+      const balancePayments = await prisma.payment.aggregate({
+        where: { appointmentId: appointment.id, type: "BALANCE", status: "COMPLETED" },
+        _sum: { amountInCents: true },
+      });
+      const balancePaid = balancePayments._sum.amountInCents || 0;
+      const remaining = appointment.totalInCents - appointment.depositInCents - balancePaid;
+      if (remaining > 0) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        paymentUrl = `${baseUrl}/${appointment.provider.slug}/pay/${appointment.id}`;
+        completionTotalInCents = appointment.totalInCents;
+        completionDepositInCents = appointment.depositInCents;
+      }
+    }
+
     try {
       await sendCompletionThankYou({
         providerName: appointment.provider.businessName,
@@ -191,6 +211,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         timezone: appointment.provider.timezone,
         appointmentId: appointment.id,
         slug: appointment.provider.slug,
+        totalInCents: completionTotalInCents,
+        depositInCents: completionDepositInCents,
+        paymentUrl,
       }, appointment.providerId);
     } catch (e) {
       console.error("[email] Failed to send completion email:", e);

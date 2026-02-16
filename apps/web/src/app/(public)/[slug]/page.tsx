@@ -180,13 +180,35 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           </section>
         )}
 
+        {/* Books closed banner */}
+        {!provider.booksOpen && (
+          <section>
+            <div className="bg-amber-50 border border-amber-200 rounded-card p-grid-2 text-center space-y-1">
+              <p className="text-sm font-medium text-amber-800">Books are currently closed</p>
+              {provider.booksOpenAt && (
+                <p className="text-xs text-amber-700">
+                  Books open{" "}
+                  {new Date(provider.booksOpenAt).toLocaleString("en-US", {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZone: provider.timezone,
+                  })}
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Services */}
         <section>
           <h2 className="text-lg font-medium mb-grid-1">Services</h2>
           <Suspense fallback={<div className="space-y-grid-1">{provider.services.map((s) => (
             <div key={s.id} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-32" />
           ))}</div>}>
-            <ServiceList services={provider.services} slug={slug} />
+            <ServiceList services={provider.services} slug={slug} booksOpen={provider.booksOpen} />
           </Suspense>
         </section>
 

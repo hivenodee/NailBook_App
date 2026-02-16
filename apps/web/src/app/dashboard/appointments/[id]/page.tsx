@@ -106,6 +106,8 @@ export default function AppointmentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceConfirmCash, setBalanceConfirmCash] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -139,6 +141,29 @@ export default function AppointmentDetailPage() {
     } finally {
       setActionLoading(false);
       setConfirmAction(null);
+    }
+  }
+
+  async function handleCollectBalance(action: "send-link" | "mark-cash") {
+    setBalanceLoading(true);
+    try {
+      const res = await fetch(`/api/appointments/${id}/collect-balance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        await load();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        console.error("Collect balance error:", res.status, json);
+        alert(`Error: ${json.error || res.statusText}`);
+      }
+    } catch (e) {
+      console.error("Collect balance failed:", e);
+    } finally {
+      setBalanceLoading(false);
+      setBalanceConfirmCash(false);
     }
   }
 
@@ -276,6 +301,89 @@ export default function AppointmentDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Remaining Balance */}
+      {appointment.depositInCents > 0 && (() => {
+        const balancePaid = appointment.payments
+          .filter((p) => p.type === "BALANCE" && p.status === "COMPLETED")
+          .reduce((sum, p) => sum + p.amountInCents, 0);
+        const remaining = appointment.totalInCents - appointment.depositInCents - balancePaid;
+        const hasBalancePayments = appointment.payments.some((p) => p.type === "BALANCE" && p.status === "COMPLETED");
+
+        if (remaining <= 0 && hasBalancePayments) {
+          const balanceMethods = [...new Set(
+            appointment.payments
+              .filter((p) => p.type === "BALANCE" && p.status === "COMPLETED")
+              .map((p) => p.method === "CASH" ? "Cash" : "Card"),
+          )];
+          return (
+            <div className="bg-surface rounded-card p-grid-2 shadow-card">
+              <div className="flex items-center gap-2 text-sm text-green-700">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="font-medium">
+                  Balance Paid — {balanceMethods.join(" / ")}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        if (remaining > 0) {
+          return (
+            <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
+              <div>
+                <h2 className="text-sm font-medium text-text-muted">Remaining Balance</h2>
+                <p className="text-lg font-semibold">
+                  ${(remaining / 100).toFixed(2)} remaining
+                </p>
+              </div>
+              {balanceConfirmCash ? (
+                <div className="space-y-grid-1">
+                  <p className="text-sm">
+                    Mark ${(remaining / 100).toFixed(2)} as received in cash?
+                  </p>
+                  <div className="flex gap-grid-1">
+                    <button
+                      onClick={() => handleCollectBalance("mark-cash")}
+                      disabled={balanceLoading}
+                      className="text-sm font-medium px-4 py-2 rounded-button bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+                    >
+                      {balanceLoading ? "..." : "Confirm"}
+                    </button>
+                    <button
+                      onClick={() => setBalanceConfirmCash(false)}
+                      className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-grid-1 flex-wrap">
+                  <button
+                    onClick={() => handleCollectBalance("send-link")}
+                    disabled={balanceLoading}
+                    className="text-sm font-medium px-4 py-2 rounded-button bg-primary text-white hover:bg-primary-hover transition-colors disabled:opacity-50"
+                  >
+                    {balanceLoading ? "Sending..." : "Send Payment Link"}
+                  </button>
+                  <button
+                    onClick={() => setBalanceConfirmCash(true)}
+                    disabled={balanceLoading}
+                    className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    Mark as Cash Paid
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })()}
 
       {/* Actions */}
       {isActive && (

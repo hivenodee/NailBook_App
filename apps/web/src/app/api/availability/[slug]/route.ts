@@ -19,9 +19,44 @@ export async function GET(
   const provider = await prisma.provider.findUnique({ where: { slug } });
   if (!provider) return error("Provider not found", 404);
 
+  const now = new Date();
+
+  // Auto-open: if books are closed but scheduled open time has passed, open them
+  if (!provider.booksOpen && provider.booksOpenAt && provider.booksOpenAt <= now) {
+    await prisma.provider.update({
+      where: { id: provider.id },
+      data: { booksOpen: true, booksOpenAt: null },
+    });
+    provider.booksOpen = true;
+    provider.booksOpenAt = null;
+  }
+
+  // Books closed guard
+  if (!provider.booksOpen) {
+    return success({
+      booksOpen: false,
+      booksOpenAt: provider.booksOpenAt?.toISOString() ?? null,
+      timezone: provider.timezone,
+      slots: [],
+    });
+  }
+
+  // Window guard: requested date beyond booking window
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + provider.bookingWindowDays);
+  const requestedDate = new Date(dateStr);
+  if (requestedDate > maxDate) {
+    return success({
+      booksOpen: true,
+      timezone: provider.timezone,
+      slots: [],
+      outsideWindow: true,
+    });
+  }
+
   // Check cache
   const cached = await getAvailabilityCache(provider.id, dateStr);
-  if (cached) return success({ timezone: provider.timezone, slots: cached });
+  if (cached) return success({ booksOpen: true, timezone: provider.timezone, slots: cached });
 
   const date = new Date(dateStr);
   const dayOfWeek = date.getUTCDay();
@@ -36,7 +71,7 @@ export async function GET(
     },
   });
 
-  if (rules.length === 0) return success({ timezone: tz, slots: [] });
+  if (rules.length === 0) return success({ booksOpen: true, timezone: tz, slots: [] });
 
   // Day boundaries in provider's timezone (converted to UTC)
   const { start: dayStart, end: dayEnd } = dayBoundsUTC(dateStr, tz);
@@ -49,7 +84,7 @@ export async function GET(
       endDate: { gte: dayStart },
     },
   });
-  if (timeOff) return success({ timezone: tz, slots: [] });
+  if (timeOff) return success({ booksOpen: true, timezone: tz, slots: [] });
 
   // Get confirmed appointments for this day
   const appointments = await prisma.appointment.findMany({
@@ -94,5 +129,5 @@ export async function GET(
 
   await setAvailabilityCache(provider.id, dateStr, slots);
 
-  return success({ timezone: tz, slots });
+  return success({ booksOpen: true, timezone: tz, slots });
 }

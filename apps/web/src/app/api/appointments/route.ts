@@ -64,6 +64,28 @@ export async function POST(request: NextRequest) {
   });
   if (!service) return error("Service not found", 404);
 
+  // Books open/close check
+  const now = new Date();
+  if (!service.provider.booksOpen && service.provider.booksOpenAt && service.provider.booksOpenAt <= now) {
+    await prisma.provider.update({
+      where: { id: service.provider.id },
+      data: { booksOpen: true, booksOpenAt: null },
+    });
+    service.provider.booksOpen = true;
+    service.provider.booksOpenAt = null;
+  }
+  if (!service.provider.booksOpen) {
+    return error("Books are currently closed", 403);
+  }
+
+  // Booking window check
+  const maxBookingDate = new Date();
+  maxBookingDate.setDate(maxBookingDate.getDate() + service.provider.bookingWindowDays);
+  const start = new Date(startTime);
+  if (start > maxBookingDate) {
+    return error("This date is outside the booking window", 400);
+  }
+
   // Fetch all active add-ons for the service (for mandatory and group validation)
   const allServiceAddOns = await prisma.addOn.findMany({
     where: { serviceId, isActive: true },
@@ -140,7 +162,6 @@ export async function POST(request: NextRequest) {
 
   const totalPriceCents = totalBeforeDiscount - discountInCents;
 
-  const start = new Date(startTime);
   const end = new Date(start.getTime() + (service.durationMinutes + addOnDurationMin) * 60 * 1000);
 
   // Check for overlapping confirmed appointments

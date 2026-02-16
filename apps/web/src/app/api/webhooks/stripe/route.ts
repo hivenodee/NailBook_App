@@ -44,6 +44,36 @@ export async function POST(request: NextRequest) {
 
       if (!appointmentId || !providerId) break;
 
+      // Handle BALANCE payments separately — don't change appointment status
+      if (paymentType === "BALANCE") {
+        await prisma.$transaction(async (tx) => {
+          await tx.payment.create({
+            data: {
+              providerId,
+              appointmentId,
+              amountInCents: session.amount_total || 0,
+              type: "BALANCE",
+              status: "COMPLETED",
+              method: "CARD",
+              stripePaymentIntentId: session.payment_intent as string,
+            },
+          });
+
+          await tx.appointmentEvent.create({
+            data: {
+              appointmentId,
+              type: "balance_payment_received",
+              actorType: "system",
+              metadata: {
+                stripeEventId: event.id,
+                amount: session.amount_total,
+              },
+            },
+          });
+        });
+        break;
+      }
+
       await prisma.$transaction(async (tx) => {
         // Update appointment status
         await tx.appointment.update({

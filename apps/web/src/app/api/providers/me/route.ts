@@ -43,6 +43,7 @@ export async function PATCH(request: NextRequest) {
     "acceptsCard", "acceptsApplePay", "acceptsGooglePay",
     "acceptsCashAppPay", "acceptsCash",
     "cancellationHours", "arrivalGraceMinutes",
+    "booksOpen", "booksOpenAt", "bookingWindowDays",
   ] as const;
 
   const data: Record<string, unknown> = {};
@@ -57,10 +58,19 @@ export async function PATCH(request: NextRequest) {
     return error("No valid fields provided");
   }
 
-  const updated = await prisma.provider.update({
-    where: { id: provider.id },
-    data,
-  });
+  // Convert booksOpenAt string to Date for Prisma
+  if ("booksOpenAt" in data) {
+    data.booksOpenAt = data.booksOpenAt ? new Date(data.booksOpenAt as string) : null;
+  }
 
-  return success(updated);
+  try {
+    const updated = await prisma.provider.update({
+      where: { id: provider.id },
+      data,
+    });
+    return success(updated);
+  } catch (e) {
+    console.error("[providers/me] Update failed:", e);
+    return error("Failed to update profile", 500);
+  }
 }

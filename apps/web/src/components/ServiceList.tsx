@@ -24,9 +24,10 @@ type Service = {
 type ServiceListProps = {
   services: Service[];
   slug: string;
+  booksOpen?: boolean;
 };
 
-export default function ServiceList({ services, slug }: ServiceListProps) {
+export default function ServiceList({ services, slug, booksOpen = true }: ServiceListProps) {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("service");
   const highlightRef = useRef<HTMLDivElement | null>(null);
@@ -95,12 +96,18 @@ export default function ServiceList({ services, slug }: ServiceListProps) {
               )}
             </div>
           </div>
-          <a
-            href={`/${slug}/book?service=${service.id}`}
-            className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors"
-          >
-            Book Now
-          </a>
+          {booksOpen ? (
+            <a
+              href={`/${slug}/book?service=${service.id}`}
+              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors"
+            >
+              Book Now
+            </a>
+          ) : (
+            <span className="mt-grid-2 block w-full text-center bg-gray-300 text-gray-500 py-2.5 rounded-button text-sm font-medium cursor-not-allowed">
+              Book Now
+            </span>
+          )}
         </div>
       ))}
     </div>

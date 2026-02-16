@@ -121,6 +121,8 @@ function typeLabel(type: string) {
       return "Deposit";
     case "FULL":
       return "Full payment";
+    case "BALANCE":
+      return "Balance";
     case "REFUND":
       return "Refund";
     default:

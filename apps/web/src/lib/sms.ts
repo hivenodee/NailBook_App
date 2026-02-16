@@ -123,6 +123,16 @@ export async function sendWaitlistJoinedSms(
   await sendTemplateSms(phone, "WAITLIST_JOINED", vars, providerId);
 }
 
+// ─── Balance request SMS ──────────────────────────────────
+
+export async function sendBalanceRequestSms(
+  phone: string,
+  vars: Record<string, string>,
+  providerId?: string,
+) {
+  await sendTemplateSms(phone, "BALANCE_REQUEST", vars, providerId);
+}
+
 // ─── Completion SMS ───────────────────────────────────────
 
 export async function sendCompletionSms(

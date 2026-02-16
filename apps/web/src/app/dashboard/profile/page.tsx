@@ -16,7 +16,18 @@ type ProviderData = {
   acceptsCash: boolean;
   cancellationHours: number;
   arrivalGraceMinutes: number;
+  booksOpen: boolean;
+  booksOpenAt: string | null;
+  bookingWindowDays: number;
 };
+
+const WINDOW_PRESETS = [
+  { label: "1 Week", days: 7 },
+  { label: "2 Weeks", days: 14 },
+  { label: "1 Month", days: 30 },
+  { label: "3 Months", days: 90 },
+  { label: "1 Year", days: 365 },
+];
 
 export default function ProfilePage() {
   const [provider, setProvider] = useState<ProviderData | null>(null);
@@ -38,6 +49,10 @@ export default function ProfilePage() {
   const [acceptsCash, setAcceptsCash] = useState(true);
   const [cancellationHours, setCancellationHours] = useState(24);
   const [arrivalGraceMinutes, setArrivalGraceMinutes] = useState(15);
+  const [booksOpen, setBooksOpen] = useState(true);
+  const [booksOpenAtDate, setBooksOpenAtDate] = useState("");
+  const [booksOpenAtTime, setBooksOpenAtTime] = useState("");
+  const [bookingWindowDays, setBookingWindowDays] = useState(30);
 
   useEffect(() => {
     async function load() {
@@ -59,6 +74,13 @@ export default function ProfilePage() {
           setAcceptsCash(p.acceptsCash);
           setCancellationHours(p.cancellationHours);
           setArrivalGraceMinutes(p.arrivalGraceMinutes);
+          setBooksOpen(p.booksOpen);
+          setBookingWindowDays(p.bookingWindowDays);
+          if (p.booksOpenAt) {
+            const dt = new Date(p.booksOpenAt);
+            setBooksOpenAtDate(dt.toISOString().split("T")[0]);
+            setBooksOpenAtTime(dt.toTimeString().slice(0, 5));
+          }
         }
       } catch (e) {
         console.error("Failed to load profile:", e);
@@ -90,6 +112,11 @@ export default function ProfilePage() {
           acceptsCash,
           cancellationHours,
           arrivalGraceMinutes,
+          booksOpen,
+          booksOpenAt: !booksOpen && booksOpenAtDate && booksOpenAtTime
+            ? new Date(`${booksOpenAtDate}T${booksOpenAtTime}:00`).toISOString()
+            : null,
+          bookingWindowDays,
         }),
       });
       const json = await res.json();
@@ -191,6 +218,94 @@ export default function ProfilePage() {
         <Toggle label="Google Pay" checked={acceptsGooglePay} onChange={setAcceptsGooglePay} />
         <Toggle label="Cash App Pay" checked={acceptsCashAppPay} onChange={setAcceptsCashAppPay} />
         <Toggle label="Cash" checked={acceptsCash} onChange={setAcceptsCash} />
+      </section>
+
+      {/* Booking Controls */}
+      <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
+        <h2 className="text-lg font-medium">Booking Controls</h2>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Books Status</p>
+            <p className="text-xs text-text-muted">
+              {booksOpen ? "Clients can book appointments" : "Booking is paused"}
+            </p>
+          </div>
+          <Toggle
+            label={booksOpen ? "Open" : "Closed"}
+            checked={booksOpen}
+            onChange={(val) => {
+              setBooksOpen(val);
+              if (val) {
+                setBooksOpenAtDate("");
+                setBooksOpenAtTime("");
+              }
+            }}
+          />
+        </div>
+
+        {!booksOpen && (
+          <div className="border-t border-border pt-grid-2 space-y-grid-2">
+            <p className="text-sm font-medium">Schedule Opening</p>
+            <p className="text-xs text-text-muted">
+              Set a date and time for your books to automatically open.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium mb-0.5">Date</label>
+                <input
+                  type="date"
+                  value={booksOpenAtDate}
+                  onChange={(e) => setBooksOpenAtDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium mb-0.5">Time</label>
+                <input
+                  type="time"
+                  value={booksOpenAtTime}
+                  onChange={(e) => setBooksOpenAtTime(e.target.value)}
+                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+            {booksOpenAtDate && booksOpenAtTime && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBooksOpenAtDate("");
+                  setBooksOpenAtTime("");
+                }}
+                className="text-xs text-red-600 hover:underline"
+              >
+                Clear schedule
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="border-t border-border pt-grid-2 space-y-grid-1">
+          <p className="text-sm font-medium">Booking Window</p>
+          <p className="text-xs text-text-muted">How far ahead can clients book?</p>
+          <div className="flex flex-wrap gap-2">
+            {WINDOW_PRESETS.map((preset) => (
+              <button
+                key={preset.days}
+                type="button"
+                onClick={() => setBookingWindowDays(preset.days)}
+                className={`px-3 py-1.5 rounded-button text-sm font-medium transition-colors border ${
+                  bookingWindowDays === preset.days
+                    ? "border-primary bg-primary-light text-primary"
+                    : "border-border bg-background text-text-secondary hover:border-primary/40"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Policies */}

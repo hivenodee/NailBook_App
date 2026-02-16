@@ -66,6 +66,11 @@ model Provider {
   arrivalGraceMinutes Int @default(15)
   timezone        String  @default("America/New_York")
 
+  // Books open/close
+  booksOpen          Boolean   @default(true)
+  booksOpenAt        DateTime? // scheduled time to open books (null = no schedule)
+  bookingWindowDays  Int       @default(30) // how many days ahead clients can book
+
   // Cancellation policy
   cancellationHours Int @default(24)
   noShowFeePercent  Int @default(100)
@@ -343,6 +348,7 @@ model Payment {
 enum PaymentType {
   DEPOSIT
   FULL
+  BALANCE
   REFUND
 }
 
@@ -539,6 +545,7 @@ enum MessageTemplateType {
   FOLLOWUP
   WAITLIST_AVAILABLE
   WAITLIST_JOINED
+  BALANCE_REQUEST
 }
 
 model MessageTemplate {
