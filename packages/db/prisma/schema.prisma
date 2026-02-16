@@ -23,7 +23,6 @@ model User {
 
   appointments    Appointment[]
   sentMessages    Message[]       @relation("MessageSender")
-  reviews         Review[]
   favoriteProviders FavoriteProvider[]
   accountEvents   AccountActivityEvent[]
 
@@ -87,6 +86,8 @@ model Provider {
   favoritedBy     FavoriteProvider[]
   providerClients ProviderClient[]
   messageTemplates MessageTemplate[]
+  waitlistEntries  WaitlistEntry[]
+  feedback         Feedback[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -147,6 +148,7 @@ model Service {
   addOnGroups  AddOnGroup[]
   appointments Appointment[]
   coupons      Coupon[]
+  waitlistEntries WaitlistEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -268,6 +270,7 @@ model Appointment {
   // Provider notes
   notes        String?
   isNewClient  Boolean @default(false)
+  bookedFromWaitlist Boolean @default(false)
 
   // Inspiration photo
   inspirationUrl String?
@@ -280,6 +283,7 @@ model Appointment {
   events   AppointmentEvent[]
   payments Payment[]
   thread   Thread?
+  feedback Feedback?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -409,21 +413,21 @@ model Message {
   @@index([threadId])
 }
 
-// ─── Reviews ───────────────────────────────────────────────
+// ─── Feedback & Reviews ────────────────────────────────────
 
-model Review {
-  id            String @id @default(cuid())
-  appointmentId String @unique
-  clientId      String
-  client        User   @relation(fields: [clientId], references: [id])
-  rating        Int    // 1-5
-  body          String?
-  evidenceUrls  Json?  // string array
+model Feedback {
+  id              String      @id @default(cuid())
+  appointmentId   String      @unique
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+  providerId      String
+  provider        Provider    @relation(fields: [providerId], references: [id])
+  rating          Int?        // 1-5, optional
+  body            String      // free text, required
+  isPublic        Boolean     @default(false)
+  createdAt       DateTime    @default(now())
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clientId])
+  @@index([providerId])
+  @@index([providerId, isPublic])
 }
 
 // ─── Media ─────────────────────────────────────────────────
@@ -533,6 +537,8 @@ enum MessageTemplateType {
   COMPLETION
   REMINDER
   FOLLOWUP
+  WAITLIST_AVAILABLE
+  WAITLIST_JOINED
 }
 
 model MessageTemplate {
@@ -548,5 +554,46 @@ model MessageTemplate {
   updatedAt    DateTime            @updatedAt
 
   @@unique([providerId, type])
+  @@index([providerId])
+}
+
+// ─── Waitlist ────────────────────────────────────────────
+
+enum WaitlistEntryStatus {
+  ACTIVE
+  AVAILABLE   // slot opened, awaiting provider approval
+  NOTIFIED
+  BOOKED
+  EXPIRED
+  CANCELLED
+}
+
+enum WaitlistTimePreference {
+  ANY
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+model WaitlistEntry {
+  id              String                  @id @default(cuid())
+  providerId      String
+  provider        Provider                @relation(fields: [providerId], references: [id])
+  serviceId       String?
+  service         Service?                @relation(fields: [serviceId], references: [id])
+  status          WaitlistEntryStatus     @default(ACTIVE)
+  targetDate      DateTime
+  targetTime      DateTime?               // specific slot time (null = day-level waitlist)
+  timePreference  WaitlistTimePreference  @default(ANY)
+  clientName      String
+  clientEmail     String
+  clientPhone     String?
+  lastNotifiedAt  DateTime?
+  notifyCount     Int                     @default(0)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@unique([providerId, clientEmail, targetDate, targetTime])
+  @@index([providerId, targetDate, status])
   @@index([providerId])
 }

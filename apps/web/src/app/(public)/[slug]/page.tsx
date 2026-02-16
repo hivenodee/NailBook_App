@@ -1,5 +1,6 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import ServiceList from "@/components/ServiceList";
@@ -29,6 +30,19 @@ async function getProvider(slug: string) {
   });
 }
 
+async function getReviewStats(providerId: string) {
+  const reviews = await prisma.feedback.findMany({
+    where: { providerId, isPublic: true, rating: { not: null } },
+    select: { rating: true },
+  });
+  const count = await prisma.feedback.count({
+    where: { providerId, isPublic: true },
+  });
+  if (reviews.length === 0) return { avgRating: null, count };
+  const avg = reviews.reduce((s, r) => s + r.rating!, 0) / reviews.length;
+  return { avgRating: Math.round(avg * 10) / 10, count };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const provider = await getProvider(slug);
@@ -49,6 +63,8 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
   const { slug } = await params;
   const provider = await getProvider(slug);
   if (!provider) notFound();
+
+  const reviewStats = await getReviewStats(provider.id);
 
   return (
     <main className="min-h-screen bg-background">
@@ -134,6 +150,35 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
             </div>
           )}
         </section>
+
+        {/* Reviews summary */}
+        {reviewStats.count > 0 && (
+          <section>
+            <Link
+              href={`/${slug}/reviews`}
+              className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-between hover:shadow-md transition-shadow block"
+            >
+              <div className="flex items-center gap-grid-2">
+                {reviewStats.avgRating !== null && (
+                  <>
+                    <span className="text-2xl font-bold">{reviewStats.avgRating}</span>
+                    <div className="flex gap-0.5 text-yellow-400 text-sm">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <span key={s} className={s <= Math.round(reviewStats.avgRating!) ? "text-yellow-400" : "text-border"}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <span className="text-sm text-text-muted">
+                  {reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <span className="text-sm text-primary font-medium">View all</span>
+            </Link>
+          </section>
+        )}
 
         {/* Services */}
         <section>

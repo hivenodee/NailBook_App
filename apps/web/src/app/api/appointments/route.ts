@@ -210,6 +210,22 @@ export async function POST(request: NextRequest) {
 
   if (!clientId) return error("Email is required for booking", 400);
 
+  // Check if this booking came from a waitlist entry
+  let bookedFromWaitlist = false;
+  if (clientEmail) {
+    const targetDate = new Date(`${start.toISOString().split("T")[0]}T00:00:00.000Z`);
+    const matchingWaitlist = await prisma.waitlistEntry.findFirst({
+      where: {
+        providerId: service.providerId,
+        clientEmail: clientEmail.toLowerCase().trim(),
+        targetDate,
+        status: { in: ["ACTIVE", "AVAILABLE", "NOTIFIED"] },
+      },
+      select: { id: true },
+    });
+    bookedFromWaitlist = !!matchingWaitlist;
+  }
+
   // If total is $0 after discount, treat like cash (no Stripe needed)
   const isFreeAfterDiscount = totalPriceCents === 0;
   const skipStripe = paymentMethod === "CASH" || isFreeAfterDiscount;
@@ -265,6 +281,7 @@ export async function POST(request: NextRequest) {
         clientPhone,
         inspirationUrl,
         isNewClient,
+        bookedFromWaitlist,
         providerClientId,
         ...(selectedAddOns.length > 0 && {
           addOns: { connect: selectedAddOns.map((a) => ({ id: a.id })) },
@@ -295,6 +312,20 @@ export async function POST(request: NextRequest) {
 
   // Invalidate availability cache for the booked date
   await invalidateAvailability(service.providerId, start.toISOString().split("T")[0]);
+
+  // Mark matching waitlist entry as BOOKED (fire-and-forget)
+  if (clientEmail) {
+    const targetDate = new Date(`${start.toISOString().split("T")[0]}T00:00:00.000Z`);
+    prisma.waitlistEntry.updateMany({
+      where: {
+        providerId: service.providerId,
+        clientEmail: clientEmail.toLowerCase().trim(),
+        targetDate,
+        status: { in: ["ACTIVE", "AVAILABLE", "NOTIFIED"] },
+      },
+      data: { status: "BOOKED" },
+    }).catch((e) => console.error("[waitlist] Failed to mark as BOOKED:", e));
+  }
 
   // If cash or free after discount, no Stripe needed — send confirmation emails immediately
   if (skipStripe) {

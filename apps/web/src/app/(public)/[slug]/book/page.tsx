@@ -119,6 +119,127 @@ function toDateStr(date: Date) {
   return date.toISOString().split("T")[0];
 }
 
+function WaitlistForm({
+  serviceId,
+  selectedDate,
+  waitlistSlot,
+  waitlistName,
+  setWaitlistName,
+  waitlistEmail,
+  setWaitlistEmail,
+  waitlistPhone,
+  setWaitlistPhone,
+  waitlistTimePref,
+  setWaitlistTimePref,
+  waitlistSubmitting,
+  setWaitlistSubmitting,
+  onSuccess,
+}: {
+  serviceId: string | null;
+  selectedDate: Date;
+  waitlistSlot: TimeSlot | null;
+  waitlistName: string;
+  setWaitlistName: (v: string) => void;
+  waitlistEmail: string;
+  setWaitlistEmail: (v: string) => void;
+  waitlistPhone: string;
+  setWaitlistPhone: (v: string) => void;
+  waitlistTimePref: "ANY" | "MORNING" | "AFTERNOON" | "EVENING";
+  setWaitlistTimePref: (v: "ANY" | "MORNING" | "AFTERNOON" | "EVENING") => void;
+  waitlistSubmitting: boolean;
+  setWaitlistSubmitting: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  return (
+    <div className="mt-3 space-y-2 text-left max-w-xs mx-auto">
+      <div>
+        <label className="block text-xs font-medium mb-0.5">Name</label>
+        <input
+          type="text"
+          value={waitlistName}
+          onChange={(e) => setWaitlistName(e.target.value)}
+          placeholder="Your name"
+          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-0.5">Email</label>
+        <input
+          type="email"
+          value={waitlistEmail}
+          onChange={(e) => setWaitlistEmail(e.target.value)}
+          placeholder="your@email.com"
+          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-0.5">
+          Phone <span className="text-text-muted">(optional)</span>
+        </label>
+        <input
+          type="tel"
+          value={waitlistPhone}
+          onChange={(e) => setWaitlistPhone(e.target.value)}
+          placeholder="(555) 123-4567"
+          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      {/* Only show time preference for day-level waitlist */}
+      {!waitlistSlot && (
+        <div>
+          <label className="block text-xs font-medium mb-0.5">Time preference</label>
+          <select
+            value={waitlistTimePref}
+            onChange={(e) => setWaitlistTimePref(e.target.value as typeof waitlistTimePref)}
+            className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="ANY">Any time</option>
+            <option value="MORNING">Morning (before 12 PM)</option>
+            <option value="AFTERNOON">Afternoon (12–5 PM)</option>
+            <option value="EVENING">Evening (after 5 PM)</option>
+          </select>
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={!waitlistName || !waitlistEmail || waitlistSubmitting}
+        onClick={async () => {
+          if (!serviceId) return;
+          setWaitlistSubmitting(true);
+          try {
+            const res = await fetch("/api/waitlist", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                serviceId,
+                targetDate: toDateStr(selectedDate),
+                ...(waitlistSlot ? { targetTime: waitlistSlot.startTime } : {}),
+                timePreference: waitlistTimePref,
+                clientName: waitlistName,
+                clientEmail: waitlistEmail,
+                clientPhone: waitlistPhone || undefined,
+              }),
+            });
+            if (res.ok) {
+              onSuccess();
+            } else {
+              const json = await res.json();
+              alert(json.error?.message || "Failed to join waitlist");
+            }
+          } catch {
+            alert("Something went wrong. Please try again.");
+          } finally {
+            setWaitlistSubmitting(false);
+          }
+        }}
+        className="w-full bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+      >
+        {waitlistSubmitting ? "Joining..." : "Join Waitlist"}
+      </button>
+    </div>
+  );
+}
+
 export default function BookPage(): React.JSX.Element {
   const searchParams = useSearchParams();
   const params = useParams();
@@ -131,8 +252,27 @@ export default function BookPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Waitlist state
+  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
+  const [waitlistSlot, setWaitlistSlot] = useState<TimeSlot | null>(null); // per-slot waitlist
+  const [waitlistName, setWaitlistName] = useState("");
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistPhone, setWaitlistPhone] = useState("");
+  const [waitlistTimePref, setWaitlistTimePref] = useState<"ANY" | "MORNING" | "AFTERNOON" | "EVENING">("ANY");
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+
+  // Pre-select date from URL query param
+  const dateParam = searchParams.get("date");
+
   // Time selection
-  const [selectedDate, setSelectedDate] = useState<Date>(getNextDays(1)[0]);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      const parsed = new Date(`${dateParam}T12:00:00`);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return getNextDays(1)[0];
+  });
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -184,6 +324,13 @@ export default function BookPage(): React.JSX.Element {
       })
       .finally(() => setLoading(false));
   }, [serviceId]);
+
+  // Reset waitlist form state when date changes
+  useEffect(() => {
+    setShowWaitlistForm(false);
+    setWaitlistSuccess(false);
+    setWaitlistSlot(null);
+  }, [selectedDate]);
 
   // Fetch slots when date changes
   const fetchSlots = useCallback(async () => {
@@ -613,30 +760,186 @@ export default function BookPage(): React.JSX.Element {
                 <p className="text-text-muted text-sm text-center py-grid-4">
                   Loading times...
                 </p>
-              ) : availableSlots.length === 0 ? (
-                <p className="text-text-muted text-sm text-center py-grid-4">
-                  No available times on {formatDate(selectedDate)}. Try another
-                  day.
-                </p>
+              ) : slots.length === 0 ? (
+                /* No schedule for this day at all */
+                <div className="py-grid-4 text-center">
+                  <p className="text-text-muted text-sm">
+                    No times available on {formatDate(selectedDate)}.
+                  </p>
+                  {waitlistSuccess ? (
+                    <p className="text-sm text-green-700 mt-2">
+                      You&apos;re on the waitlist! We&apos;ll email you if a spot opens up.
+                    </p>
+                  ) : !showWaitlistForm ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (clientName && !waitlistName) setWaitlistName(clientName);
+                        if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
+                        if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
+                        setWaitlistSlot(null);
+                        setShowWaitlistForm(true);
+                      }}
+                      className="text-sm text-primary hover:underline mt-2 inline-block"
+                    >
+                      Join waitlist for this day
+                    </button>
+                  ) : (
+                    <WaitlistForm
+                      serviceId={serviceId}
+                      selectedDate={selectedDate}
+                      waitlistSlot={null}
+                      waitlistName={waitlistName}
+                      setWaitlistName={setWaitlistName}
+                      waitlistEmail={waitlistEmail}
+                      setWaitlistEmail={setWaitlistEmail}
+                      waitlistPhone={waitlistPhone}
+                      setWaitlistPhone={setWaitlistPhone}
+                      waitlistTimePref={waitlistTimePref}
+                      setWaitlistTimePref={setWaitlistTimePref}
+                      waitlistSubmitting={waitlistSubmitting}
+                      setWaitlistSubmitting={setWaitlistSubmitting}
+                      onSuccess={() => {
+                        setWaitlistSuccess(true);
+                        setShowWaitlistForm(false);
+                      }}
+                    />
+                  )}
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {availableSlots.map((slot) => {
-                    const isSelected =
-                      selectedSlot?.startTime === slot.startTime;
-                    return (
-                      <button
-                        key={slot.startTime}
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`py-2.5 rounded-button text-sm font-medium transition-colors ${
-                          isSelected
-                            ? "bg-primary text-white"
-                            : "bg-background text-text-secondary hover:bg-primary-light"
-                        }`}
-                      >
-                        {formatTime(slot.startTime, service.provider.timezone)}
-                      </button>
-                    );
-                  })}
+                /* Show ALL slots — available + booked */
+                <div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {slots.map((slot) => {
+                      const isAvailable = slot.available;
+                      const isSelected = selectedSlot?.startTime === slot.startTime;
+                      const isWaitlisting = waitlistSlot?.startTime === slot.startTime;
+
+                      if (isAvailable) {
+                        return (
+                          <button
+                            key={slot.startTime}
+                            onClick={() => {
+                              setSelectedSlot(slot);
+                              setWaitlistSlot(null);
+                              setShowWaitlistForm(false);
+                            }}
+                            className={`py-2.5 rounded-button text-sm font-medium transition-colors ${
+                              isSelected
+                                ? "bg-primary text-white"
+                                : "bg-background text-text-secondary hover:bg-primary-light"
+                            }`}
+                          >
+                            {formatTime(slot.startTime, service.provider.timezone)}
+                          </button>
+                        );
+                      }
+
+                      // Booked slot
+                      return (
+                        <button
+                          key={slot.startTime}
+                          onClick={() => {
+                            setSelectedSlot(null);
+                            setWaitlistSlot(slot);
+                            setShowWaitlistForm(true);
+                            setWaitlistSuccess(false);
+                            if (clientName && !waitlistName) setWaitlistName(clientName);
+                            if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
+                            if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
+                          }}
+                          className={`py-2.5 rounded-button text-sm transition-colors flex flex-col items-center ${
+                            isWaitlisting
+                              ? "bg-amber-100 border border-amber-400 text-amber-800"
+                              : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                          }`}
+                        >
+                          <span className="font-medium">{formatTime(slot.startTime, service.provider.timezone)}</span>
+                          <span className="text-[10px]">Booked</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Per-slot waitlist form */}
+                  {waitlistSlot && showWaitlistForm && !waitlistSuccess && (
+                    <div className="mt-3 border-t border-border pt-3">
+                      <p className="text-sm font-medium text-center mb-2">
+                        Join waitlist for {formatTime(waitlistSlot.startTime, service.provider.timezone)} on {formatDate(selectedDate)}
+                      </p>
+                      <WaitlistForm
+                        serviceId={serviceId}
+                        selectedDate={selectedDate}
+                        waitlistSlot={waitlistSlot}
+                        waitlistName={waitlistName}
+                        setWaitlistName={setWaitlistName}
+                        waitlistEmail={waitlistEmail}
+                        setWaitlistEmail={setWaitlistEmail}
+                        waitlistPhone={waitlistPhone}
+                        setWaitlistPhone={setWaitlistPhone}
+                        waitlistTimePref={waitlistTimePref}
+                        setWaitlistTimePref={setWaitlistTimePref}
+                        waitlistSubmitting={waitlistSubmitting}
+                        setWaitlistSubmitting={setWaitlistSubmitting}
+                        onSuccess={() => {
+                          setWaitlistSuccess(true);
+                          setShowWaitlistForm(false);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Per-slot waitlist success */}
+                  {waitlistSlot && waitlistSuccess && (
+                    <p className="text-sm text-green-700 mt-3 text-center">
+                      You&apos;re on the waitlist for {formatTime(waitlistSlot.startTime, service.provider.timezone)}! We&apos;ll email you if a spot opens up.
+                    </p>
+                  )}
+
+                  {/* Day-level waitlist when all slots are booked */}
+                  {availableSlots.length === 0 && !waitlistSlot && (
+                    <div className="mt-3 border-t border-border pt-3 text-center">
+                      <p className="text-text-muted text-sm">All times are booked.</p>
+                      {waitlistSuccess ? (
+                        <p className="text-sm text-green-700 mt-1">
+                          You&apos;re on the waitlist! We&apos;ll email you if a spot opens up.
+                        </p>
+                      ) : !showWaitlistForm ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (clientName && !waitlistName) setWaitlistName(clientName);
+                            if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
+                            if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
+                            setShowWaitlistForm(true);
+                          }}
+                          className="text-sm text-primary hover:underline mt-1 inline-block"
+                        >
+                          Join waitlist for this day
+                        </button>
+                      ) : (
+                        <WaitlistForm
+                          serviceId={serviceId}
+                          selectedDate={selectedDate}
+                          waitlistSlot={null}
+                          waitlistName={waitlistName}
+                          setWaitlistName={setWaitlistName}
+                          waitlistEmail={waitlistEmail}
+                          setWaitlistEmail={setWaitlistEmail}
+                          waitlistPhone={waitlistPhone}
+                          setWaitlistPhone={setWaitlistPhone}
+                          waitlistTimePref={waitlistTimePref}
+                          setWaitlistTimePref={setWaitlistTimePref}
+                          waitlistSubmitting={waitlistSubmitting}
+                          setWaitlistSubmitting={setWaitlistSubmitting}
+                          onSuccess={() => {
+                            setWaitlistSuccess(true);
+                            setShowWaitlistForm(false);
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

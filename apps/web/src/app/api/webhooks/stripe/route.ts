@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendClientConfirmation, sendProviderNewBooking, formatDateTime, type BookingEmailData } from "@/lib/email";
 import { sendBookingConfirmationSms } from "@/lib/sms";
 import { invalidateAvailability } from "@/lib/cache";
+import { notifyWaitlistForDate } from "@/lib/waitlist";
 import { scheduleReminders } from "@/lib/schedule-jobs";
 import type Stripe from "stripe";
 
@@ -172,9 +173,16 @@ export async function POST(request: NextRequest) {
 
         // Invalidate cache so the slot becomes available again
         if (expiredAppt) {
-          await invalidateAvailability(
+          const dateStr = expiredAppt.startTime.toISOString().split("T")[0];
+          await invalidateAvailability(expiredAppt.providerId, dateStr);
+
+          // Notify waitlist that the slot is free again
+          notifyWaitlistForDate(
             expiredAppt.providerId,
-            expiredAppt.startTime.toISOString().split("T")[0],
+            dateStr,
+            expiredAppt.startTime.toISOString(),
+          ).catch((e) =>
+            console.error("[waitlist] Failed to notify:", e),
           );
         }
       }

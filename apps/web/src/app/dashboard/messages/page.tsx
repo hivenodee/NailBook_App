@@ -8,7 +8,9 @@ type TemplateType =
   | "CANCELLATION"
   | "COMPLETION"
   | "REMINDER"
-  | "FOLLOWUP";
+  | "FOLLOWUP"
+  | "WAITLIST_AVAILABLE"
+  | "WAITLIST_JOINED";
 
 type TemplateData = {
   type: TemplateType;
@@ -33,6 +35,8 @@ const TYPE_LABELS: Record<TemplateType, string> = {
   COMPLETION: "Completion",
   REMINDER: "Reminder",
   FOLLOWUP: "Follow-up",
+  WAITLIST_AVAILABLE: "Waitlist — Spot Available",
+  WAITLIST_JOINED: "Waitlist — Joined Confirmation",
 };
 
 export default function MessagesPage(): React.JSX.Element {

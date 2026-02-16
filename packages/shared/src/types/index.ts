@@ -9,7 +9,7 @@ import type {
   createBookingSchema,
   createAddOnSchema,
   sendMessageSchema,
-  createReviewSchema,
+  submitFeedbackSchema,
   providerSettingsSchema,
 } from "../validation";
 
@@ -23,7 +23,7 @@ export type TimeOffInput = z.infer<typeof timeOffSchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type CreateAddOnInput = z.infer<typeof createAddOnSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
-export type CreateReviewInput = z.infer<typeof createReviewSchema>;
+export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
 export type ProviderSettingsInput = z.infer<typeof providerSettingsSchema>;
 
 // API response wrapper

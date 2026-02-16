@@ -31,9 +31,11 @@ export const VARIABLES_BY_TYPE: Record<MessageTemplateType, readonly string[]> =
     "paymentLine",
   ],
   CANCELLATION: [...COMMON_VARS, "dateTime", "cancelledBy"],
-  COMPLETION: [...COMMON_VARS, "dateTime"],
+  COMPLETION: [...COMMON_VARS, "dateTime", "feedbackUrl"],
   REMINDER: [...COMMON_VARS, "dateTime", "hoursUntil"],
   FOLLOWUP: [...COMMON_VARS, "dateTime"],
+  WAITLIST_AVAILABLE: [...COMMON_VARS, "date", "bookingUrl"],
+  WAITLIST_JOINED: [...COMMON_VARS, "date", "time"],
 };
 
 // ─── Default templates (extracted from existing hardcoded emails) ──
@@ -93,7 +95,9 @@ We hope you loved your {{serviceName}} with {{providerName}}.
 
 Service: {{serviceName}}
 With: {{providerName}}
-Date: {{dateTime}}`,
+Date: {{dateTime}}
+
+Leave feedback: {{feedbackUrl}}`,
     smsBody:
       "Thanks for your visit! We hope you loved your {{serviceName}} with {{providerName}}.",
   },
@@ -113,6 +117,26 @@ Date: {{dateTime}}`,
 We'd love to hear how it went!`,
     smsBody:
       "How was your {{serviceName}} with {{providerName}}? We'd love to hear!",
+  },
+  WAITLIST_AVAILABLE: {
+    emailSubject: "A spot opened up with {{providerName}}!",
+    emailBody: `Great news, {{clientName}}!
+
+A spot just opened up for {{serviceName}} with {{providerName}} on {{date}}.
+
+Book now before it's taken: {{bookingUrl}}`,
+    smsBody:
+      "A spot opened up for {{serviceName}} with {{providerName}} on {{date}}! Book now: {{bookingUrl}}",
+  },
+  WAITLIST_JOINED: {
+    emailSubject: "You're on the waitlist — {{providerName}}",
+    emailBody: `Hi {{clientName}},
+
+You've been added to the waitlist for {{serviceName}} with {{providerName}} on {{date}}.{{time}}
+
+We'll notify you as soon as a spot opens up. No action needed on your end until then.`,
+    smsBody:
+      "You're on the waitlist for {{serviceName}} with {{providerName}} on {{date}}.{{time}} We'll let you know when a spot opens up!",
   },
 };
 
@@ -167,4 +191,8 @@ export const SAMPLE_VARS: Record<string, string> = {
   calendarUrl: "https://calendar.google.com/calendar/render?...",
   cancelledBy: "You have cancelled",
   hoursUntil: "24",
+  date: "Saturday, March 15",
+  time: " at 2:00 PM",
+  bookingUrl: "https://nailbook.app/glamour-nails/book?service=abc&date=2026-03-15",
+  feedbackUrl: "https://nailbook.app/glamour-nails/feedback/abc123",
 };

@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { invalidateAvailability } from "@/lib/cache";
+import { notifyWaitlistForDate } from "@/lib/waitlist";
 import {
   sendCancellationEmail,
   sendProviderCancellation,
@@ -30,6 +31,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       coupon: { select: { code: true, type: true, value: true } },
       events: { orderBy: { createdAt: "asc" } },
       payments: { orderBy: { createdAt: "desc" } },
+      feedback: { select: { id: true } },
     },
   });
 
@@ -132,6 +134,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
   await invalidateAvailability(appointment.providerId, ...datesToInvalidate);
 
+  // ─── Notify waitlist when a slot frees up ─────────────
+  if (action === "cancel" || action === "reschedule" || action === "no_show") {
+    // Notify for the original date (now freed), with the specific slot time
+    notifyWaitlistForDate(
+      appointment.providerId,
+      appointment.startTime.toISOString().split("T")[0],
+      appointment.startTime.toISOString(),
+    ).catch((e) => console.error("[waitlist] Failed to notify:", e));
+  }
+
   // ─── Post-action notifications ──────────────────────────
   if (action === "cancel") {
     const cancelData: CancellationEmailData = {
@@ -177,6 +189,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         clientName: appointment.clientName,
         clientEmail: appointment.clientEmail,
         timezone: appointment.provider.timezone,
+        appointmentId: appointment.id,
+        slug: appointment.provider.slug,
       }, appointment.providerId);
     } catch (e) {
       console.error("[email] Failed to send completion email:", e);

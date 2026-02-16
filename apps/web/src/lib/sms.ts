@@ -103,6 +103,26 @@ export async function sendCancellationSms(
   }, providerId);
 }
 
+// ─── Waitlist available SMS ───────────────────────────
+
+export async function sendWaitlistAvailableSms(
+  phone: string,
+  vars: Record<string, string>,
+  providerId?: string,
+) {
+  await sendTemplateSms(phone, "WAITLIST_AVAILABLE", vars, providerId);
+}
+
+// ─── Waitlist joined confirmation SMS ─────────────────────
+
+export async function sendWaitlistJoinedSms(
+  phone: string,
+  vars: Record<string, string>,
+  providerId?: string,
+) {
+  await sendTemplateSms(phone, "WAITLIST_JOINED", vars, providerId);
+}
+
 // ─── Completion SMS ───────────────────────────────────────
 
 export async function sendCompletionSms(

@@ -14,6 +14,8 @@ const ALL_TYPES: MessageTemplateType[] = [
   "COMPLETION",
   "REMINDER",
   "FOLLOWUP",
+  "WAITLIST_AVAILABLE",
+  "WAITLIST_JOINED",
 ];
 
 async function getProviderForUser(clerkId: string) {

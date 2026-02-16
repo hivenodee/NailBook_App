@@ -97,13 +97,12 @@ export const sendMessageSchema = z.object({
   body: z.string().min(1).max(2000),
 });
 
-// ─── Review ────────────────────────────────────────────────
+// ─── Feedback ──────────────────────────────────────────────
 
-export const createReviewSchema = z.object({
+export const submitFeedbackSchema = z.object({
   appointmentId: z.string().cuid(),
-  rating: z.number().int().min(1).max(5),
-  body: z.string().max(1000).optional(),
-  evidenceUrls: z.array(z.string().url()).max(5).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  body: z.string().min(1).max(2000),
 });
 
 // ─── Coupon ───────────────────────────────────────────────
@@ -115,6 +114,18 @@ export const createCouponSchema = z.object({
   expiresAt: z.string().datetime().optional(),
   maxUses: z.number().int().min(1).optional(),
   serviceIds: z.array(z.string().cuid()).optional(),
+});
+
+// ─── Waitlist ──────────────────────────────────────────────
+
+export const joinWaitlistSchema = z.object({
+  serviceId: z.string().min(1),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  targetTime: z.string().datetime().optional(),
+  timePreference: z.enum(["ANY", "MORNING", "AFTERNOON", "EVENING"]).default("ANY"),
+  clientName: z.string().min(1).max(100),
+  clientEmail: z.string().email(),
+  clientPhone: z.string().max(20).optional(),
 });
 
 // ─── Provider Settings ─────────────────────────────────────

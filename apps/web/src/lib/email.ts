@@ -262,6 +262,8 @@ export type CompletionEmailData = {
   clientName?: string | null;
   clientEmail?: string | null;
   timezone?: string;
+  appointmentId?: string;
+  slug?: string;
 };
 
 export async function sendCompletionThankYou(
@@ -270,15 +272,76 @@ export async function sendCompletionThankYou(
 ) {
   if (!data.clientEmail) return;
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const feedbackUrl =
+    data.slug && data.appointmentId
+      ? `${baseUrl}/${data.slug}/feedback/${data.appointmentId}`
+      : "";
+
   const vars: Record<string, string> = {
     providerName: data.providerName,
     serviceName: data.serviceName,
     clientName: data.clientName || "Client",
     clientEmail: data.clientEmail || "",
     dateTime: formatDateTime(data.startTime, data.timezone),
+    feedbackUrl,
   };
 
   await sendTemplateEmail(data.clientEmail, "COMPLETION", vars, providerId);
+}
+
+// ─── Waitlist available email ─────────────────────────────
+
+export type WaitlistEmailData = {
+  providerName: string;
+  serviceName: string;
+  clientName: string;
+  clientEmail: string;
+  date: string; // formatted date string
+  bookingUrl: string;
+};
+
+export async function sendWaitlistAvailableEmail(
+  data: WaitlistEmailData,
+  providerId?: string,
+) {
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName,
+    clientEmail: data.clientEmail,
+    date: data.date,
+    bookingUrl: data.bookingUrl,
+  };
+
+  await sendTemplateEmail(data.clientEmail, "WAITLIST_AVAILABLE", vars, providerId);
+}
+
+// ─── Waitlist joined confirmation email ──────────────────
+
+export type WaitlistJoinedEmailData = {
+  providerName: string;
+  serviceName: string;
+  clientName: string;
+  clientEmail: string;
+  date: string; // formatted date string
+  time?: string; // formatted time string (for slot-specific waitlist)
+};
+
+export async function sendWaitlistJoinedEmail(
+  data: WaitlistJoinedEmailData,
+  providerId?: string,
+) {
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName,
+    clientEmail: data.clientEmail,
+    date: data.date,
+    time: data.time ? ` at ${data.time}` : "",
+  };
+
+  await sendTemplateEmail(data.clientEmail, "WAITLIST_JOINED", vars, providerId);
 }
 
 // ─── Reminder email ───────────────────────────────────────

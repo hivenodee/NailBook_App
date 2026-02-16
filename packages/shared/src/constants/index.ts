@@ -64,6 +64,11 @@ export const MEDIA_LIMITS = {
   MAX_PORTFOLIO_ITEMS: 50,
 } as const;
 
+// Waitlist
+export const WAITLIST = {
+  NOTIFICATION_COOLDOWN_HOURS: 4,
+} as const;
+
 // Booking flow
 export const BOOKING = {
   DEFAULT_GRACE_MINUTES: 15,

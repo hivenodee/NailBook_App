@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
 import { availabilityRuleSchema } from "@nailbook/shared";
 import { invalidateAllAvailability } from "@/lib/cache";
+import { notifyWaitlistAllFutureDates } from "@/lib/waitlist";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,11 @@ export async function POST(request: Request) {
 
   // Schedule changed — invalidate all cached availability for this provider
   await invalidateAllAvailability(providerId);
+
+  // Notify waitlist entries for all future dates
+  notifyWaitlistAllFutureDates(providerId).catch((e) =>
+    console.error("[waitlist] Failed to notify:", e),
+  );
 
   const rules = await prisma.availabilityRule.findMany({
     where: { providerId },

@@ -5,11 +5,14 @@ const isPublicRoute = createRouteMatcher([
   "/:slug((?!api|_next|favicon|dashboard).*)",
   "/:slug/book",
   "/:slug/confirmation",
+  "/:slug/feedback/(.*)",
+  "/:slug/reviews",
   "/api/providers(.*)",
   "/api/services(.*)",
   "/api/appointments",
   "/api/appointments/(.*)",
   "/api/availability/(.*)",
+  "/api/feedback",
   "/api/webhooks/(.*)",
 ]);
 
