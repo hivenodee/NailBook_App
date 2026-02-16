@@ -3,6 +3,14 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { invalidateAvailability } from "@/lib/cache";
+import {
+  sendCancellationEmail,
+  sendProviderCancellation,
+  sendCompletionThankYou,
+  type CancellationEmailData,
+} from "@/lib/email";
+import { cancelReminders, scheduleFollowup } from "@/lib/schedule-jobs";
+import { sendCancellationSms } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +25,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
     include: {
       service: true,
       addOns: { select: { id: true, name: true, priceInCents: true, durationMinutes: true } },
-      provider: { select: { businessName: true, slug: true } },
+      provider: { select: { businessName: true, slug: true, timezone: true } },
       client: { select: { firstName: true, lastName: true, avatarUrl: true } },
+      coupon: { select: { code: true, type: true, value: true } },
       events: { orderBy: { createdAt: "asc" } },
       payments: { orderBy: { createdAt: "desc" } },
     },
@@ -48,7 +57,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   const appointment = await prisma.appointment.findUnique({
     where: { id },
-    include: { service: true },
+    include: {
+      service: true,
+      provider: { include: { user: { select: { email: true } } } },
+    },
   });
   if (!appointment) return error("Appointment not found", 404);
 
@@ -119,6 +131,68 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     datesToInvalidate.push(new Date(startTime).toISOString().split("T")[0]);
   }
   await invalidateAvailability(appointment.providerId, ...datesToInvalidate);
+
+  // ─── Post-action notifications ──────────────────────────
+  if (action === "cancel") {
+    const cancelData: CancellationEmailData = {
+      providerName: appointment.provider.businessName,
+      serviceName: appointment.service.name,
+      startTime: appointment.startTime,
+      clientName: appointment.clientName,
+      clientEmail: appointment.clientEmail,
+      cancelledBy: isProvider ? "provider" : "client",
+      timezone: appointment.provider.timezone,
+    };
+    try {
+      await Promise.all([
+        sendCancellationEmail(cancelData, appointment.providerId),
+        // Only notify provider when client cancels
+        !isProvider
+          ? sendProviderCancellation(appointment.provider.user.email, cancelData, appointment.providerId)
+          : Promise.resolve(),
+      ]);
+    } catch (e) {
+      console.error("[email] Failed to send cancellation emails:", e);
+    }
+    if (appointment.clientPhone) {
+      sendCancellationSms(
+        appointment.clientPhone,
+        appointment.provider.businessName,
+        appointment.service.name,
+        appointment.providerId,
+      ).catch((e) => console.error("[sms] Failed:", e));
+    }
+    // Remove scheduled reminders for cancelled appointment
+    cancelReminders(appointment.id).catch((e) =>
+      console.error("[jobs] Failed to cancel reminders:", e)
+    );
+  }
+
+  if (action === "complete") {
+    try {
+      await sendCompletionThankYou({
+        providerName: appointment.provider.businessName,
+        serviceName: appointment.service.name,
+        startTime: appointment.startTime,
+        clientName: appointment.clientName,
+        clientEmail: appointment.clientEmail,
+        timezone: appointment.provider.timezone,
+      }, appointment.providerId);
+    } catch (e) {
+      console.error("[email] Failed to send completion email:", e);
+    }
+    // Schedule follow-up email (2h after completion)
+    scheduleFollowup(appointment.id).catch((e) =>
+      console.error("[jobs] Failed to schedule followup:", e)
+    );
+  }
+
+  if (action === "no_show") {
+    // Remove scheduled reminders for no-show
+    cancelReminders(appointment.id).catch((e) =>
+      console.error("[jobs] Failed to cancel reminders:", e)
+    );
+  }
 
   return success(updated);
 }

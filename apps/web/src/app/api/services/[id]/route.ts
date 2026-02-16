@@ -19,11 +19,22 @@ export async function GET(
   const service = await prisma.service.findUnique({
     where: { id },
     include: {
-      addOns: includeAll ? { orderBy: { createdAt: "asc" } } : { where: { isActive: true } },
+      addOns: includeAll
+        ? { orderBy: { sortOrder: "asc" } }
+        : { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+      addOnGroups: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          addOns: includeAll
+            ? { orderBy: { sortOrder: "asc" } }
+            : { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+        },
+      },
       provider: {
         select: {
           businessName: true,
           slug: true,
+          timezone: true,
           cancellationHours: true,
           arrivalGraceMinutes: true,
           acceptsCard: true,

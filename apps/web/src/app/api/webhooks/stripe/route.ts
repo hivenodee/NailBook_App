@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
-import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
+import { sendClientConfirmation, sendProviderNewBooking, formatDateTime, type BookingEmailData } from "@/lib/email";
+import { sendBookingConfirmationSms } from "@/lib/sms";
 import { invalidateAvailability } from "@/lib/cache";
+import { scheduleReminders } from "@/lib/schedule-jobs";
 import type Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -108,15 +110,43 @@ export async function POST(request: NextRequest) {
           arrivalGraceMinutes: appointment.provider.arrivalGraceMinutes,
           clientName: appointment.clientName,
           clientEmail: appointment.clientEmail,
+          timezone: appointment.provider.timezone,
         };
         try {
           await Promise.all([
-            sendClientConfirmation(emailData),
-            sendProviderNewBooking(appointment.provider.user.email, emailData),
+            sendClientConfirmation(emailData, appointment.providerId),
+            sendProviderNewBooking(appointment.provider.user.email, emailData, appointment.providerId),
           ]);
         } catch (e) {
           console.error("[email] Failed to send booking confirmation emails:", e);
         }
+        // Send booking confirmation SMS
+        if (appointment.clientPhone) {
+          const smsVars: Record<string, string> = {
+            providerName: appointment.provider.businessName,
+            serviceName: appointment.service.name,
+            clientName: appointment.clientName || "Client",
+            clientEmail: appointment.clientEmail || "",
+            dateTime: formatDateTime(appointment.startTime, appointment.provider.timezone),
+            duration: String(appointment.service.durationMinutes),
+            total: `$${(appointment.totalInCents / 100).toFixed(2)}`,
+            deposit: `$${(appointment.depositInCents / 100).toFixed(2)}`,
+            paymentLine: paymentType === "DEPOSIT"
+              ? `Deposit paid: $${(appointment.depositInCents / 100).toFixed(2)} — Remaining: $${((appointment.totalInCents - appointment.depositInCents) / 100).toFixed(2)}`
+              : `Paid: $${(appointment.totalInCents / 100).toFixed(2)}`,
+            location: appointment.provider.locationAddress || "",
+            cancellationHours: String(appointment.provider.cancellationHours),
+            arrivalGraceMinutes: String(appointment.provider.arrivalGraceMinutes),
+            calendarUrl: "",
+          };
+          sendBookingConfirmationSms(appointment.clientPhone, smsVars, appointment.providerId).catch((e) =>
+            console.error("[sms] Failed to send booking confirmation SMS:", e)
+          );
+        }
+        // Schedule reminder jobs (24h + 2h before appointment)
+        scheduleReminders(appointment.id, appointment.startTime).catch((e) =>
+          console.error("[jobs] Failed to schedule reminders:", e)
+        );
       }
       break;
     }

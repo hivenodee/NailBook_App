@@ -65,6 +65,7 @@ model Provider {
   instantBook    Boolean @default(true)
   requireInspirationPhoto Boolean @default(false)
   arrivalGraceMinutes Int @default(15)
+  timezone        String  @default("America/New_York")
 
   // Cancellation policy
   cancellationHours Int @default(24)
@@ -74,6 +75,7 @@ model Provider {
   stripeAccountId String?
 
   services        Service[]
+  coupons         Coupon[]
   availabilityRules AvailabilityRule[]
   timeOffs        TimeOff[]
   appointments    Appointment[]
@@ -83,6 +85,8 @@ model Provider {
   payouts         Payout[]
   exportJobs      ExportJob[]
   favoritedBy     FavoriteProvider[]
+  providerClients ProviderClient[]
+  messageTemplates MessageTemplate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,6 +104,26 @@ model FavoriteProvider {
   createdAt  DateTime @default(now())
 
   @@unique([userId, providerId])
+}
+
+// ─── Provider Clients ─────────────────────────────────────
+
+model ProviderClient {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  email      String
+  name       String?
+  phone      String?
+  notes      String?  // provider-only internal notes
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerId, email])
+  @@index([providerId])
 }
 
 // ─── Catalog ───────────────────────────────────────────────
@@ -120,7 +144,9 @@ model Service {
   depositValue   Int         @default(0) // cents for FLAT, percentage for PERCENT
 
   addOns       AddOn[]
+  addOnGroups  AddOnGroup[]
   appointments Appointment[]
+  coupons      Coupon[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -134,6 +160,28 @@ enum DepositType {
   PERCENT
 }
 
+enum GroupSelectionRule {
+  OPTIONAL        // pick any or none
+  EXACTLY_ONE     // client must pick exactly 1 (radio)
+  AT_LEAST_ONE    // client must pick 1+ (checkbox, min 1)
+}
+
+model AddOnGroup {
+  id         String             @id @default(cuid())
+  serviceId  String
+  service    Service            @relation(fields: [serviceId], references: [id])
+  name       String
+  sortOrder  Int                @default(0)
+  rule       GroupSelectionRule  @default(OPTIONAL)
+
+  addOns     AddOn[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([serviceId])
+}
+
 model AddOn {
   id          String  @id @default(cuid())
   serviceId   String
@@ -142,6 +190,11 @@ model AddOn {
   priceInCents Int
   durationMinutes Int @default(0)
   isActive    Boolean @default(true)
+
+  groupId     String?
+  group       AddOnGroup? @relation(fields: [groupId], references: [id])
+  isMandatory Boolean     @default(false)
+  sortOrder   Int         @default(0)
 
   appointments Appointment[]
 
@@ -197,8 +250,15 @@ model Appointment {
 
   startTime    DateTime
   endTime      DateTime
-  totalInCents Int
-  depositInCents Int             @default(0)
+  totalInCents    Int
+  depositInCents  Int             @default(0)
+  discountInCents Int             @default(0)
+  couponId        String?
+  coupon          Coupon?         @relation(fields: [couponId], references: [id])
+
+  // Provider client profile
+  providerClientId String?
+  providerClient   ProviderClient? @relation(fields: [providerClientId], references: [id])
 
   // Client info (for web bookings without account)
   clientName   String?
@@ -405,6 +465,35 @@ model AccountActivityEvent {
   @@index([userId])
 }
 
+// ─── Coupons ──────────────────────────────────────────────
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+model Coupon {
+  id          String     @id @default(cuid())
+  providerId  String
+  provider    Provider   @relation(fields: [providerId], references: [id])
+  code        String     // stored UPPERCASE
+  type        CouponType
+  value       Int        // percent (1-100) or cents
+  expiresAt   DateTime?
+  maxUses     Int?       // null = unlimited
+  usedCount   Int        @default(0)
+  isActive    Boolean    @default(true)
+
+  services     Service[]
+  appointments Appointment[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([providerId, code])
+  @@index([providerId])
+}
+
 // ─── Exports ───────────────────────────────────────────────
 
 model ExportJob {
@@ -433,4 +522,31 @@ enum ExportStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// ─── Message Templates ───────────────────────────────────
+
+enum MessageTemplateType {
+  BOOKING_CONFIRMATION
+  BOOKING_NOTIFICATION
+  CANCELLATION
+  COMPLETION
+  REMINDER
+  FOLLOWUP
+}
+
+model MessageTemplate {
+  id           String              @id @default(cuid())
+  providerId   String
+  provider     Provider            @relation(fields: [providerId], references: [id])
+  type         MessageTemplateType
+  emailSubject String?
+  emailBody    String?
+  smsBody      String?
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([providerId, type])
+  @@index([providerId])
 }

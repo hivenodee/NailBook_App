@@ -17,7 +17,17 @@ export async function GET(request: NextRequest) {
   const services = await prisma.service.findMany({
     where: { providerId, ...(includeAll ? {} : { isActive: true }) },
     include: {
-      addOns: includeAll ? { orderBy: { createdAt: "asc" } } : { where: { isActive: true } },
+      addOns: includeAll
+        ? { orderBy: { sortOrder: "asc" } }
+        : { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+      addOnGroups: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          addOns: includeAll
+            ? { orderBy: { sortOrder: "asc" } }
+            : { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+        },
+      },
     },
     orderBy: { sortOrder: "asc" },
   });

@@ -14,23 +14,23 @@ type Appointment = {
   clientEmail: string | null;
   service: { name: string };
   client: { firstName: string | null; lastName: string | null };
-  provider: { businessName: string; slug: string };
+  provider: { businessName: string; slug: string; timezone: string };
 };
 
-function formatTime(iso: string) {
+function formatTime(iso: string, tz: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, tz: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
@@ -106,7 +106,7 @@ export default function DashboardTodayPage() {
   for (const appt of appointments) {
     const key = isToday(appt.startTime)
       ? "Today"
-      : formatDate(appt.startTime);
+      : formatDate(appt.startTime, appt.provider.timezone);
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(appt);
   }
@@ -144,7 +144,7 @@ export default function DashboardTodayPage() {
                         {appt.service.name}
                       </p>
                       <p className="text-sm text-text-muted mt-1">
-                        {formatTime(appt.startTime)} – {formatTime(appt.endTime)}
+                        {formatTime(appt.startTime, appt.provider.timezone)} – {formatTime(appt.endTime, appt.provider.timezone)}
                       </p>
                     </div>
                     <div className="text-right space-y-1">

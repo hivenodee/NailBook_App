@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
 import { createBookingSchema } from "@nailbook/shared";
 import { stripe } from "@/lib/stripe";
-import { sendClientConfirmation, sendProviderNewBooking, type BookingEmailData } from "@/lib/email";
+import { sendClientConfirmation, sendProviderNewBooking, formatDateTime, type BookingEmailData } from "@/lib/email";
+import { sendBookingConfirmationSms } from "@/lib/sms";
 import { invalidateAvailability } from "@/lib/cache";
+import { scheduleReminders } from "@/lib/schedule-jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
       addOns: { select: { id: true, name: true, priceInCents: true, durationMinutes: true } },
       client: { select: { firstName: true, lastName: true, avatarUrl: true } },
       provider: {
-        select: { businessName: true, slug: true },
+        select: { businessName: true, slug: true, timezone: true },
       },
     },
     orderBy: { startTime: "asc" },
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
   const result = await parseBody(request, createBookingSchema);
   if (result.error) return result.error;
 
-  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds } =
+  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds, couponCode } =
     result.data;
 
   const service = await prisma.service.findUnique({
@@ -62,21 +64,81 @@ export async function POST(request: NextRequest) {
   });
   if (!service) return error("Service not found", 404);
 
-  // Validate and fetch selected add-ons
-  let selectedAddOns: { id: string; priceInCents: number; durationMinutes: number }[] = [];
+  // Fetch all active add-ons for the service (for mandatory and group validation)
+  const allServiceAddOns = await prisma.addOn.findMany({
+    where: { serviceId, isActive: true },
+    select: { id: true, priceInCents: true, durationMinutes: true, groupId: true, isMandatory: true },
+  });
+
+  // Build selection set: start with client picks, then merge mandatory
+  const selectionSet = new Set(addOnIds || []);
+  for (const addon of allServiceAddOns) {
+    if (addon.isMandatory) selectionSet.add(addon.id);
+  }
+
+  // Validate client-provided IDs exist
   if (addOnIds && addOnIds.length > 0) {
-    selectedAddOns = await prisma.addOn.findMany({
-      where: { id: { in: addOnIds }, serviceId, isActive: true },
-      select: { id: true, priceInCents: true, durationMinutes: true },
-    });
-    if (selectedAddOns.length !== addOnIds.length) {
-      return error("One or more add-ons are invalid", 400);
+    const validIds = new Set(allServiceAddOns.map((a) => a.id));
+    for (const id of addOnIds) {
+      if (!validIds.has(id)) return error("One or more add-ons are invalid", 400);
     }
   }
 
+  // Validate group rules
+  const addOnGroups = await prisma.addOnGroup.findMany({
+    where: { serviceId },
+    select: { id: true, name: true, rule: true },
+  });
+  for (const group of addOnGroups) {
+    if (group.rule === "OPTIONAL") continue;
+    const groupAddOnIds = allServiceAddOns.filter((a) => a.groupId === group.id).map((a) => a.id);
+    const selectedFromGroup = groupAddOnIds.filter((id) => selectionSet.has(id));
+    if (group.rule === "EXACTLY_ONE") {
+      if (selectedFromGroup.length !== 1) {
+        return error(`Please select exactly one from "${group.name}"`, 400);
+      }
+    } else if (group.rule === "AT_LEAST_ONE") {
+      if (selectedFromGroup.length < 1) {
+        return error(`Please select at least one from "${group.name}"`, 400);
+      }
+    }
+  }
+
+  const selectedAddOns = allServiceAddOns.filter((a) => selectionSet.has(a.id));
+
   const addOnPriceCents = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0);
   const addOnDurationMin = selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const totalPriceCents = service.priceInCents + addOnPriceCents;
+  const totalBeforeDiscount = service.priceInCents + addOnPriceCents;
+
+  // Validate and apply coupon
+  let couponId: string | undefined;
+  let discountInCents = 0;
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({
+      where: { providerId_code: { providerId: service.providerId, code: couponCode.toUpperCase().trim() } },
+      include: { services: { select: { id: true } } },
+    });
+    if (!coupon || !coupon.isActive) {
+      return error("Invalid coupon code", 400);
+    }
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+      return error("This coupon has expired", 400);
+    }
+    if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
+      return error("This coupon has been fully redeemed", 400);
+    }
+    if (coupon.services.length > 0 && !coupon.services.some((s) => s.id === serviceId)) {
+      return error("This coupon doesn't apply to this service", 400);
+    }
+    couponId = coupon.id;
+    if (coupon.type === "PERCENT") {
+      discountInCents = Math.min(Math.round(totalBeforeDiscount * coupon.value / 100), totalBeforeDiscount);
+    } else {
+      discountInCents = Math.min(coupon.value, totalBeforeDiscount);
+    }
+  }
+
+  const totalPriceCents = totalBeforeDiscount - discountInCents;
 
   const start = new Date(startTime);
   const end = new Date(start.getTime() + (service.durationMinutes + addOnDurationMin) * 60 * 1000);
@@ -92,10 +154,10 @@ export async function POST(request: NextRequest) {
   });
   if (overlap) return error("Time slot is no longer available", 409);
 
-  // Calculate deposit (based on total including add-ons)
+  // Calculate deposit (based on discounted total)
   let depositInCents = 0;
   if (service.depositType === "FLAT") {
-    depositInCents = service.depositValue;
+    depositInCents = Math.min(service.depositValue, totalPriceCents);
   } else if (service.depositType === "PERCENT") {
     depositInCents = Math.round(
       (totalPriceCents * service.depositValue) / 100
@@ -103,7 +165,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate payment method against provider settings and deposit
-  if (paymentMethod === "CASH" && depositInCents > 0) {
+  if (paymentMethod === "CASH" && depositInCents > 0 && totalPriceCents > 0) {
     return error("Cash payments are not available for services that require a deposit", 400);
   }
 
@@ -148,28 +210,75 @@ export async function POST(request: NextRequest) {
 
   if (!clientId) return error("Email is required for booking", 400);
 
+  // If total is $0 after discount, treat like cash (no Stripe needed)
+  const isFreeAfterDiscount = totalPriceCents === 0;
+  const skipStripe = paymentMethod === "CASH" || isFreeAfterDiscount;
+
   // Create appointment
   const appointment = await prisma.$transaction(async (tx) => {
+    // Upsert provider client profile (keyed on email)
+    let providerClientId: string | undefined;
+    let isNewClient = true;
+    if (clientEmail) {
+      const providerClient = await tx.providerClient.upsert({
+        where: {
+          providerId_email: {
+            providerId: service.providerId,
+            email: clientEmail.toLowerCase().trim(),
+          },
+        },
+        update: {
+          name: clientName || undefined,
+          phone: clientPhone || undefined,
+        },
+        create: {
+          providerId: service.providerId,
+          email: clientEmail.toLowerCase().trim(),
+          name: clientName || undefined,
+          phone: clientPhone || undefined,
+        },
+      });
+      providerClientId = providerClient.id;
+
+      // Check if this client has any previous appointments with this provider
+      const previousAppt = await tx.appointment.findFirst({
+        where: { providerClientId: providerClient.id },
+        select: { id: true },
+      });
+      isNewClient = !previousAppt;
+    }
+
     const appt = await tx.appointment.create({
       data: {
         providerId: service.providerId,
         clientId,
         serviceId,
-        status: paymentMethod === "CASH" ? "CONFIRMED" : "PENDING_PAYMENT",
+        status: skipStripe ? "CONFIRMED" : "PENDING_PAYMENT",
         startTime: start,
         endTime: end,
         totalInCents: totalPriceCents,
-        depositInCents,
+        depositInCents: isFreeAfterDiscount ? 0 : depositInCents,
+        discountInCents,
+        couponId,
         clientName,
         clientEmail,
         clientPhone,
         inspirationUrl,
-        isNewClient: true,
+        isNewClient,
+        providerClientId,
         ...(selectedAddOns.length > 0 && {
           addOns: { connect: selectedAddOns.map((a) => ({ id: a.id })) },
         }),
       },
     });
+
+    // Increment coupon usage
+    if (couponId) {
+      await tx.coupon.update({
+        where: { id: couponId },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
 
     // Write event
     await tx.appointmentEvent.create({
@@ -187,8 +296,8 @@ export async function POST(request: NextRequest) {
   // Invalidate availability cache for the booked date
   await invalidateAvailability(service.providerId, start.toISOString().split("T")[0]);
 
-  // If cash, no Stripe needed — send confirmation emails immediately
-  if (paymentMethod === "CASH") {
+  // If cash or free after discount, no Stripe needed — send confirmation emails immediately
+  if (skipStripe) {
     const emailData: BookingEmailData = {
       providerName: service.provider.businessName,
       serviceName: service.name,
@@ -196,22 +305,48 @@ export async function POST(request: NextRequest) {
       startTime: start,
       endTime: end,
       totalInCents: totalPriceCents,
-      depositInCents,
-      paymentType: "CASH",
+      depositInCents: isFreeAfterDiscount ? 0 : depositInCents,
+      paymentType: isFreeAfterDiscount ? "FREE" : "CASH",
       locationAddress: service.provider.locationAddress,
       cancellationHours: service.provider.cancellationHours,
       arrivalGraceMinutes: service.provider.arrivalGraceMinutes,
       clientName,
       clientEmail,
+      timezone: service.provider.timezone,
     };
     try {
       await Promise.all([
-        sendClientConfirmation(emailData),
-        sendProviderNewBooking(service.provider.user.email, emailData),
+        sendClientConfirmation(emailData, service.providerId),
+        sendProviderNewBooking(service.provider.user.email, emailData, service.providerId),
       ]);
     } catch (e) {
-      console.error("[email] Failed to send cash booking emails:", e);
+      console.error("[email] Failed to send booking emails:", e);
     }
+    // Send booking confirmation SMS
+    if (clientPhone) {
+      const smsVars: Record<string, string> = {
+        providerName: service.provider.businessName,
+        serviceName: service.name,
+        clientName: clientName || "Client",
+        clientEmail: clientEmail || "",
+        dateTime: formatDateTime(start, service.provider.timezone),
+        duration: String(service.durationMinutes),
+        total: `$${(totalPriceCents / 100).toFixed(2)}`,
+        deposit: `$${((isFreeAfterDiscount ? 0 : depositInCents) / 100).toFixed(2)}`,
+        paymentLine: isFreeAfterDiscount ? "Free — discount applied" : `Pay at appointment: $${(totalPriceCents / 100).toFixed(2)}`,
+        location: service.provider.locationAddress || "",
+        cancellationHours: String(service.provider.cancellationHours),
+        arrivalGraceMinutes: String(service.provider.arrivalGraceMinutes),
+        calendarUrl: "",
+      };
+      sendBookingConfirmationSms(clientPhone, smsVars, service.providerId).catch((e) =>
+        console.error("[sms] Failed to send booking confirmation SMS:", e)
+      );
+    }
+    // Schedule reminder jobs (24h + 2h before appointment)
+    scheduleReminders(appointment.id, start).catch((e) =>
+      console.error("[jobs] Failed to schedule reminders:", e)
+    );
     return success(appointment, 201);
   }
 

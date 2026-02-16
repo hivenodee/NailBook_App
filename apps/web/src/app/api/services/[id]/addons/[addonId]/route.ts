@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   if (!addon || addon.serviceId !== serviceId) return error("Add-on not found", 404);
 
   const body = await request.json();
-  const allowedFields = ["name", "priceInCents", "durationMinutes", "isActive"] as const;
+  const allowedFields = ["name", "priceInCents", "durationMinutes", "isActive", "groupId", "isMandatory", "sortOrder"] as const;
 
   const data: Record<string, unknown> = {};
   for (const key of allowedFields) {

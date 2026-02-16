@@ -1,18 +1,20 @@
-import { ServerClient } from "postmark";
+import { Resend } from "resend";
+import { renderTemplate, getTemplate, DEFAULT_TEMPLATES } from "@/lib/templates";
+import type { MessageTemplateType } from "@nailbook/db";
 
-let _client: ServerClient | null = null;
+let _client: Resend | null = null;
 
-function getClient(): ServerClient | null {
-  if (!process.env.POSTMARK_SERVER_TOKEN) {
+function getClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
     return null;
   }
   if (!_client) {
-    _client = new ServerClient(process.env.POSTMARK_SERVER_TOKEN);
+    _client = new Resend(process.env.RESEND_API_KEY);
   }
   return _client;
 }
 
-const FROM_EMAIL = process.env.POSTMARK_FROM_EMAIL || "bookings@nailbook.com";
+const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
 type SendEmailParams = {
   to: string;
@@ -30,12 +32,12 @@ async function sendEmail({ to, subject, htmlBody, textBody }: SendEmailParams) {
     console.log("[email-dev] ---");
     return;
   }
-  await client.sendEmail({
-    From: FROM_EMAIL,
-    To: to,
-    Subject: subject,
-    HtmlBody: htmlBody,
-    TextBody: textBody,
+  await client.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject,
+    html: htmlBody,
+    text: textBody,
   });
 }
 
@@ -45,13 +47,14 @@ function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatDateTime(date: Date) {
+export function formatDateTime(date: Date, timezone = "UTC") {
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: timezone,
   });
 }
 
@@ -80,6 +83,39 @@ function buildGoogleCalendarUrl(params: {
   return `https://calendar.google.com/calendar/render?${qs.toString()}`;
 }
 
+// ─── Helper: wrap plain text body in styled HTML ──────────
+
+function wrapHtml(textBody: string): string {
+  const escaped = textBody
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+  return `<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;font-size:14px;line-height:1.6;">${escaped}</div>`;
+}
+
+// ─── Helper: load template, render, and send ──────────────
+
+async function sendTemplateEmail(
+  to: string,
+  type: MessageTemplateType,
+  vars: Record<string, string>,
+  providerId?: string,
+) {
+  let tpl: { emailSubject: string; emailBody: string; smsBody: string };
+  if (providerId) {
+    tpl = await getTemplate(providerId, type);
+  } else {
+    tpl = DEFAULT_TEMPLATES[type];
+  }
+
+  const subject = renderTemplate(tpl.emailSubject, vars);
+  const textBody = renderTemplate(tpl.emailBody, vars);
+  const htmlBody = wrapHtml(textBody);
+
+  await sendEmail({ to, subject, htmlBody, textBody });
+}
+
 // ─── Email data type ───────────────────────────────────────
 
 export type BookingEmailData = {
@@ -90,19 +126,19 @@ export type BookingEmailData = {
   endTime: Date;
   totalInCents: number;
   depositInCents: number;
-  paymentType: "CASH" | "DEPOSIT" | "FULL";
+  paymentType: "CASH" | "DEPOSIT" | "FULL" | "FREE";
   locationAddress?: string | null;
   cancellationHours: number;
   arrivalGraceMinutes: number;
   clientName?: string | null;
   clientEmail?: string | null;
+  timezone?: string;
 };
 
-// ─── Client confirmation email ─────────────────────────────
+// ─── Build vars from booking data ─────────────────────────
 
-export async function sendClientConfirmation(data: BookingEmailData) {
-  if (!data.clientEmail) return;
-
+function buildBookingVars(data: BookingEmailData): Record<string, string> {
+  const tz = data.timezone || "America/New_York";
   const calUrl = buildGoogleCalendarUrl({
     serviceName: data.serviceName,
     providerName: data.providerName,
@@ -112,11 +148,10 @@ export async function sendClientConfirmation(data: BookingEmailData) {
     location: data.locationAddress,
   });
 
-  const dateStr = formatDateTime(data.startTime);
-
-  // Payment line
   let paymentLine: string;
-  if (data.paymentType === "CASH") {
+  if (data.paymentType === "FREE") {
+    paymentLine = "Free — discount applied";
+  } else if (data.paymentType === "CASH") {
     paymentLine = `Pay at appointment: ${formatPrice(data.totalInCents)}`;
   } else if (data.paymentType === "DEPOSIT") {
     paymentLine = `Deposit paid: ${formatPrice(data.depositInCents)} — Remaining: ${formatPrice(data.totalInCents - data.depositInCents)} due at appointment`;
@@ -124,120 +159,146 @@ export async function sendClientConfirmation(data: BookingEmailData) {
     paymentLine = `Paid: ${formatPrice(data.totalInCents)}`;
   }
 
-  const locationHtml = data.locationAddress
-    ? `<tr><td style="padding:4px 0;color:#666;">Location</td><td style="padding:4px 0;">${data.locationAddress}</td></tr>`
-    : "";
-  const locationText = data.locationAddress
-    ? `Location: ${data.locationAddress}\n`
-    : "";
+  return {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName || "Client",
+    clientEmail: data.clientEmail || "",
+    dateTime: formatDateTime(data.startTime, tz),
+    duration: String(data.durationMinutes),
+    total: formatPrice(data.totalInCents),
+    deposit: formatPrice(data.depositInCents),
+    paymentLine,
+    location: data.locationAddress ? `Location: ${data.locationAddress}\n` : "",
+    cancellationHours: String(data.cancellationHours),
+    arrivalGraceMinutes: String(data.arrivalGraceMinutes),
+    calendarUrl: calUrl,
+  };
+}
 
-  const htmlBody = `
-<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
-  <h2 style="font-size:20px;font-weight:600;margin-bottom:16px;">You're booked!</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
-    <tr><td style="padding:4px 0;color:#666;">Service</td><td style="padding:4px 0;">${data.serviceName}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">With</td><td style="padding:4px 0;">${data.providerName}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">When</td><td style="padding:4px 0;">${dateStr}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">Duration</td><td style="padding:4px 0;">${data.durationMinutes} min</td></tr>
-    ${locationHtml}
-    <tr><td style="padding:4px 0;color:#666;">Payment</td><td style="padding:4px 0;">${paymentLine}</td></tr>
-  </table>
-  <p style="font-size:13px;color:#666;margin-bottom:16px;">
-    Cancellation: at least ${data.cancellationHours}h in advance for a full refund.<br/>
-    Arrival: please arrive within ${data.arrivalGraceMinutes} minutes of your appointment time.
-  </p>
-  <a href="${calUrl}" style="display:inline-block;padding:10px 20px;background:#6B4C9A;color:#fff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500;">Add to Calendar</a>
-</div>`;
+// ─── Client confirmation email ─────────────────────────────
 
-  const textBody = `You're booked!
-
-Service: ${data.serviceName}
-With: ${data.providerName}
-When: ${dateStr}
-Duration: ${data.durationMinutes} min
-${locationText}${paymentLine}
-
-Cancellation: at least ${data.cancellationHours}h in advance for a full refund.
-Arrival: please arrive within ${data.arrivalGraceMinutes} minutes of your appointment time.
-
-Add to Calendar: ${calUrl}`;
-
-  await sendEmail({
-    to: data.clientEmail,
-    subject: `Booking Confirmed — ${data.providerName}`,
-    htmlBody,
-    textBody,
-  });
+export async function sendClientConfirmation(
+  data: BookingEmailData,
+  providerId?: string,
+) {
+  if (!data.clientEmail) return;
+  const vars = buildBookingVars(data);
+  await sendTemplateEmail(data.clientEmail, "BOOKING_CONFIRMATION", vars, providerId);
 }
 
 // ─── Provider notification email ───────────────────────────
 
 export async function sendProviderNewBooking(
   providerEmail: string,
-  data: BookingEmailData
+  data: BookingEmailData,
+  providerId?: string,
 ) {
-  const dateStr = formatDateTime(data.startTime);
-  const clientDisplay = data.clientName || data.clientEmail || "A client";
-
-  let paymentLine: string;
-  if (data.paymentType === "CASH") {
-    paymentLine = `Cash — ${formatPrice(data.totalInCents)} due at appointment`;
-  } else if (data.paymentType === "DEPOSIT") {
-    paymentLine = `Deposit paid: ${formatPrice(data.depositInCents)} — Remaining: ${formatPrice(data.totalInCents - data.depositInCents)}`;
-  } else {
-    paymentLine = `Paid in full: ${formatPrice(data.totalInCents)}`;
-  }
-
-  const htmlBody = `
-<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
-  <h2 style="font-size:20px;font-weight:600;margin-bottom:16px;">New Booking</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px;">
-    <tr><td style="padding:4px 0;color:#666;">Client</td><td style="padding:4px 0;">${clientDisplay}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">Service</td><td style="padding:4px 0;">${data.serviceName}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">When</td><td style="padding:4px 0;">${dateStr}</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">Duration</td><td style="padding:4px 0;">${data.durationMinutes} min</td></tr>
-    <tr><td style="padding:4px 0;color:#666;">Payment</td><td style="padding:4px 0;">${paymentLine}</td></tr>
-  </table>
-</div>`;
-
-  const textBody = `New Booking
-
-Client: ${clientDisplay}
-Service: ${data.serviceName}
-When: ${dateStr}
-Duration: ${data.durationMinutes} min
-Payment: ${paymentLine}`;
-
-  await sendEmail({
-    to: providerEmail,
-    subject: `New Booking — ${data.serviceName} with ${clientDisplay}`,
-    htmlBody,
-    textBody,
-  });
+  const vars = buildBookingVars(data);
+  await sendTemplateEmail(providerEmail, "BOOKING_NOTIFICATION", vars, providerId);
 }
 
-// ─── Reminder email (kept for worker) ──────────────────────
+// ─── Cancellation email (client) ──────────────────────────
+
+export type CancellationEmailData = {
+  providerName: string;
+  serviceName: string;
+  startTime: Date;
+  clientName?: string | null;
+  clientEmail?: string | null;
+  cancelledBy: "client" | "provider";
+  timezone?: string;
+};
+
+export async function sendCancellationEmail(
+  data: CancellationEmailData,
+  providerId?: string,
+) {
+  if (!data.clientEmail) return;
+
+  const cancellerText =
+    data.cancelledBy === "provider"
+      ? `${data.providerName} has cancelled`
+      : "You have cancelled";
+
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName || "Client",
+    clientEmail: data.clientEmail || "",
+    dateTime: formatDateTime(data.startTime, data.timezone),
+    cancelledBy: cancellerText,
+  };
+
+  await sendTemplateEmail(data.clientEmail, "CANCELLATION", vars, providerId);
+}
+
+// ─── Cancellation notification (provider) ─────────────────
+
+export async function sendProviderCancellation(
+  providerEmail: string,
+  data: CancellationEmailData,
+  providerId?: string,
+) {
+  const clientDisplay = data.clientName || data.clientEmail || "A client";
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: clientDisplay,
+    clientEmail: data.clientEmail || "",
+    dateTime: formatDateTime(data.startTime, data.timezone),
+    cancelledBy: `${clientDisplay} has cancelled`,
+  };
+
+  await sendTemplateEmail(providerEmail, "CANCELLATION", vars, providerId);
+}
+
+// ─── Completion / thank you email ─────────────────────────
+
+export type CompletionEmailData = {
+  providerName: string;
+  serviceName: string;
+  startTime: Date;
+  clientName?: string | null;
+  clientEmail?: string | null;
+  timezone?: string;
+};
+
+export async function sendCompletionThankYou(
+  data: CompletionEmailData,
+  providerId?: string,
+) {
+  if (!data.clientEmail) return;
+
+  const vars: Record<string, string> = {
+    providerName: data.providerName,
+    serviceName: data.serviceName,
+    clientName: data.clientName || "Client",
+    clientEmail: data.clientEmail || "",
+    dateTime: formatDateTime(data.startTime, data.timezone),
+  };
+
+  await sendTemplateEmail(data.clientEmail, "COMPLETION", vars, providerId);
+}
+
+// ─── Reminder email ───────────────────────────────────────
 
 export async function sendAppointmentReminder(
   to: string,
   providerName: string,
   serviceName: string,
   dateTime: string,
-  hoursUntil: number
+  hoursUntil: number,
+  providerId?: string,
 ) {
-  const htmlBody = `
-<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
-  <h2 style="font-size:20px;font-weight:600;margin-bottom:16px;">Appointment Reminder</h2>
-  <p style="font-size:14px;"><strong>${serviceName}</strong> with ${providerName}</p>
-  <p style="font-size:14px;">${dateTime}</p>
-</div>`;
+  const vars: Record<string, string> = {
+    providerName,
+    serviceName,
+    clientName: "",
+    clientEmail: to,
+    dateTime,
+    hoursUntil: String(hoursUntil),
+  };
 
-  const textBody = `Appointment Reminder\n\n${serviceName} with ${providerName}\n${dateTime}`;
-
-  await sendEmail({
-    to,
-    subject: `Reminder: ${serviceName} in ${hoursUntil}h`,
-    htmlBody,
-    textBody,
-  });
+  await sendTemplateEmail(to, "REMINDER", vars, providerId);
 }

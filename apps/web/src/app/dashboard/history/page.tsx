@@ -15,26 +15,26 @@ type Appointment = {
   service: { name: string };
   addOns: { id: string; name: string; priceInCents: number }[];
   client: { firstName: string | null; lastName: string | null };
-  provider: { businessName: string; slug: string };
+  provider: { businessName: string; slug: string; timezone: string };
 };
 
 type StatusFilter = "ALL" | "COMPLETED" | "CANCELLED" | "NO_SHOW" | "CONFIRMED" | "PENDING_PAYMENT";
 
-function formatDateTime(iso: string) {
+function formatDateTime(iso: string, tz: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, tz: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
@@ -165,7 +165,7 @@ export default function HistoryPage(): React.JSX.Element {
                       </div>
                     )}
                     <p className="text-sm text-text-muted mt-1">
-                      {formatDateTime(appt.startTime)} &middot; {formatTime(appt.startTime)} – {formatTime(appt.endTime)}
+                      {formatDateTime(appt.startTime, appt.provider.timezone)} &middot; {formatTime(appt.startTime, appt.provider.timezone)} – {formatTime(appt.endTime, appt.provider.timezone)}
                     </p>
                   </div>
                   <div className="text-right space-y-1">

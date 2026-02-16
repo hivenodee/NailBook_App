@@ -28,6 +28,7 @@ type Appointment = {
   endTime: string;
   totalInCents: number;
   depositInCents: number;
+  discountInCents: number;
   clientName: string | null;
   clientEmail: string | null;
   clientPhone: string | null;
@@ -37,26 +38,28 @@ type Appointment = {
   service: { name: string; durationMinutes: number; priceInCents: number };
   addOns: { id: string; name: string; priceInCents: number; durationMinutes: number }[];
   client: { firstName: string | null; lastName: string | null; avatarUrl: string | null };
-  provider: { businessName: string; slug: string };
+  provider: { businessName: string; slug: string; timezone: string };
+  coupon: { code: string; type: string; value: number } | null;
   events: AppointmentEvent[];
   payments: Payment[];
 };
 
-function formatDateTime(iso: string) {
+function formatDateTime(iso: string, tz: string) {
   return new Date(iso).toLocaleString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: tz,
   });
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, tz: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
@@ -202,11 +205,11 @@ export default function AppointmentDetailPage() {
           )}
           <p>
             <span className="text-text-muted">Date:</span>{" "}
-            {formatDateTime(appointment.startTime)}
+            {formatDateTime(appointment.startTime, appointment.provider.timezone)}
           </p>
           <p>
             <span className="text-text-muted">Time:</span>{" "}
-            {formatTime(appointment.startTime)} – {formatTime(appointment.endTime)}
+            {formatTime(appointment.startTime, appointment.provider.timezone)} – {formatTime(appointment.endTime, appointment.provider.timezone)}
           </p>
           <p>
             <span className="text-text-muted">Duration:</span>{" "}
@@ -244,6 +247,15 @@ export default function AppointmentDetailPage() {
 
         {/* Payment info */}
         <div className="border-t border-border pt-grid-1 space-y-1 text-sm">
+          {appointment.discountInCents > 0 && (
+            <p className="text-green-700">
+              <span>Discount:</span>{" "}
+              <span className="font-medium">
+                -${(appointment.discountInCents / 100).toFixed(2)}
+                {appointment.coupon && ` (${appointment.coupon.code})`}
+              </span>
+            </p>
+          )}
           <p>
             <span className="text-text-muted">Total:</span>{" "}
             <span className="font-medium">

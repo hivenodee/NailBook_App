@@ -20,6 +20,7 @@ type AppointmentData = {
   provider: {
     businessName: string;
     slug: string;
+    timezone: string;
   };
 };
 
@@ -27,20 +28,20 @@ function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, tz: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, tz: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
@@ -219,11 +220,11 @@ export default function ConfirmationPage(): React.JSX.Element {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Date</span>
-              <span className="font-medium">{formatDate(appt.startTime)}</span>
+              <span className="font-medium">{formatDate(appt.startTime, appt.provider.timezone)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Time</span>
-              <span className="font-medium">{formatTime(appt.startTime)}</span>
+              <span className="font-medium">{formatTime(appt.startTime, appt.provider.timezone)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-text-muted">Duration</span>

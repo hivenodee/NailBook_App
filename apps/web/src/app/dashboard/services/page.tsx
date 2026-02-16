@@ -20,7 +20,9 @@ export default function ServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [providerId, setProviderId] = useState<string | null>(null);
+  const [providerSlug, setProviderSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -50,6 +52,7 @@ export default function ServicesPage() {
         const json = await res.json();
         if (json.data?.id) {
           setProviderId(json.data.id);
+          setProviderSlug(json.data.slug || null);
           await loadServices(json.data.id);
         }
       } catch (e) {
@@ -103,6 +106,14 @@ export default function ServicesPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  function copyLink(serviceId: string) {
+    if (!providerSlug) return;
+    const url = `${window.location.origin}/${providerSlug}?service=${serviceId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(serviceId);
+    setTimeout(() => setCopiedId((prev) => (prev === serviceId ? null : prev)), 2000);
   }
 
   async function toggleActive(service: Service) {
@@ -294,16 +305,24 @@ export default function ServicesPage() {
                     )}
                   </div>
                 </Link>
-                <button
-                  onClick={() => toggleActive(service)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
-                    service.isActive
-                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      : "bg-green-100 text-green-800 hover:bg-green-200"
-                  }`}
-                >
-                  {service.isActive ? "Disable" : "Enable"}
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => copyLink(service.id)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-button transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    {copiedId === service.id ? "Copied!" : "Copy Link"}
+                  </button>
+                  <button
+                    onClick={() => toggleActive(service)}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
+                      service.isActive
+                        ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-green-100 text-green-800 hover:bg-green-200"
+                    }`}
+                  >
+                    {service.isActive ? "Disable" : "Enable"}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -67,6 +67,16 @@ export const createBookingSchema = z.object({
     "CASH_APP_PAY",
     "CASH",
   ]),
+  // Optional coupon code
+  couponCode: z.string().max(50).optional(),
+});
+
+// ─── AddOn Group ──────────────────────────────────────────
+
+export const createAddOnGroupSchema = z.object({
+  name: z.string().min(1).max(100),
+  sortOrder: z.number().int().min(0).default(0),
+  rule: z.enum(["OPTIONAL", "EXACTLY_ONE", "AT_LEAST_ONE"]).default("OPTIONAL"),
 });
 
 // ─── AddOn ─────────────────────────────────────────────────
@@ -75,6 +85,9 @@ export const createAddOnSchema = z.object({
   name: z.string().min(1).max(100),
   priceInCents: z.number().int().min(0),
   durationMinutes: z.number().int().min(0).max(120).default(0),
+  groupId: z.string().cuid().optional(),
+  isMandatory: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).default(0),
 });
 
 // ─── Message ───────────────────────────────────────────────
@@ -91,6 +104,17 @@ export const createReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   body: z.string().max(1000).optional(),
   evidenceUrls: z.array(z.string().url()).max(5).optional(),
+});
+
+// ─── Coupon ───────────────────────────────────────────────
+
+export const createCouponSchema = z.object({
+  code: z.string().min(1).max(50),
+  type: z.enum(["PERCENT", "FIXED"]),
+  value: z.number().int().min(1),
+  expiresAt: z.string().datetime().optional(),
+  maxUses: z.number().int().min(1).optional(),
+  serviceIds: z.array(z.string().cuid()).optional(),
 });
 
 // ─── Provider Settings ─────────────────────────────────────

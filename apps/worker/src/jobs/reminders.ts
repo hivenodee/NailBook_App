@@ -34,6 +34,7 @@ export function startReminderWorker() {
       const hoursUntil =
         type === "24h" ? REMINDER_HOURS.FIRST : REMINDER_HOURS.SECOND;
 
+      const tz = appointment.provider.timezone || "America/New_York";
       await emailClient.sendEmail({
         From: "reminders@nailbook.com",
         To: email,
@@ -47,6 +48,7 @@ export function startReminderWorker() {
             day: "numeric",
             hour: "numeric",
             minute: "2-digit",
+            timeZone: tz,
           })}</p>
         `,
       });

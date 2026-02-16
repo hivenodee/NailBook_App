@@ -11,11 +11,21 @@ type TimeSlot = {
   available: boolean;
 };
 
+type AddOnGroupData = {
+  id: string;
+  name: string;
+  rule: "OPTIONAL" | "EXACTLY_ONE" | "AT_LEAST_ONE";
+  sortOrder: number;
+};
+
 type AddOnData = {
   id: string;
   name: string;
   priceInCents: number;
   durationMinutes: number;
+  groupId: string | null;
+  isMandatory: boolean;
+  sortOrder: number;
 };
 
 type ServiceData = {
@@ -26,9 +36,11 @@ type ServiceData = {
   depositType: "NONE" | "FLAT" | "PERCENT";
   depositValue: number;
   addOns: AddOnData[];
+  addOnGroups: AddOnGroupData[];
   provider: {
     businessName: string;
     slug: string;
+    timezone: string;
     cancellationHours: number;
     arrivalGraceMinutes: number;
     acceptsCash: boolean;
@@ -69,11 +81,11 @@ function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, tz: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   });
 }
 
@@ -86,7 +98,7 @@ function formatDate(date: Date) {
 }
 
 function getDepositAmount(service: ServiceData, totalCents: number) {
-  if (service.depositType === "FLAT") return service.depositValue;
+  if (service.depositType === "FLAT") return Math.min(service.depositValue, totalCents);
   if (service.depositType === "PERCENT")
     return Math.round((totalCents * service.depositValue) / 100);
   return 0;
@@ -136,15 +148,39 @@ export default function BookPage(): React.JSX.Element {
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
 
+  // Coupon
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    type: "PERCENT" | "FIXED";
+    value: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const days = getNextDays(14);
 
-  // Fetch service details
+  // Fetch service details + auto-select mandatory add-ons
   useEffect(() => {
     if (!serviceId) return;
     fetch(`/api/services/${serviceId}`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.data) setService(json.data);
+        if (json.data) {
+          const s = json.data as ServiceData;
+          setService(s);
+          // Auto-select mandatory add-ons
+          const mandatoryIds = s.addOns
+            .filter((a) => a.isMandatory)
+            .map((a) => a.id);
+          if (mandatoryIds.length > 0) {
+            setSelectedAddOnIds((prev) => {
+              const next = new Set(prev);
+              for (const id of mandatoryIds) next.add(id);
+              return next;
+            });
+          }
+        }
       })
       .finally(() => setLoading(false));
   }, [serviceId]);
@@ -159,7 +195,8 @@ export default function BookPage(): React.JSX.Element {
         `/api/availability/${slug}?date=${toDateStr(selectedDate)}`
       );
       const json = await res.json();
-      setSlots(json.data || []);
+      const avail = json.data || {};
+      setSlots(avail.slots || avail || []);
     } catch {
       setSlots([]);
     } finally {
@@ -187,6 +224,7 @@ export default function BookPage(): React.JSX.Element {
           clientPhone: clientPhone || undefined,
           paymentMethod: selectedPaymentMethod,
           addOnIds: selectedAddOns.length > 0 ? selectedAddOns.map((a) => a.id) : undefined,
+          couponCode: appliedCoupon?.code || undefined,
         }),
       });
       const json = await res.json();
@@ -206,20 +244,111 @@ export default function BookPage(): React.JSX.Element {
     }
   };
 
+  async function handleApplyCoupon() {
+    if (!couponInput.trim() || !serviceId) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim(), slug, serviceId }),
+      });
+      const json = await res.json();
+      if (json.data?.valid) {
+        setAppliedCoupon({ code: json.data.code, type: json.data.type, value: json.data.value });
+        setCouponError(null);
+      } else {
+        setCouponError(json.data?.reason || "Invalid coupon code");
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Failed to validate coupon");
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  }
+
   function toggleAddOn(id: string) {
+    if (!service) return;
+    const addon = service.addOns.find((a) => a.id === id);
+    if (!addon) return;
+
+    // Can't toggle mandatory add-ons
+    if (addon.isMandatory) return;
+
+    const group = addon.groupId
+      ? service.addOnGroups.find((g) => g.id === addon.groupId)
+      : null;
+
     setSelectedAddOnIds((prev) => {
       const next = new Set(prev);
+
+      if (group?.rule === "EXACTLY_ONE") {
+        // Radio behavior: deselect others in group, select this one
+        const groupAddOnIds = service.addOns
+          .filter((a) => a.groupId === group.id && !a.isMandatory)
+          .map((a) => a.id);
+        for (const gId of groupAddOnIds) next.delete(gId);
+        next.add(id);
+        return next;
+      }
+
+      if (group?.rule === "AT_LEAST_ONE" && next.has(id)) {
+        // Don't deselect if it's the last one in the group
+        const groupAddOnIds = service.addOns
+          .filter((a) => a.groupId === group.id)
+          .map((a) => a.id);
+        const selectedInGroup = groupAddOnIds.filter((gId) => next.has(gId));
+        if (selectedInGroup.length <= 1) return prev;
+      }
+
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
   }
 
+  // Group validation
+  const unsatisfiedGroups: string[] = [];
+  if (service) {
+    for (const group of service.addOnGroups) {
+      if (group.rule === "OPTIONAL") continue;
+      const groupAddOnIds = service.addOns
+        .filter((a) => a.groupId === group.id)
+        .map((a) => a.id);
+      const selectedCount = groupAddOnIds.filter((id) => selectedAddOnIds.has(id)).length;
+      if (group.rule === "EXACTLY_ONE" && selectedCount !== 1) {
+        unsatisfiedGroups.push(group.id);
+      } else if (group.rule === "AT_LEAST_ONE" && selectedCount < 1) {
+        unsatisfiedGroups.push(group.id);
+      }
+    }
+  }
+  const allGroupsSatisfied = unsatisfiedGroups.length === 0;
+
   const selectedAddOns = service?.addOns.filter((a) => selectedAddOnIds.has(a.id)) ?? [];
   const addOnPriceCents = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0);
   const addOnDurationMin = selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const totalPriceCents = (service?.priceInCents ?? 0) + addOnPriceCents;
+  const totalBeforeDiscount = (service?.priceInCents ?? 0) + addOnPriceCents;
   const totalDurationMin = (service?.durationMinutes ?? 0) + addOnDurationMin;
+
+  // Calculate discount
+  let discountCents = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === "PERCENT") {
+      discountCents = Math.min(Math.round(totalBeforeDiscount * appliedCoupon.value / 100), totalBeforeDiscount);
+    } else {
+      discountCents = Math.min(appliedCoupon.value, totalBeforeDiscount);
+    }
+  }
+  const totalPriceCents = totalBeforeDiscount - discountCents;
   const depositAmount = service ? getDepositAmount(service, totalPriceCents) : 0;
   const availableMethods = service ? getAvailablePaymentMethods(service) : [];
   const availableSlots = slots.filter((s) => s.available);
@@ -232,13 +361,16 @@ export default function BookPage(): React.JSX.Element {
   }, [step, selectedPaymentMethod, availableMethods]);
 
   const isCash = selectedPaymentMethod === "CASH";
+  const isFree = totalPriceCents === 0;
   const confirmButtonText = submitting
     ? "Booking..."
-    : isCash
-      ? "Confirm Booking"
-      : depositAmount > 0
-        ? `Pay ${formatPrice(depositAmount)} Deposit`
-        : `Pay ${formatPrice(totalPriceCents)}`;
+    : isFree
+      ? "Confirm Free Booking"
+      : isCash
+        ? "Confirm Booking"
+        : depositAmount > 0
+          ? `Pay ${formatPrice(depositAmount)} Deposit`
+          : `Pay ${formatPrice(totalPriceCents)}`;
 
   if (loading) {
     return (
@@ -290,24 +422,50 @@ export default function BookPage(): React.JSX.Element {
           )}
         </div>
 
-        {/* Add-ons selector */}
-        {service.addOns.length > 0 && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3 space-y-grid-1">
-            <p className="text-sm font-medium">Add-ons</p>
-            {service.addOns.map((addon) => {
-              const isSelected = selectedAddOnIds.has(addon.id);
-              return (
-                <button
-                  key={addon.id}
-                  type="button"
-                  onClick={() => toggleAddOn(addon.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-button text-sm transition-colors border ${
-                    isSelected
+        {/* Add-ons selector (grouped) */}
+        {service.addOns.length > 0 && (() => {
+          // Group add-ons by groupId; ungrouped go at the end
+          const groups = service.addOnGroups
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((g) => ({
+              ...g,
+              addOns: service.addOns
+                .filter((a) => a.groupId === g.id)
+                .sort((a, b) => a.sortOrder - b.sortOrder),
+            }));
+          const ungrouped = service.addOns
+            .filter((a) => !a.groupId)
+            .sort((a, b) => a.sortOrder - b.sortOrder);
+
+          const renderAddOn = (addon: AddOnData, isRadio: boolean) => {
+            const isSelected = selectedAddOnIds.has(addon.id);
+            const isMandatory = addon.isMandatory;
+            return (
+              <button
+                key={addon.id}
+                type="button"
+                onClick={() => toggleAddOn(addon.id)}
+                disabled={isMandatory}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-button text-sm transition-colors border ${
+                  isMandatory
+                    ? "border-border bg-gray-50 cursor-default opacity-75"
+                    : isSelected
                       ? "border-primary bg-primary-light"
                       : "border-border bg-background hover:border-primary/40"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isRadio ? (
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? "border-primary" : "border-border"
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                  ) : (
                     <div
                       className={`w-4 h-4 rounded border flex items-center justify-center ${
                         isSelected
@@ -321,21 +479,73 @@ export default function BookPage(): React.JSX.Element {
                         </svg>
                       )}
                     </div>
-                    <span className={isSelected ? "font-medium text-primary" : "text-text-secondary"}>
-                      {addon.name}
-                    </span>
-                  </div>
-                  <div className="text-right text-xs text-text-muted">
-                    <span>+{formatPrice(addon.priceInCents)}</span>
-                    {addon.durationMinutes > 0 && (
-                      <span className="ml-2">+{addon.durationMinutes} min</span>
+                  )}
+                  <span className={isMandatory ? "text-text-muted" : isSelected ? "font-medium text-primary" : "text-text-secondary"}>
+                    {addon.name}
+                  </span>
+                  {isMandatory && (
+                    <span className="text-xs text-text-muted bg-gray-100 px-1.5 py-0.5 rounded-full">(included)</span>
+                  )}
+                </div>
+                <div className="text-right text-xs text-text-muted">
+                  <span>+{formatPrice(addon.priceInCents)}</span>
+                  {addon.durationMinutes > 0 && (
+                    <span className="ml-2">+{addon.durationMinutes} min</span>
+                  )}
+                </div>
+              </button>
+            );
+          };
+
+          const hasContent = groups.some((g) => g.addOns.length > 0) || ungrouped.length > 0;
+          if (!hasContent) return null;
+
+          return (
+            <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3 space-y-grid-2">
+              <p className="text-sm font-medium">Add-ons</p>
+
+              {groups.map((group) => {
+                if (group.addOns.length === 0) return null;
+                const isUnsatisfied = unsatisfiedGroups.includes(group.id);
+                const isRadio = group.rule === "EXACTLY_ONE";
+                return (
+                  <div key={group.id} className="space-y-grid-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                        {group.name}
+                      </span>
+                      {group.rule === "EXACTLY_ONE" && (
+                        <span className="text-xs text-text-muted">Choose one</span>
+                      )}
+                      {group.rule === "AT_LEAST_ONE" && (
+                        <span className="text-xs text-text-muted">Select at least one</span>
+                      )}
+                    </div>
+                    {group.addOns.map((addon) => renderAddOn(addon, isRadio))}
+                    {isUnsatisfied && (
+                      <p className="text-xs text-red-600">
+                        {group.rule === "EXACTLY_ONE"
+                          ? `Please choose one from "${group.name}"`
+                          : `Please select at least one from "${group.name}"`}
+                      </p>
                     )}
                   </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+
+              {ungrouped.length > 0 && (
+                <div className="space-y-grid-1">
+                  {groups.some((g) => g.addOns.length > 0) && (
+                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                      Other
+                    </span>
+                  )}
+                  {ungrouped.map((addon) => renderAddOn(addon, false))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-grid-2 mb-grid-4">
@@ -423,7 +633,7 @@ export default function BookPage(): React.JSX.Element {
                             : "bg-background text-text-secondary hover:bg-primary-light"
                         }`}
                       >
-                        {formatTime(slot.startTime)}
+                        {formatTime(slot.startTime, service.provider.timezone)}
                       </button>
                     );
                   })}
@@ -432,7 +642,7 @@ export default function BookPage(): React.JSX.Element {
             </div>
 
             <button
-              disabled={!selectedSlot}
+              disabled={!selectedSlot || !allGroupsSatisfied}
               onClick={() => setStep("details")}
               className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
@@ -515,14 +725,14 @@ export default function BookPage(): React.JSX.Element {
                 <span className="font-medium">
                   {new Date(selectedSlot.startTime).toLocaleDateString(
                     "en-US",
-                    { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }
+                    { weekday: "long", month: "long", day: "numeric", timeZone: service.provider.timezone }
                   )}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Time</span>
                 <span className="font-medium">
-                  {formatTime(selectedSlot.startTime)}
+                  {formatTime(selectedSlot.startTime, service.provider.timezone)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -551,13 +761,25 @@ export default function BookPage(): React.JSX.Element {
                 </>
               )}
               <hr className="border-border" />
+              {discountCents > 0 && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-muted">Subtotal</span>
+                    <span className="font-medium">{formatPrice(totalBeforeDiscount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>Discount ({appliedCoupon?.code})</span>
+                    <span className="font-medium">-{formatPrice(discountCents)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Total</span>
                 <span className="font-semibold">
                   {formatPrice(totalPriceCents)}
                 </span>
               </div>
-              {!isCash && depositAmount > 0 && (
+              {!isCash && !isFree && depositAmount > 0 && (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-text-muted">Due now</span>
@@ -573,11 +795,64 @@ export default function BookPage(): React.JSX.Element {
                   </div>
                 </>
               )}
-              {isCash && (
+              {isFree && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Payment</span>
+                  <span className="font-medium text-green-700">Free</span>
+                </div>
+              )}
+              {isCash && !isFree && (
                 <div className="flex justify-between text-sm">
                   <span className="text-text-muted">Payment</span>
                   <span className="font-medium">Pay at appointment</span>
                 </div>
+              )}
+            </div>
+
+            {/* Coupon code input */}
+            <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-green-700">
+                      {appliedCoupon.code}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      {appliedCoupon.type === "PERCENT"
+                        ? `${appliedCoupon.value}% off`
+                        : `${formatPrice(appliedCoupon.value)} off`}
+                    </span>
+                  </div>
+                  <button
+                    onClick={removeCoupon}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Have a code?</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon code"
+                      className="flex-1 border border-border rounded-input px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase"
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="bg-primary text-white px-4 py-2 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+                    >
+                      {couponLoading ? "..." : "Apply"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-xs text-red-600">{couponError}</p>
+                  )}
+                </>
               )}
             </div>
 

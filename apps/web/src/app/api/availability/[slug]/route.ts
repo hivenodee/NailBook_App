@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { BOOKING } from "@nailbook/shared";
 import { getAvailabilityCache, setAvailabilityCache } from "@/lib/cache";
+import { wallClockToUTC, dayBoundsUTC } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,11 @@ export async function GET(
 
   // Check cache
   const cached = await getAvailabilityCache(provider.id, dateStr);
-  if (cached) return success(cached);
+  if (cached) return success({ timezone: provider.timezone, slots: cached });
 
   const date = new Date(dateStr);
   const dayOfWeek = date.getUTCDay();
+  const tz = provider.timezone;
 
   // Get availability rules for this day
   const rules = await prisma.availabilityRule.findMany({
@@ -34,12 +36,12 @@ export async function GET(
     },
   });
 
-  if (rules.length === 0) return success([]);
+  if (rules.length === 0) return success({ timezone: tz, slots: [] });
+
+  // Day boundaries in provider's timezone (converted to UTC)
+  const { start: dayStart, end: dayEnd } = dayBoundsUTC(dateStr, tz);
 
   // Check time off
-  const dayStart = new Date(dateStr + "T00:00:00Z");
-  const dayEnd = new Date(dateStr + "T23:59:59Z");
-
   const timeOff = await prisma.timeOff.findFirst({
     where: {
       providerId: provider.id,
@@ -47,30 +49,28 @@ export async function GET(
       endDate: { gte: dayStart },
     },
   });
-  if (timeOff) return success([]);
+  if (timeOff) return success({ timezone: tz, slots: [] });
 
   // Get confirmed appointments for this day
   const appointments = await prisma.appointment.findMany({
     where: {
       providerId: provider.id,
       status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
-      startTime: { gte: dayStart, lte: dayEnd },
+      startTime: { gte: dayStart, lt: dayEnd },
     },
     select: { startTime: true, endTime: true },
   });
 
   // Generate time slots from availability rules
+  // Rule times are wall-clock (e.g., "09:00" = 9 AM in provider's timezone)
   const slots: { startTime: string; endTime: string; available: boolean }[] = [];
 
   for (const rule of rules) {
     const [startHour, startMin] = rule.startTime.split(":").map(Number);
     const [endHour, endMin] = rule.endTime.split(":").map(Number);
 
-    const ruleStart = new Date(date);
-    ruleStart.setUTCHours(startHour, startMin, 0, 0);
-
-    const ruleEnd = new Date(date);
-    ruleEnd.setUTCHours(endHour, endMin, 0, 0);
+    const ruleStart = wallClockToUTC(dateStr, startHour, startMin, tz);
+    const ruleEnd = wallClockToUTC(dateStr, endHour, endMin, tz);
 
     let cursor = new Date(ruleStart);
     while (cursor < ruleEnd) {
@@ -94,5 +94,5 @@ export async function GET(
 
   await setAvailabilityCache(provider.id, dateStr, slots);
 
-  return success(slots);
+  return success({ timezone: tz, slots });
 }
