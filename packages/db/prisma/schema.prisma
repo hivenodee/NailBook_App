@@ -513,7 +513,10 @@ model ExportJob {
   type       ExportType
   status     ExportStatus @default(PENDING)
   fileUrl    String?
+  content    String?      @db.Text
   error      String?
+  startDate  DateTime?
+  endDate    DateTime?
 
   createdAt  DateTime @default(now())
   completedAt DateTime?

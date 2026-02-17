@@ -130,7 +130,7 @@ Monorepo tooling: pnpm 9.15 workspaces + Turborepo.
 All dashboard pages require Clerk authentication and a Provider record.
 
 **Layout** — `/dashboard/layout.tsx`
-- Sticky nav: Today, History, Clients, Services, Hours, Money, Portfolio, Waitlist, Feedback, Messages, Coupons, Profile
+- Sticky nav: Today, History, Clients, Services, Hours, Money, Portfolio, Waitlist, Feedback, Messages, Coupons, Exports, Profile
 
 **Today** — `/dashboard/page.tsx`
 - Today's CONFIRMED + PENDING_PAYMENT appointments
@@ -449,6 +449,7 @@ Past date → EXPIRED (auto-expired on list fetch)
 | `/dashboard/feedback` | Feedback management |
 | `/dashboard/messages` | Message templates |
 | `/dashboard/coupons` | Coupon management |
+| `/dashboard/exports` | CSV data export |
 | `/dashboard/profile` | Business settings |
 
 ### Components
@@ -540,7 +541,7 @@ Past date → EXPIRED (auto-expired on list fetch)
 - [ ] Client discovery feed (web UI)
 - [ ] Biometric login
 - [ ] Review evidence / dispute workflow
-- [ ] CSV export download UI (worker job exists, no frontend to trigger/download)
+- [x] CSV export download UI — **DONE**: Synchronous CSV generation in POST /api/exports, download via GET /api/exports/:id/download, dashboard UI at /dashboard/exports
 - [ ] Payout visibility dashboard (model exists, no UI)
 - [ ] Provider verification workflow (badge exists, no admin UI to grant)
 - [ ] Account activity log UI (model exists, no frontend)

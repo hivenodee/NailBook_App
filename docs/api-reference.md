@@ -247,11 +247,19 @@ List recent export jobs.
 - **Response**: Last 20 export jobs
 
 ### POST /api/exports
-Request CSV export.
+Generate CSV export synchronously.
 
 - **Auth**: Clerk (provider only)
-- **Body**: `{ type: "CLIENTS" | "APPOINTMENTS" | "TRANSACTIONS" }`
-- **Response**: Created export job (PENDING status)
+- **Body**: `{ type: "CLIENTS" | "APPOINTMENTS" | "TRANSACTIONS", startDate?: "ISO 8601", endDate?: "ISO 8601" }`
+- **Response**: Completed export job with CSV content stored in `content` field
+- **Notes**: CSV generated inline (synchronous). Date filtering applies to `startTime` for CLIENTS/APPOINTMENTS, `createdAt` for TRANSACTIONS.
+
+### GET /api/exports/:id/download
+Download CSV file.
+
+- **Auth**: Clerk (provider only, must own export)
+- **Response**: Raw CSV file with `Content-Disposition: attachment` header
+- **Notes**: Returns 404 if export is not COMPLETED or has no content
 
 ---
 

@@ -5,7 +5,7 @@ import { success, error } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/exports — request a CSV export
+// POST /api/exports — generate CSV export synchronously
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
@@ -17,22 +17,143 @@ export async function POST(request: NextRequest) {
   if (!user?.provider) return error("Not a provider", 403);
 
   const body = await request.json();
-  const { type } = body as { type: "CLIENTS" | "APPOINTMENTS" | "TRANSACTIONS" };
+  const { type, startDate, endDate } = body as {
+    type: string;
+    startDate?: string;
+    endDate?: string;
+  };
 
   if (!["CLIENTS", "APPOINTMENTS", "TRANSACTIONS"].includes(type)) {
     return error("Invalid export type");
   }
 
+  const parsedStart = startDate ? new Date(startDate) : undefined;
+  const parsedEnd = endDate ? new Date(endDate) : undefined;
+
   const job = await prisma.exportJob.create({
     data: {
       providerId: user.provider.id,
-      type,
-      status: "PENDING",
+      type: type as "CLIENTS" | "APPOINTMENTS" | "TRANSACTIONS",
+      status: "PROCESSING",
+      startDate: parsedStart,
+      endDate: parsedEnd,
     },
   });
 
-  // Worker picks up PENDING export jobs via cron
-  return success(job, 201);
+  try {
+    let csvContent = "";
+
+    switch (type) {
+      case "CLIENTS": {
+        const clientDateFilter =
+          parsedStart || parsedEnd
+            ? {
+                createdAt: {
+                  ...(parsedStart ? { gte: parsedStart } : {}),
+                  ...(parsedEnd ? { lte: parsedEnd } : {}),
+                },
+              }
+            : {};
+        const clients = await prisma.providerClient.findMany({
+          where: {
+            providerId: user.provider.id,
+            ...clientDateFilter,
+          },
+          include: {
+            appointments: {
+              select: { startTime: true },
+              orderBy: { startTime: "asc" },
+              take: 1,
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        });
+        csvContent =
+          "Name,Email,Phone,First Visit\n" +
+          clients
+            .map(
+              (c) =>
+                `"${escapeCsv(c.name || "")}","${escapeCsv(c.email)}","${escapeCsv(c.phone || "")}","${c.appointments[0]?.startTime.toISOString() || c.createdAt.toISOString()}"`
+            )
+            .join("\n");
+        break;
+      }
+
+      case "APPOINTMENTS": {
+        const dateFilter =
+          parsedStart || parsedEnd
+            ? {
+                startTime: {
+                  ...(parsedStart ? { gte: parsedStart } : {}),
+                  ...(parsedEnd ? { lte: parsedEnd } : {}),
+                },
+              }
+            : {};
+        const appts = await prisma.appointment.findMany({
+          where: { providerId: user.provider.id, ...dateFilter },
+          include: { service: true, client: true },
+          orderBy: { startTime: "desc" },
+        });
+        csvContent =
+          "Date,Service,Client,Status,Total\n" +
+          appts
+            .map(
+              (a) =>
+                `"${a.startTime.toISOString()}","${escapeCsv(a.service.name)}","${escapeCsv(a.client.firstName || a.clientName || "")}","${a.status}","${(a.totalInCents / 100).toFixed(2)}"`
+            )
+            .join("\n");
+        break;
+      }
+
+      case "TRANSACTIONS": {
+        const dateFilter =
+          parsedStart || parsedEnd
+            ? {
+                createdAt: {
+                  ...(parsedStart ? { gte: parsedStart } : {}),
+                  ...(parsedEnd ? { lte: parsedEnd } : {}),
+                },
+              }
+            : {};
+        const payments = await prisma.payment.findMany({
+          where: { providerId: user.provider.id, ...dateFilter },
+          include: {
+            appointment: { include: { service: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+        csvContent =
+          "Date,Service,Amount,Type,Status,Method\n" +
+          payments
+            .map(
+              (p) =>
+                `"${p.createdAt.toISOString()}","${escapeCsv(p.appointment.service.name)}","${(p.amountInCents / 100).toFixed(2)}","${p.type}","${p.status}","${p.method}"`
+            )
+            .join("\n");
+        break;
+      }
+    }
+
+    const updatedJob = await prisma.exportJob.update({
+      where: { id: job.id },
+      data: {
+        status: "COMPLETED",
+        content: csvContent,
+        completedAt: new Date(),
+      },
+    });
+
+    return success(updatedJob, 201);
+  } catch (err) {
+    const updatedJob = await prisma.exportJob.update({
+      where: { id: job.id },
+      data: {
+        status: "FAILED",
+        error: err instanceof Error ? err.message : "Unknown error",
+      },
+    });
+    return success(updatedJob, 201);
+  }
 }
 
 // GET /api/exports — list export jobs
@@ -53,4 +174,8 @@ export async function GET() {
   });
 
   return success(jobs);
+}
+
+function escapeCsv(val: string): string {
+  return val.replace(/"/g, '""');
 }
