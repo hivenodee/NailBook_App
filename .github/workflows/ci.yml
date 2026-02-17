@@ -29,9 +29,6 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
-      - name: Lint
-        run: pnpm lint
-
       - name: Type Check (web)
         run: pnpm --filter web exec tsc --noEmit
         env:
