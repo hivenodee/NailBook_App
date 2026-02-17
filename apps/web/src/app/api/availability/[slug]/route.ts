@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { BOOKING } from "@nailbook/shared";
 import { getAvailabilityCache, setAvailabilityCache } from "@/lib/cache";
-import { wallClockToUTC, dayBoundsUTC } from "@/lib/timezone";
+import { dayBoundsUTC } from "@/lib/timezone";
+import { generateTimeSlots } from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
 
@@ -97,35 +98,7 @@ export async function GET(
   });
 
   // Generate time slots from availability rules
-  // Rule times are wall-clock (e.g., "09:00" = 9 AM in provider's timezone)
-  const slots: { startTime: string; endTime: string; available: boolean }[] = [];
-
-  for (const rule of rules) {
-    const [startHour, startMin] = rule.startTime.split(":").map(Number);
-    const [endHour, endMin] = rule.endTime.split(":").map(Number);
-
-    const ruleStart = wallClockToUTC(dateStr, startHour, startMin, tz);
-    const ruleEnd = wallClockToUTC(dateStr, endHour, endMin, tz);
-
-    let cursor = new Date(ruleStart);
-    while (cursor < ruleEnd) {
-      const slotEnd = new Date(
-        cursor.getTime() + BOOKING.SLOT_INCREMENT_MINUTES * 60 * 1000
-      );
-
-      const isBooked = appointments.some(
-        (a) => a.startTime < slotEnd && a.endTime > cursor
-      );
-
-      slots.push({
-        startTime: cursor.toISOString(),
-        endTime: slotEnd.toISOString(),
-        available: !isBooked,
-      });
-
-      cursor = slotEnd;
-    }
-  }
+  const slots = generateTimeSlots(rules, dateStr, tz, BOOKING.SLOT_INCREMENT_MINUTES, appointments);
 
   await setAvailabilityCache(provider.id, dateStr, slots);
 

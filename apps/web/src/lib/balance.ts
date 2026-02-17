@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { calculateBalance } from "@/lib/pricing";
 
 export type BalanceInfo = {
   totalInCents: number;
@@ -29,16 +30,17 @@ export async function getBalanceInfo(
     (sum, p) => sum + p.amountInCents,
     0,
   );
-  const remainingInCents =
-    appointment.totalInCents -
-    appointment.depositInCents -
-    balancePaidInCents;
+  const { remainingInCents, isPaid } = calculateBalance(
+    appointment.totalInCents,
+    appointment.depositInCents,
+    balancePaidInCents,
+  );
 
   return {
     totalInCents: appointment.totalInCents,
     depositInCents: appointment.depositInCents,
     balancePaidInCents,
-    remainingInCents: Math.max(0, remainingInCents),
-    isPaid: remainingInCents <= 0,
+    remainingInCents,
+    isPaid,
   };
 }

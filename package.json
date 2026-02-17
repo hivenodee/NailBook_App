@@ -5,6 +5,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "test": "turbo test",
     "clean": "turbo clean",
     "db:generate": "pnpm --filter @nailbook/db exec prisma generate",
     "db:migrate": "pnpm --filter @nailbook/db exec prisma migrate dev",

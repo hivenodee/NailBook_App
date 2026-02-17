@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/coupons/validate — public endpoint to validate a coupon during booking
 export async function POST(request: NextRequest) {
+  const limited = await rateLimit(request);
+  if (limited) return limited;
+
   const body = await request.json();
   const { code, slug, serviceId } = body as {
     code?: string;

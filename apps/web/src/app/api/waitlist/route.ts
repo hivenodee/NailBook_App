@@ -5,11 +5,15 @@ import { joinWaitlistSchema } from "@nailbook/shared";
 import { sendWaitlistJoinedEmail } from "@/lib/email";
 import { sendWaitlistJoinedSms } from "@/lib/sms";
 import { formatDateForEmail } from "@/lib/waitlist";
+import { strictRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/waitlist — join waitlist (public, no auth required)
 export async function POST(request: NextRequest) {
+  const limited = await strictRateLimit(request);
+  if (limited) return limited;
+
   const result = await parseBody(request, joinWaitlistSchema);
   if (result.error) return result.error;
 

@@ -8,6 +8,8 @@ import { sendClientConfirmation, sendProviderNewBooking, formatDateTime, type Bo
 import { sendBookingConfirmationSms } from "@/lib/sms";
 import { invalidateAvailability } from "@/lib/cache";
 import { scheduleReminders } from "@/lib/schedule-jobs";
+import { strictRateLimit } from "@/lib/rate-limit";
+import { calculateDiscount, calculateDeposit } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/appointments — create a new booking
 export async function POST(request: NextRequest) {
+  const limited = await strictRateLimit(request);
+  if (limited) return limited;
+
   const result = await parseBody(request, createBookingSchema);
   if (result.error) return result.error;
 
@@ -153,11 +158,7 @@ export async function POST(request: NextRequest) {
       return error("This coupon doesn't apply to this service", 400);
     }
     couponId = coupon.id;
-    if (coupon.type === "PERCENT") {
-      discountInCents = Math.min(Math.round(totalBeforeDiscount * coupon.value / 100), totalBeforeDiscount);
-    } else {
-      discountInCents = Math.min(coupon.value, totalBeforeDiscount);
-    }
+    discountInCents = calculateDiscount(totalBeforeDiscount, coupon.type as "PERCENT" | "FIXED", coupon.value);
   }
 
   const totalPriceCents = totalBeforeDiscount - discountInCents;
@@ -176,14 +177,7 @@ export async function POST(request: NextRequest) {
   if (overlap) return error("Time slot is no longer available", 409);
 
   // Calculate deposit (based on discounted total)
-  let depositInCents = 0;
-  if (service.depositType === "FLAT") {
-    depositInCents = Math.min(service.depositValue, totalPriceCents);
-  } else if (service.depositType === "PERCENT") {
-    depositInCents = Math.round(
-      (totalPriceCents * service.depositValue) / 100
-    );
-  }
+  const depositInCents = calculateDeposit(totalPriceCents, service.depositType as "NONE" | "FLAT" | "PERCENT", service.depositValue);
 
   // Validate payment method against provider settings and deposit
   if (paymentMethod === "CASH" && depositInCents > 0 && totalPriceCents > 0) {

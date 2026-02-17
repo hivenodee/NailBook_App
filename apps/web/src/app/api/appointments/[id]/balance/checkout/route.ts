@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { getBalanceInfo } from "@/lib/balance";
+import { strictRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,9 @@ type Params = { params: Promise<{ id: string }> };
 
 // POST /api/appointments/:id/balance/checkout — public, no auth
 export async function POST(_request: NextRequest, { params }: Params) {
+  const limited = await strictRateLimit(_request);
+  if (limited) return limited;
+
   const { id } = await params;
 
   const appointment = await prisma.appointment.findUnique({

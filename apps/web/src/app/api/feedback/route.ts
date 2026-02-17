@@ -3,11 +3,15 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
 import { submitFeedbackSchema } from "@nailbook/shared";
+import { strictRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/feedback — Submit anonymous feedback (no auth required)
 export async function POST(request: NextRequest) {
+  const limited = await strictRateLimit(request);
+  if (limited) return limited;
+
   const parsed = await parseBody(request, submitFeedbackSchema);
   if (parsed.error) return parsed.error;
 

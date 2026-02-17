@@ -8,6 +8,8 @@
     "build": "tsc",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:resolve": "prisma migrate resolve",
     "push": "prisma db push",
     "studio": "prisma studio"
   },
