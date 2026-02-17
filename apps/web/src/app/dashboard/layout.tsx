@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
+import DashboardNav from "@/components/DashboardNav";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,44 @@ async function getProvider(clerkId: string) {
     include: { provider: true },
   });
   return user?.provider ?? null;
+}
+
+async function getBadgeCounts(providerId: string) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const [today, money, waitlist, feedback] = await Promise.all([
+    prisma.appointment.count({
+      where: {
+        providerId,
+        startTime: { gte: startOfToday, lt: endOfToday },
+        status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+      },
+    }),
+    prisma.payment.count({
+      where: {
+        appointment: { providerId },
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    }),
+    prisma.waitlistEntry.count({
+      where: {
+        providerId,
+        status: "ACTIVE",
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    }),
+    prisma.feedback.count({
+      where: {
+        providerId,
+        createdAt: { gte: twentyFourHoursAgo },
+      },
+    }),
+  ]);
+
+  return { today, money, waitlist, feedback };
 }
 
 export default async function DashboardLayout({
@@ -26,44 +65,21 @@ export default async function DashboardLayout({
   const provider = await getProvider(userId);
   if (!provider) redirect("/");
 
+  const badges = await getBadgeCounts(provider.id);
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="bg-surface border-b border-border sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-grid-2 flex items-center justify-between h-14">
-          <Link href="/dashboard" className="font-semibold text-lg">
+        <div className="max-w-3xl mx-auto px-grid-2 flex items-center h-14 gap-grid-2">
+          <Link href="/dashboard" className="font-semibold text-lg flex-shrink-0">
             NailBook
           </Link>
-          <div className="flex gap-grid-2">
-            <NavLink href="/dashboard">Today</NavLink>
-            <NavLink href="/dashboard/history">History</NavLink>
-            <NavLink href="/dashboard/clients">Clients</NavLink>
-            <NavLink href="/dashboard/services">Services</NavLink>
-            <NavLink href="/dashboard/availability">Hours</NavLink>
-            <NavLink href="/dashboard/money">Money</NavLink>
-            <NavLink href="/dashboard/portfolio">Portfolio</NavLink>
-            <NavLink href="/dashboard/waitlist">Waitlist</NavLink>
-            <NavLink href="/dashboard/feedback">Feedback</NavLink>
-            <NavLink href="/dashboard/messages">Messages</NavLink>
-            <NavLink href="/dashboard/coupons">Coupons</NavLink>
-            <NavLink href="/dashboard/exports">Exports</NavLink>
-            <NavLink href="/dashboard/profile">Profile</NavLink>
-          </div>
+          <DashboardNav badges={badges} />
         </div>
       </nav>
       <main className="max-w-3xl mx-auto px-grid-2 py-grid-3">
         {children}
       </main>
     </div>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: string }): React.JSX.Element {
-  return (
-    <Link
-      href={href}
-      className="text-sm font-medium text-text-muted hover:text-text-secondary transition-colors px-2 py-1"
-    >
-      {children}
-    </Link>
   );
 }

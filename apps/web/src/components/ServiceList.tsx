@@ -99,12 +99,12 @@ export default function ServiceList({ services, slug, booksOpen = true }: Servic
           {booksOpen ? (
             <a
               href={`/${slug}/book?service=${service.id}`}
-              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors"
+              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors shadow-sm"
             >
               Book Now
             </a>
           ) : (
-            <span className="mt-grid-2 block w-full text-center bg-gray-300 text-gray-500 py-2.5 rounded-button text-sm font-medium cursor-not-allowed">
+            <span className="mt-grid-2 block w-full text-center bg-border text-text-muted py-2.5 rounded-button text-sm font-medium cursor-not-allowed">
               Book Now
             </span>
           )}

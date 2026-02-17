@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { statusColor, statusLabel } from "@/lib/status-colors";
 
 type Appointment = {
   id: string;
@@ -36,27 +37,6 @@ function formatTime(iso: string, tz: string) {
     minute: "2-digit",
     timeZone: tz,
   });
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case "CONFIRMED":
-      return "bg-green-100 text-green-800";
-    case "PENDING_PAYMENT":
-      return "bg-yellow-100 text-yellow-800";
-    case "COMPLETED":
-      return "bg-blue-100 text-blue-800";
-    case "CANCELLED":
-      return "bg-red-100 text-red-800";
-    case "NO_SHOW":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
 }
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
@@ -116,7 +96,7 @@ export default function HistoryPage(): React.JSX.Element {
             className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors whitespace-nowrap ${
               filter === f.value
                 ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
             }`}
           >
             {f.label}
@@ -125,7 +105,23 @@ export default function HistoryPage(): React.JSX.Element {
       </div>
 
       {loading ? (
-        <div className="text-text-muted text-sm">Loading...</div>
+        <div className="space-y-grid-1">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-32" />
+                  <div className="h-3 bg-border/40 rounded w-24" />
+                  <div className="h-3 bg-border/40 rounded w-40" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <div className="h-5 bg-border/40 rounded-full w-20 ml-auto" />
+                  <div className="h-4 bg-border/60 rounded w-14 ml-auto" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
           <p className="text-text-muted">

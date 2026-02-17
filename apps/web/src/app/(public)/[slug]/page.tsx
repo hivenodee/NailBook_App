@@ -124,7 +124,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         <section>
           <h2 className="text-lg font-medium mb-grid-1">Portfolio</h2>
           {provider.mediaAssets.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1 rounded-card overflow-hidden">
+            <div className="grid grid-cols-3 gap-0.5 rounded-card overflow-hidden">
               {provider.mediaAssets.map((asset) => (
                 <div key={asset.id} className="aspect-square bg-border">
                   {asset.type === "PHOTO" ? (
@@ -156,7 +156,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           <section>
             <Link
               href={`/${slug}/reviews`}
-              className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-between hover:shadow-md transition-shadow block"
+              className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-between hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-grid-2">
                 {reviewStats.avgRating !== null && (
@@ -221,27 +221,27 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           <p>Arrival grace period: {provider.arrivalGraceMinutes} minutes.</p>
           <div className="flex gap-2 flex-wrap mt-grid-1">
             {provider.acceptsCard && (
-              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded text-xs">
+              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded-full text-xs">
                 Card
               </span>
             )}
             {provider.acceptsApplePay && (
-              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded text-xs">
+              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded-full text-xs">
                 Apple Pay
               </span>
             )}
             {provider.acceptsGooglePay && (
-              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded text-xs">
+              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded-full text-xs">
                 Google Pay
               </span>
             )}
             {provider.acceptsCashAppPay && (
-              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded text-xs">
+              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded-full text-xs">
                 Cash App Pay
               </span>
             )}
             {provider.acceptsCash && (
-              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded text-xs">
+              <span className="bg-primary-light text-text-secondary px-2 py-0.5 rounded-full text-xs">
                 Cash
               </span>
             )}

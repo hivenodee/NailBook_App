@@ -135,7 +135,24 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="space-y-grid-3 max-w-lg">
+        <div className="h-7 bg-border/60 rounded w-20" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse space-y-grid-2">
+            <div className="h-5 bg-border/60 rounded w-28" />
+            <div className="space-y-2">
+              <div className="h-3 bg-border/40 rounded w-20" />
+              <div className="h-9 bg-border/30 rounded-button w-full" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 bg-border/40 rounded w-16" />
+              <div className="h-9 bg-border/30 rounded-button w-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (!provider) {
@@ -394,7 +411,7 @@ function Toggle({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative w-10 h-6 rounded-full transition-colors ${
-          checked ? "bg-primary" : "bg-gray-300"
+          checked ? "bg-primary" : "bg-border"
         }`}
       >
         <span

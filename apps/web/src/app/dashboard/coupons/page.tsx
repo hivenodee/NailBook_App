@@ -144,7 +144,27 @@ export default function CouponsPage() {
   }
 
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="space-y-grid-3">
+        <div className="flex justify-between items-center">
+          <div className="h-7 bg-border/60 rounded w-24" />
+          <div className="h-10 bg-border/40 rounded-button w-32" />
+        </div>
+        <div className="space-y-grid-1">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-28" />
+                  <div className="h-3 bg-border/40 rounded w-40" />
+                </div>
+                <div className="h-7 bg-border/40 rounded-button w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -192,7 +212,7 @@ export default function CouponsPage() {
                   className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                     type === t
                       ? "bg-primary text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
                   }`}
                 >
                   {t === "PERCENT" ? "Percent %" : "Fixed $"}
@@ -285,7 +305,7 @@ export default function CouponsPage() {
                 setShowCreate(false);
                 setErrorMsg(null);
               }}
-              className="bg-gray-100 text-gray-700 py-2.5 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+              className="bg-background text-text-secondary border border-border py-2.5 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
             >
               Cancel
             </button>
@@ -312,7 +332,7 @@ export default function CouponsPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-semibold">{coupon.code}</span>
                     {!coupon.isActive && (
-                      <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-medium bg-border/60 text-text-muted px-2 py-0.5 rounded-full">
                         Disabled
                       </span>
                     )}
@@ -346,8 +366,8 @@ export default function CouponsPage() {
                   onClick={() => toggleActive(coupon)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                     coupon.isActive
-                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      : "bg-green-100 text-green-800 hover:bg-green-200"
+                      ? "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
+                      : "bg-green-50 text-green-700 hover:bg-green-100"
                   }`}
                 >
                   {coupon.isActive ? "Disable" : "Enable"}

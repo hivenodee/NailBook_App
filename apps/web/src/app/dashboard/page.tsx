@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { statusColor, statusLabel } from "@/lib/status-colors";
 
 type Appointment = {
   id: string;
@@ -42,27 +43,6 @@ function isToday(iso: string) {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   );
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case "CONFIRMED":
-      return "bg-green-100 text-green-800";
-    case "PENDING_PAYMENT":
-      return "bg-yellow-100 text-yellow-800";
-    case "COMPLETED":
-      return "bg-blue-100 text-blue-800";
-    case "CANCELLED":
-      return "bg-red-100 text-red-800";
-    case "NO_SHOW":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
 }
 
 export default function DashboardTodayPage() {
@@ -116,7 +96,23 @@ export default function DashboardTodayPage() {
       <h1 className="text-2xl font-semibold">Today</h1>
 
       {loading ? (
-        <div className="text-text-muted text-sm">Loading appointments...</div>
+        <div className="space-y-grid-1">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-32" />
+                  <div className="h-3 bg-border/40 rounded w-24" />
+                  <div className="h-3 bg-border/40 rounded w-28" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <div className="h-5 bg-border/40 rounded-full w-20 ml-auto" />
+                  <div className="h-4 bg-border/60 rounded w-14 ml-auto" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : appointments.length === 0 ? (
         <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
           <p className="text-text-muted">No upcoming appointments</p>

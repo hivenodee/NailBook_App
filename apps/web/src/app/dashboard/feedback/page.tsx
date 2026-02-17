@@ -126,7 +126,7 @@ export default function DashboardFeedbackPage(): React.JSX.Element {
                   className={`shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                     item.isPublic
                       ? "bg-green-50 text-green-700 hover:bg-green-100"
-                      : "bg-gray-50 text-text-muted hover:bg-gray-100"
+                      : "bg-background text-text-muted hover:bg-border/30"
                   } disabled:opacity-50`}
                 >
                   {item.isPublic ? "Public" : "Make Public"}

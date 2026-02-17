@@ -28,12 +28,12 @@ const STATUS_TABS: { label: string; value: StatusTab }[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-800",
-  AVAILABLE: "bg-amber-100 text-amber-800",
-  NOTIFIED: "bg-blue-100 text-blue-800",
-  BOOKED: "bg-purple-100 text-purple-800",
+  ACTIVE: "bg-green-50 text-green-700",
+  AVAILABLE: "bg-amber-50 text-amber-700",
+  NOTIFIED: "bg-blue-50 text-blue-700",
+  BOOKED: "bg-purple-50 text-purple-700",
   EXPIRED: "bg-gray-100 text-gray-600",
-  CANCELLED: "bg-red-100 text-red-800",
+  CANCELLED: "bg-red-50 text-red-700",
 };
 
 const TIME_PREF_LABELS: Record<string, string> = {
@@ -145,7 +145,26 @@ export default function WaitlistDashboardPage(): React.JSX.Element {
       </div>
 
       {loading ? (
-        <p className="text-text-muted text-sm text-center py-grid-4">Loading...</p>
+        <div className="space-y-grid-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 bg-border/60 rounded w-28" />
+                    <div className="h-5 bg-border/40 rounded-full w-16" />
+                  </div>
+                  <div className="h-3 bg-border/40 rounded w-36" />
+                </div>
+                <div className="h-7 bg-border/40 rounded-button w-16" />
+              </div>
+              <div className="mt-2 flex gap-4">
+                <div className="h-3 bg-border/40 rounded w-20" />
+                <div className="h-3 bg-border/40 rounded w-24" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : entries.length === 0 ? (
         <div className="bg-surface rounded-card p-grid-4 shadow-card text-center">
           <p className="text-text-muted text-sm">No waitlist entries found.</p>

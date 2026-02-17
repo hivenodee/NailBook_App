@@ -978,7 +978,7 @@ export default function BookPage(): React.JSX.Element {
                           className={`py-2.5 rounded-button text-sm transition-colors flex flex-col items-center ${
                             isWaitlisting
                               ? "bg-amber-100 border border-amber-400 text-amber-800"
-                              : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                              : "bg-background text-text-muted border border-border hover:bg-border/40"
                           }`}
                         >
                           <span className="font-medium">{formatTime(slot.startTime, service.provider.timezone)}</span>

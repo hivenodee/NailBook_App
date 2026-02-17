@@ -34,6 +34,7 @@ const config: Config = {
         card: "16px",
         button: "12px",
         input: "10px",
+        nav: "8px",
       },
       spacing: {
         // 8pt grid

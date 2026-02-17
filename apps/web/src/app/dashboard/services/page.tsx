@@ -130,7 +130,31 @@ export default function ServicesPage() {
   }
 
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="space-y-grid-3">
+        <div className="flex justify-between items-center">
+          <div className="h-7 bg-border/60 rounded w-24" />
+          <div className="h-10 bg-border/40 rounded-button w-28" />
+        </div>
+        <div className="space-y-grid-1">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-36" />
+                  <div className="h-3 bg-border/40 rounded w-48" />
+                  <div className="h-3 bg-border/40 rounded w-28" />
+                </div>
+                <div className="flex gap-1.5">
+                  <div className="h-7 bg-border/40 rounded-button w-20" />
+                  <div className="h-7 bg-border/40 rounded-button w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -217,7 +241,7 @@ export default function ServicesPage() {
                   className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                     depositType === dt
                       ? "bg-primary text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
                   }`}
                 >
                   {dt === "NONE" ? "None" : dt === "FLAT" ? "Flat $" : "Percent %"}
@@ -254,7 +278,7 @@ export default function ServicesPage() {
                 setShowCreate(false);
                 setErrorMsg(null);
               }}
-              className="bg-gray-100 text-gray-700 py-2.5 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+              className="bg-background text-text-secondary border border-border py-2.5 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
             >
               Cancel
             </button>
@@ -284,7 +308,7 @@ export default function ServicesPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium">{service.name}</h3>
                     {!service.isActive && (
-                      <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-medium bg-border/60 text-text-muted px-2 py-0.5 rounded-full">
                         Inactive
                       </span>
                     )}
@@ -308,7 +332,7 @@ export default function ServicesPage() {
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => copyLink(service.id)}
-                    className="text-xs font-medium px-3 py-1.5 rounded-button transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    className="text-xs font-medium px-3 py-1.5 rounded-button transition-colors bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
                   >
                     {copiedId === service.id ? "Copied!" : "Copy Link"}
                   </button>
@@ -316,8 +340,8 @@ export default function ServicesPage() {
                     onClick={() => toggleActive(service)}
                     className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                       service.isActive
-                        ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        : "bg-green-100 text-green-800 hover:bg-green-200"
+                        ? "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
+                        : "bg-green-50 text-green-700 hover:bg-green-100"
                     }`}
                   >
                     {service.isActive ? "Disable" : "Enable"}

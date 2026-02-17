@@ -50,7 +50,22 @@ export default function ClientsPage(): React.JSX.Element {
       </div>
 
       {loading ? (
-        <p className="text-text-muted text-sm">Loading...</p>
+        <div className="space-y-grid-1">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-32" />
+                  <div className="h-3 bg-border/40 rounded w-40" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <div className="h-4 bg-border/60 rounded w-16 ml-auto" />
+                  <div className="h-3 bg-border/40 rounded w-24 ml-auto" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : clients.length === 0 ? (
         <div className="bg-surface rounded-card p-grid-3 shadow-card text-center">
           <p className="text-text-muted text-sm">

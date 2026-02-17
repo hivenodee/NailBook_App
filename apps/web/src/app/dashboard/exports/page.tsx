@@ -122,7 +122,24 @@ export default function ExportsPage(): React.JSX.Element {
   }
 
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="space-y-grid-3">
+        <div className="h-7 bg-border/60 rounded w-20" />
+        <div className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse space-y-grid-2">
+          <div className="h-5 bg-border/60 rounded w-32" />
+          <div className="flex gap-grid-1">
+            <div className="h-7 bg-border/40 rounded-button w-28" />
+            <div className="h-7 bg-border/40 rounded-button w-20" />
+            <div className="h-7 bg-border/40 rounded-button w-28" />
+          </div>
+          <div className="flex gap-grid-1">
+            <div className="h-7 bg-border/40 rounded-button w-24" />
+            <div className="h-7 bg-border/40 rounded-button w-24" />
+            <div className="h-7 bg-border/40 rounded-button w-24" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -145,7 +162,7 @@ export default function ExportsPage(): React.JSX.Element {
                 className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                   exportType === t
                     ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
                 }`}
               >
                 {TYPE_LABELS[t]}
@@ -166,7 +183,7 @@ export default function ExportsPage(): React.JSX.Element {
                 className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                   datePreset === p
                     ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
                 }`}
               >
                 {PRESET_LABELS[p]}
@@ -249,7 +266,7 @@ export default function ExportsPage(): React.JSX.Element {
                     onClick={() =>
                       window.open(`/api/exports/${job.id}/download`, "_blank")
                     }
-                    className="text-xs font-medium px-3 py-1.5 rounded-button bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                    className="text-xs font-medium px-3 py-1.5 rounded-button bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
                   >
                     Download
                   </button>
@@ -268,10 +285,10 @@ export default function ExportsPage(): React.JSX.Element {
 
 function StatusBadge({ status }: { status: ExportJob["status"] }): React.JSX.Element {
   const styles: Record<ExportJob["status"], string> = {
-    COMPLETED: "bg-green-100 text-green-800",
-    PENDING: "bg-yellow-100 text-yellow-800",
-    PROCESSING: "bg-yellow-100 text-yellow-800",
-    FAILED: "bg-red-100 text-red-800",
+    COMPLETED: "bg-green-50 text-green-700",
+    PENDING: "bg-yellow-50 text-yellow-700",
+    PROCESSING: "bg-yellow-50 text-yellow-700",
+    FAILED: "bg-red-50 text-red-700",
   };
   const labels: Record<ExportJob["status"], string> = {
     COMPLETED: "Completed",

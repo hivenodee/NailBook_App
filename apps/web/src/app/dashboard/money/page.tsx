@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { paymentStatusColor } from "@/lib/status-colors";
 import {
   LineChart,
   Line,
@@ -98,21 +99,6 @@ const PAGE_SIZE = 20;
 
 function formatDollars(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
-}
-
-function paymentStatusColor(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "bg-green-100 text-green-800";
-    case "PENDING":
-      return "bg-yellow-100 text-yellow-800";
-    case "FAILED":
-      return "bg-red-100 text-red-800";
-    case "REFUNDED":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
 }
 
 function typeLabel(type: string) {
@@ -236,7 +222,7 @@ export default function MoneyPage(): React.JSX.Element {
               className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 range === r.value
                   ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
               }`}
             >
               {r.label}
@@ -251,7 +237,7 @@ export default function MoneyPage(): React.JSX.Element {
               className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                 granularity === g.value
                   ? "bg-primary/20 text-primary"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
               }`}
             >
               {g.label}
@@ -384,7 +370,7 @@ export default function MoneyPage(): React.JSX.Element {
             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
               statusFilter === s
                 ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
             }`}
           >
             {s === "All" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -394,7 +380,22 @@ export default function MoneyPage(): React.JSX.Element {
 
       {/* ─── Transaction List ─── */}
       {txLoading ? (
-        <div className="text-text-muted text-sm">Loading payments...</div>
+        <div className="space-y-grid-1">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-border/60 rounded w-28" />
+                  <div className="h-3 bg-border/40 rounded w-20" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <div className="h-4 bg-border/60 rounded w-16 ml-auto" />
+                  <div className="h-5 bg-border/40 rounded-full w-20 ml-auto" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : payments.length === 0 ? (
         <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
           <p className="text-text-muted">No payments yet</p>
@@ -453,14 +454,14 @@ export default function MoneyPage(): React.JSX.Element {
           <button
             onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
             disabled={!hasPrev}
-            className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
           <button
             onClick={() => setOffset(offset + PAGE_SIZE)}
             disabled={!hasMore}
-            className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
           </button>

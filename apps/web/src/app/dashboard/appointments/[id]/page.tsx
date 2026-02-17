@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { statusColor, statusLabel, paymentStatusColor } from "@/lib/status-colors";
 
 type AppointmentEvent = {
   id: string;
@@ -61,42 +62,6 @@ function formatTime(iso: string, tz: string) {
     minute: "2-digit",
     timeZone: tz,
   });
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case "CONFIRMED":
-      return "bg-green-100 text-green-800";
-    case "PENDING_PAYMENT":
-      return "bg-yellow-100 text-yellow-800";
-    case "COMPLETED":
-      return "bg-blue-100 text-blue-800";
-    case "CANCELLED":
-      return "bg-red-100 text-red-800";
-    case "NO_SHOW":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
-function statusLabel(status: string) {
-  return status.replace(/_/g, " ");
-}
-
-function paymentStatusColor(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "bg-green-100 text-green-800";
-    case "PENDING":
-      return "bg-yellow-100 text-yellow-800";
-    case "FAILED":
-      return "bg-red-100 text-red-800";
-    case "REFUNDED":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
 }
 
 export default function AppointmentDetailPage() {
@@ -168,7 +133,25 @@ export default function AppointmentDetailPage() {
   }
 
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="space-y-grid-3">
+        <div className="h-4 bg-border/40 rounded w-16" />
+        <div className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse space-y-grid-2">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2 flex-1">
+              <div className="h-5 bg-border/60 rounded w-40" />
+              <div className="h-3 bg-border/40 rounded w-20" />
+            </div>
+            <div className="h-5 bg-border/40 rounded-full w-24" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 bg-border/40 rounded w-48" />
+            <div className="h-3 bg-border/40 rounded w-36" />
+            <div className="h-3 bg-border/40 rounded w-32" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!appointment) {
@@ -354,7 +337,7 @@ export default function AppointmentDetailPage() {
                     </button>
                     <button
                       onClick={() => setBalanceConfirmCash(false)}
-                      className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                      className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors"
                     >
                       Cancel
                     </button>
@@ -372,7 +355,7 @@ export default function AppointmentDetailPage() {
                   <button
                     onClick={() => setBalanceConfirmCash(true)}
                     disabled={balanceLoading}
-                    className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors disabled:opacity-50"
                   >
                     Mark as Cash Paid
                   </button>
@@ -413,7 +396,7 @@ export default function AppointmentDetailPage() {
                 </button>
                 <button
                   onClick={() => setConfirmAction(null)}
-                  className="text-sm font-medium px-4 py-2 rounded-button bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors"
                 >
                   Go back
                 </button>
@@ -429,13 +412,13 @@ export default function AppointmentDetailPage() {
               </button>
               <button
                 onClick={() => setConfirmAction("cancel")}
-                className="bg-gray-100 text-gray-700 py-2 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => setConfirmAction("no_show")}
-                className="bg-gray-100 text-gray-700 py-2 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
               >
                 No-Show
               </button>
