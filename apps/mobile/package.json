@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "expo start",
     "build": "echo 'Mobile build handled by EAS'",
-    "lint": "eslint src/",
     "ios": "expo run:ios",
     "android": "expo run:android"
   },
