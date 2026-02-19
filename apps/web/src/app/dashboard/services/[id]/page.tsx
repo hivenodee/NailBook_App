@@ -380,7 +380,7 @@ export default function EditServicePage() {
             </button>
             <button
               onClick={closeAddonEdit}
-              className="bg-gray-100 text-gray-700 py-2 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+              className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
             >
               Cancel
             </button>
@@ -405,7 +405,7 @@ export default function EditServicePage() {
               </span>
             )}
             {!addon.isActive && (
-              <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
                 Inactive
               </span>
             )}
@@ -428,7 +428,7 @@ export default function EditServicePage() {
             onClick={() => toggleAddonActive(addon)}
             className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
               addon.isActive
-                ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-background text-text-secondary border border-border hover:bg-border/40"
                 : "bg-green-100 text-green-800 hover:bg-green-200"
             }`}
           >
@@ -512,7 +512,7 @@ export default function EditServicePage() {
                 className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                   depositType === dt
                     ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-background text-text-secondary border border-border hover:bg-border/40"
                 }`}
               >
                 {dt === "NONE" ? "None" : dt === "FLAT" ? "Flat $" : "Percent %"}
@@ -599,7 +599,7 @@ export default function EditServicePage() {
                     className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
                       groupRule === r
                         ? "bg-primary text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-background text-text-secondary border border-border hover:bg-border/40"
                     }`}
                   >
                     {RULE_LABELS[r]}
@@ -617,7 +617,7 @@ export default function EditServicePage() {
               </button>
               <button
                 onClick={() => { setShowGroupForm(false); setEditingGroupId(null); }}
-                className="bg-gray-100 text-gray-700 py-2 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
               >
                 Cancel
               </button>
@@ -697,7 +697,7 @@ export default function EditServicePage() {
               </button>
               <button
                 onClick={() => setShowAddOn(false)}
-                className="bg-gray-100 text-gray-700 py-2 px-4 rounded-button text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
               >
                 Cancel
               </button>
@@ -711,7 +711,7 @@ export default function EditServicePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{group.name}</span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                <span className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
                   {RULE_LABELS[group.rule]}
                 </span>
               </div>

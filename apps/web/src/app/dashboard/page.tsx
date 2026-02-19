@@ -131,7 +131,7 @@ export default function DashboardTodayPage() {
                 <Link
                   key={appt.id}
                   href={`/dashboard/appointments/${appt.id}`}
-                  className="block bg-surface rounded-card p-grid-2 shadow-card hover:shadow-md transition-shadow"
+                  className="block bg-surface rounded-card p-grid-2 border border-border/50 hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200"
                 >
                   <div className="flex justify-between items-start">
                     <div>

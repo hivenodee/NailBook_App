@@ -198,7 +198,7 @@ export default function AvailabilityPage() {
                 className={`w-20 text-center text-sm font-medium py-1.5 rounded-button transition-colors ${
                   rule.isActive
                     ? "bg-primary text-white"
-                    : "bg-gray-100 text-text-muted"
+                    : "bg-surface-alt text-text-muted"
                 }`}
               >
                 {DAYS_OF_WEEK[rule.dayOfWeek].slice(0, 3)}

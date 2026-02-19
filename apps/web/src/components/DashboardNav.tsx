@@ -53,17 +53,15 @@ export default function DashboardNav({ badges }: { badges: BadgeCounts }): React
           <Link
             key={item.href}
             href={item.href}
-            className={`relative flex-shrink-0 whitespace-nowrap text-sm font-medium px-2.5 py-1.5 rounded-nav transition-colors ${
+            className={`relative flex-shrink-0 whitespace-nowrap text-sm font-medium px-2.5 py-1.5 transition-colors border-b-2 ${
               active
-                ? "bg-primary-light text-primary"
-                : "text-text-muted hover:text-text-secondary hover:bg-background"
+                ? "border-primary text-primary"
+                : "border-transparent text-text-muted hover:text-text-secondary"
             }`}
           >
             {item.label}
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                {count > 9 ? "9+" : count}
-              </span>
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
             )}
           </Link>
         );

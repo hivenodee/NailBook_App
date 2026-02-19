@@ -164,7 +164,7 @@ function BooksClosedCard({
 
   return (
     <div className="bg-surface rounded-card p-grid-3 shadow-card text-center space-y-grid-2">
-      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+      <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mx-auto">
         <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
@@ -722,7 +722,7 @@ export default function BookPage(): React.JSX.Element {
                 disabled={isMandatory}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-button text-sm transition-colors border ${
                   isMandatory
-                    ? "border-border bg-gray-50 cursor-default opacity-75"
+                    ? "border-border bg-surface-alt cursor-default opacity-75"
                     : isSelected
                       ? "border-primary bg-primary-light"
                       : "border-border bg-background hover:border-primary/40"
@@ -758,7 +758,7 @@ export default function BookPage(): React.JSX.Element {
                     {addon.name}
                   </span>
                   {isMandatory && (
-                    <span className="text-xs text-text-muted bg-gray-100 px-1.5 py-0.5 rounded-full">(included)</span>
+                    <span className="text-xs text-text-muted bg-surface-alt px-1.5 py-0.5 rounded-full">(included)</span>
                   )}
                 </div>
                 <div className="text-right text-xs text-text-muted">

@@ -1,17 +1,20 @@
+// Status badge colors using design token palette (Warm Earth)
+// See docs/ui-guidelines.md §4 — Status Colors
+
 export function statusColor(status: string): string {
   switch (status) {
     case "CONFIRMED":
-      return "bg-green-50 text-green-700";
+      return "bg-status-success/10 text-status-success";
     case "PENDING_PAYMENT":
-      return "bg-yellow-50 text-yellow-700";
+      return "bg-status-warning/10 text-status-warning";
     case "COMPLETED":
-      return "bg-blue-50 text-blue-700";
+      return "bg-status-info/10 text-status-info";
     case "CANCELLED":
-      return "bg-red-50 text-red-700";
+      return "bg-status-error/10 text-status-error";
     case "NO_SHOW":
-      return "bg-gray-100 text-gray-600";
+      return "bg-border/50 text-text-muted";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-border/50 text-text-muted";
   }
 }
 
@@ -22,14 +25,14 @@ export function statusLabel(status: string): string {
 export function paymentStatusColor(status: string): string {
   switch (status) {
     case "COMPLETED":
-      return "bg-green-50 text-green-700";
+      return "bg-status-success/10 text-status-success";
     case "PENDING":
-      return "bg-yellow-50 text-yellow-700";
+      return "bg-status-warning/10 text-status-warning";
     case "FAILED":
-      return "bg-red-50 text-red-700";
+      return "bg-status-error/10 text-status-error";
     case "REFUNDED":
-      return "bg-gray-100 text-gray-600";
+      return "bg-border/50 text-text-muted";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-border/50 text-text-muted";
   }
 }

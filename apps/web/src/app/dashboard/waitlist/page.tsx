@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
   AVAILABLE: "bg-amber-50 text-amber-700",
   NOTIFIED: "bg-blue-50 text-blue-700",
   BOOKED: "bg-purple-50 text-purple-700",
-  EXPIRED: "bg-gray-100 text-gray-600",
+  EXPIRED: "bg-border/50 text-text-muted",
   CANCELLED: "bg-red-50 text-red-700",
 };
 

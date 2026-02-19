@@ -36,12 +36,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  CONFIRMED: "bg-green-100 text-green-800",
-  COMPLETED: "bg-blue-100 text-blue-800",
-  CANCELLED: "bg-red-100 text-red-700",
-  PENDING_PAYMENT: "bg-yellow-100 text-yellow-800",
-  NO_SHOW: "bg-gray-100 text-gray-600",
-  DRAFT: "bg-gray-100 text-gray-600",
+  CONFIRMED: "bg-status-success/10 text-status-success",
+  COMPLETED: "bg-status-info/10 text-status-info",
+  CANCELLED: "bg-status-error/10 text-status-error",
+  PENDING_PAYMENT: "bg-status-warning/10 text-status-warning",
+  NO_SHOW: "bg-border/50 text-text-muted",
+  DRAFT: "bg-border/50 text-text-muted",
 };
 
 export default function ClientDetailPage(): React.JSX.Element {
@@ -216,7 +216,7 @@ export default function ClientDetailPage(): React.JSX.Element {
                     {appt.addOns.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {appt.addOns.map((a, i) => (
-                          <span key={i} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                          <span key={i} className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
                             {a.name}
                           </span>
                         ))}
@@ -224,7 +224,7 @@ export default function ClientDetailPage(): React.JSX.Element {
                     )}
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[appt.status] || "bg-gray-100 text-gray-600"}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[appt.status] || "bg-border/50 text-text-muted"}`}>
                       {STATUS_LABELS[appt.status] || appt.status}
                     </span>
                     <p className="text-sm font-medium mt-1">

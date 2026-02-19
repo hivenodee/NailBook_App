@@ -367,7 +367,7 @@ export default function MessagesPage(): React.JSX.Element {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-button shadow-lg z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-text-primary text-white text-sm font-medium px-4 py-2 rounded-button shadow-lg z-50">
           {toast}
         </div>
       )}

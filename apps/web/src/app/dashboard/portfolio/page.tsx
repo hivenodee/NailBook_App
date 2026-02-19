@@ -203,7 +203,7 @@ export default function PortfolioManagementPage() {
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => toggleHidden(asset)}
-                  className="text-xs font-medium bg-white text-gray-800 px-2 py-1 rounded shadow hover:bg-gray-100 transition-colors"
+                  className="text-xs font-medium bg-surface text-text-primary px-2 py-1 rounded shadow-card hover:bg-surface-alt transition-colors"
                 >
                   {asset.isHidden ? "Unhide" : "Hide"}
                 </button>

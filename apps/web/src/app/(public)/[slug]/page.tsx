@@ -156,7 +156,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           <section>
             <Link
               href={`/${slug}/reviews`}
-              className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-between hover:shadow-md transition-shadow"
+              className="bg-surface rounded-card p-grid-2 border border-border/50 flex items-center justify-between hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200"
             >
               <div className="flex items-center gap-grid-2">
                 {reviewStats.avgRating !== null && (

@@ -53,7 +53,7 @@ export default function ServiceList({ services, slug, booksOpen = true }: Servic
         <div
           key={service.id}
           ref={cardRef(service.id)}
-          className={`bg-surface rounded-card p-grid-2 shadow-card${
+          className={`bg-surface rounded-card p-grid-3 border border-border/50 hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200${
             service.id === highlightId ? " ring-2 ring-primary" : ""
           }`}
         >
