@@ -5,36 +5,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // NailBook design tokens from design.md
-        background: "#FAF9F7",       // warm off-white
-        surface: "#FFFFFF",
-        border: "#E8E4DF",           // warm border
+        // NailBook Warm Earth palette — see docs/ui-guidelines.md
+        background: "#F8F6F1",       // warm linen
+        surface: {
+          DEFAULT: "#FFFFFF",
+          alt: "#F3EDE6",            // alternating sections, hover
+        },
+        border: "#E5DFD6",           // warm sand
         text: {
-          primary: "#2D2D2D",        // charcoal, not pure black
-          secondary: "#6B6560",
-          muted: "#9C958E",
+          primary: "#2A2522",        // rich charcoal
+          secondary: "#6D6560",
+          muted: "#9E958C",          // taupe
         },
         primary: {
-          DEFAULT: "#7C8C6E",        // muted sage
-          hover: "#6B7A5E",
-          light: "#E8ECE4",
+          DEFAULT: "#7B8B6A",        // warm sage
+          hover: "#667A55",          // deep sage
+          light: "#E6EBE1",          // sage tint
         },
         accent: {
-          rose: "#C9A89C",           // rose gold
-          lavender: "#B8A9C9",
+          DEFAULT: "#C4A08A",        // rose gold
+          light: "#F0E6DD",          // rose mist
         },
         status: {
-          success: "#7C8C6E",
-          warning: "#D4A853",
-          error: "#C27070",
-          info: "#7A9CB8",
+          success: "#6B8F5C",        // fern
+          warning: "#C9993A",        // amber gold
+          error: "#BF6B6B",          // dusty rose
+          info: "#7A94AA",           // slate blue
         },
       },
       borderRadius: {
         card: "16px",
         button: "12px",
         input: "10px",
-        nav: "8px",
       },
       spacing: {
         // 8pt grid
@@ -57,6 +59,26 @@ const config: Config = {
           "Segoe UI",
           "sans-serif",
         ],
+        display: [
+          "DM Serif Display",
+          "Georgia",
+          "Times New Roman",
+          "serif",
+        ],
+      },
+      keyframes: {
+        fadeInUp: {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+      },
+      animation: {
+        "fade-in-up": "fadeInUp 0.3s ease-out",
+        shimmer: "shimmer 1.5s ease-in-out infinite",
       },
     },
   },
