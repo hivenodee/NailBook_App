@@ -37,7 +37,7 @@ export default function ClientsPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Clients</h1>
+      <h1 className="font-display text-2xl">Clients</h1>
 
       <div>
         <input

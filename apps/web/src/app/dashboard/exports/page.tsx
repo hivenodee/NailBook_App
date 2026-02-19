@@ -144,7 +144,7 @@ export default function ExportsPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Exports</h1>
+      <h1 className="font-display text-2xl">Exports</h1>
 
       {/* Request Export card */}
       <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">

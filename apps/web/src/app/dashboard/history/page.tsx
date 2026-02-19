@@ -85,7 +85,7 @@ export default function HistoryPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Appointment History</h1>
+      <h1 className="font-display text-2xl">Appointment History</h1>
 
       {/* Filters */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">

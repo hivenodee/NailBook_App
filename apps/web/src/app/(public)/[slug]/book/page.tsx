@@ -169,7 +169,7 @@ function BooksClosedCard({
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold">Books Are Currently Closed</h2>
+      <h2 className="font-display text-xl">Books Are Currently Closed</h2>
 
       {booksOpenAt && timeLeft && (
         <>
@@ -850,7 +850,7 @@ export default function BookPage(): React.JSX.Element {
         {/* Step: Select time */}
         {step === "time" && (
           <section className="space-y-grid-2">
-            <h2 className="text-xl font-semibold">Select a Time</h2>
+            <h2 className="font-display text-xl">Select a Time</h2>
 
             {/* Date picker — horizontal scroll */}
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-grid-2 px-grid-2">
@@ -1084,7 +1084,7 @@ export default function BookPage(): React.JSX.Element {
         {/* Step: Client details */}
         {step === "details" && (
           <section className="space-y-grid-2">
-            <h2 className="text-xl font-semibold">Your Details</h2>
+            <h2 className="font-display text-xl">Your Details</h2>
             <p className="text-text-muted text-sm">
               No account needed — just your info so the nail tech can reach you.
             </p>
@@ -1143,7 +1143,7 @@ export default function BookPage(): React.JSX.Element {
         {/* Step: Confirm & pay */}
         {step === "confirm" && selectedSlot && (
           <section className="space-y-grid-2">
-            <h2 className="text-xl font-semibold">Confirm Booking</h2>
+            <h2 className="font-display text-xl">Confirm Booking</h2>
 
             <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
               <div className="flex justify-between text-sm">

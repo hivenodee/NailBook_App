@@ -168,7 +168,7 @@ export default function NotificationsPage(): React.JSX.Element {
   return (
     <div className="space-y-grid-3">
       <div>
-        <h1 className="text-2xl font-semibold">Notification History</h1>
+        <h1 className="font-display text-2xl">Notification History</h1>
         <p className="text-text-secondary text-sm mt-1">
           Track delivery status of all sent notifications
         </p>

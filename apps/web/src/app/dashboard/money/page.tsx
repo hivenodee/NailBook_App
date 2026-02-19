@@ -210,7 +210,7 @@ export default function MoneyPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Money</h1>
+      <h1 className="font-display text-2xl">Money</h1>
 
       {/* ─── Range + Granularity Controls ─── */}
       <div className="flex flex-wrap gap-2">
@@ -257,7 +257,7 @@ export default function MoneyPage(): React.JSX.Element {
         <div className="grid grid-cols-2 gap-grid-2">
           <div className="bg-surface rounded-card p-grid-2 shadow-card">
             <p className="text-text-muted text-xs">Revenue</p>
-            <p className="text-xl font-semibold" style={{ color: CHART_COLORS.revenue }}>
+            <p className="font-display text-xl" style={{ color: CHART_COLORS.revenue }}>
               {formatDollars(summary?.revenue ?? 0)}
             </p>
             <p className="text-text-muted text-xs">
@@ -266,7 +266,7 @@ export default function MoneyPage(): React.JSX.Element {
           </div>
           <div className="bg-surface rounded-card p-grid-2 shadow-card">
             <p className="text-text-muted text-xs">Lost</p>
-            <p className="text-xl font-semibold" style={{ color: CHART_COLORS.lost }}>
+            <p className="font-display text-xl" style={{ color: CHART_COLORS.lost }}>
               {formatDollars(summary?.lostRevenue ?? 0)}
             </p>
             <p className="text-text-muted text-xs">
@@ -275,14 +275,14 @@ export default function MoneyPage(): React.JSX.Element {
           </div>
           <div className="bg-surface rounded-card p-grid-2 shadow-card">
             <p className="text-text-muted text-xs">Recovered</p>
-            <p className="text-xl font-semibold" style={{ color: CHART_COLORS.recovered }}>
+            <p className="font-display text-xl" style={{ color: CHART_COLORS.recovered }}>
               {formatDollars(summary?.recoveredRevenue ?? 0)}
             </p>
             <p className="text-text-muted text-xs">{summary?.waitlistRecoveryCount ?? 0} from waitlist</p>
           </div>
           <div className="bg-surface rounded-card p-grid-2 shadow-card">
             <p className="text-text-muted text-xs">Net</p>
-            <p className="text-xl font-bold" style={{ color: CHART_COLORS.net }}>
+            <p className="font-display text-xl" style={{ color: CHART_COLORS.net }}>
               {formatDollars(summary?.netRevenue ?? 0)}
             </p>
           </div>
@@ -429,7 +429,7 @@ export default function MoneyPage(): React.JSX.Element {
                     </p>
                   </div>
                   <div className="text-right space-y-1">
-                    <p className="font-medium">
+                    <p className="font-display text-base">
                       ${(payment.amountInCents / 100).toFixed(2)}
                     </p>
                     <p className="text-xs text-text-muted">

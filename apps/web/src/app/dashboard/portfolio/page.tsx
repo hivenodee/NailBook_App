@@ -139,7 +139,7 @@ export default function PortfolioManagementPage() {
   return (
     <div className="space-y-grid-3">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Portfolio</h1>
+        <h1 className="font-display text-2xl">Portfolio</h1>
         <div>
           <input
             ref={fileInputRef}

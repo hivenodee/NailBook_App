@@ -93,7 +93,7 @@ export default function DashboardTodayPage() {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Today</h1>
+      <h1 className="font-display text-2xl">Today</h1>
 
       {loading ? (
         <div className="space-y-grid-1">
@@ -149,7 +149,7 @@ export default function DashboardTodayPage() {
                       >
                         {statusLabel(appt.status)}
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="font-display text-base">
                         ${(appt.totalInCents / 100).toFixed(2)}
                       </p>
                       {appt.depositInCents > 0 && (

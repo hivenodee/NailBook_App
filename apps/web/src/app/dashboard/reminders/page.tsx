@@ -160,7 +160,7 @@ export default function RemindersPage(): React.JSX.Element {
   return (
     <div className="space-y-grid-3">
       <div>
-        <h1 className="text-2xl font-semibold">Reminder Settings</h1>
+        <h1 className="font-display text-2xl">Reminder Settings</h1>
         <p className="text-text-secondary text-sm mt-1">
           Configure when and how your clients receive appointment reminders
         </p>

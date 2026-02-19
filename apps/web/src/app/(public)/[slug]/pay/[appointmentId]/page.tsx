@@ -117,7 +117,7 @@ export default function PayBalancePage(): React.JSX.Element {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold">Balance Paid</h1>
+          <h1 className="font-display text-xl">Balance Paid</h1>
           <p className="text-text-muted text-sm">
             Your balance for {data.service.name} with {data.provider.businessName} has been paid in full.
           </p>
@@ -146,7 +146,7 @@ export default function PayBalancePage(): React.JSX.Element {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="bg-surface rounded-card p-grid-3 shadow-card max-w-sm w-full space-y-grid-2">
         <div className="text-center">
-          <h1 className="text-xl font-semibold">{data.provider.businessName}</h1>
+          <h1 className="font-display text-xl">{data.provider.businessName}</h1>
           <p className="text-text-muted text-sm">{data.service.name}</p>
           {data.clientName && (
             <p className="text-text-muted text-xs mt-1">for {data.clientName}</p>

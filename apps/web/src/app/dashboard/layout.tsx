@@ -72,7 +72,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-background">
       <nav className="bg-surface border-b border-border sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-grid-2 flex items-center h-14 gap-grid-2">
-          <Link href="/dashboard" className="font-semibold text-lg flex-shrink-0">
+          <Link href="/dashboard" className="font-display text-xl flex-shrink-0">
             NailBook
           </Link>
           <DashboardNav badges={badges} />

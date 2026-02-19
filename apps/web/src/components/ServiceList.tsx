@@ -83,7 +83,7 @@ export default function ServiceList({ services, slug, booksOpen = true }: Servic
               )}
             </div>
             <div className="text-right">
-              <p className="font-medium">
+              <p className="font-display text-lg">
                 ${(service.priceInCents / 100).toFixed(2)}
               </p>
               {service.depositType !== "NONE" && (
@@ -99,7 +99,7 @@ export default function ServiceList({ services, slug, booksOpen = true }: Servic
           {booksOpen ? (
             <a
               href={`/${slug}/book?service=${service.id}`}
-              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors shadow-sm"
+              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium tracking-wide hover:bg-primary-hover active:scale-[0.98] transition-all shadow-sm"
             >
               Book Now
             </a>

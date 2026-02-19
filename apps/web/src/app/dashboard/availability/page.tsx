@@ -182,7 +182,7 @@ export default function AvailabilityPage() {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Availability</h1>
+      <h1 className="font-display text-2xl">Availability</h1>
 
       {/* Section A: Weekly Hours */}
       <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-4">

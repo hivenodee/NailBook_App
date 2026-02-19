@@ -61,7 +61,7 @@ export default function DashboardFeedbackPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Feedback</h1>
+      <h1 className="font-display text-2xl">Feedback</h1>
 
       {/* Filter tabs */}
       <div className="flex gap-1 bg-border/30 rounded-card p-0.5 w-fit">

@@ -182,7 +182,7 @@ export default function AppointmentDetailPage() {
       <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-xl font-semibold">{clientDisplay}</h1>
+            <h1 className="font-display text-xl">{clientDisplay}</h1>
             {appointment.isNewClient && (
               <span className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full">
                 New client
@@ -318,7 +318,7 @@ export default function AppointmentDetailPage() {
             <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
               <div>
                 <h2 className="text-sm font-medium text-text-muted">Remaining Balance</h2>
-                <p className="text-lg font-semibold">
+                <p className="font-display text-lg">
                   ${(remaining / 100).toFixed(2)} remaining
                 </p>
               </div>

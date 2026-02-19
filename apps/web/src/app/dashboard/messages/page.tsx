@@ -193,7 +193,7 @@ export default function MessagesPage(): React.JSX.Element {
   return (
     <div className="space-y-grid-3">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Message Templates</h1>
+        <h1 className="font-display text-2xl">Message Templates</h1>
         <button
           onClick={handleSave}
           disabled={saving}

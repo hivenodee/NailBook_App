@@ -170,7 +170,7 @@ export default function CouponsPage() {
   return (
     <div className="space-y-grid-3">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Coupons</h1>
+        <h1 className="font-display text-2xl">Coupons</h1>
         {!showCreate && (
           <button
             onClick={() => setShowCreate(true)}

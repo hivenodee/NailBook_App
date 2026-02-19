@@ -138,7 +138,7 @@ export default function ConfirmationPage(): React.JSX.Element {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold">Processing Payment</h1>
+            <h1 className="font-display text-2xl">Processing Payment</h1>
             <p className="text-text-secondary">
               Waiting for payment confirmation. This usually takes a few seconds...
             </p>
@@ -162,7 +162,7 @@ export default function ConfirmationPage(): React.JSX.Element {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold">You&apos;re Booked!</h1>
+            <h1 className="font-display text-2xl">You&apos;re Booked!</h1>
             <p className="text-text-secondary">
               A confirmation has been sent to your email. Your nail tech will see
               your appointment right away.
@@ -187,7 +187,7 @@ export default function ConfirmationPage(): React.JSX.Element {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold">Payment Not Completed</h1>
+            <h1 className="font-display text-2xl">Payment Not Completed</h1>
             <p className="text-text-secondary">
               We didn&apos;t receive a payment confirmation. You can try booking
               again or contact the provider.

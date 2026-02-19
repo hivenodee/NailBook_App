@@ -83,7 +83,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         {/* Profile header */}
         <section className="space-y-grid-1">
           <div className="flex items-center gap-grid-1">
-            <h1 className="text-2xl font-semibold">{provider.businessName}</h1>
+            <h1 className="font-display text-3xl">{provider.businessName}</h1>
             {provider.isVerified && (
               <span className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full">
                 Verified
@@ -122,7 +122,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
 
         {/* Portfolio grid — portfolio-first per design.md */}
         <section>
-          <h2 className="text-lg font-medium mb-grid-1">Portfolio</h2>
+          <h2 className="font-display text-xl mb-grid-1">Portfolio</h2>
           {provider.mediaAssets.length > 0 ? (
             <div className="grid grid-cols-3 gap-0.5 rounded-card overflow-hidden">
               {provider.mediaAssets.map((asset) => (
@@ -161,7 +161,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
               <div className="flex items-center gap-grid-2">
                 {reviewStats.avgRating !== null && (
                   <>
-                    <span className="text-2xl font-bold">{reviewStats.avgRating}</span>
+                    <span className="font-display text-2xl">{reviewStats.avgRating}</span>
                     <div className="flex gap-0.5 text-yellow-400 text-sm">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <span key={s} className={s <= Math.round(reviewStats.avgRating!) ? "text-yellow-400" : "text-border"}>
@@ -204,7 +204,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
 
         {/* Services */}
         <section>
-          <h2 className="text-lg font-medium mb-grid-1">Services</h2>
+          <h2 className="font-display text-xl mb-grid-1">Services</h2>
           <Suspense fallback={<div className="space-y-grid-1">{provider.services.map((s) => (
             <div key={s.id} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-32" />
           ))}</div>}>

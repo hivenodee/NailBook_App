@@ -445,7 +445,7 @@ export default function EditServicePage() {
         &larr; Back to services
       </Link>
 
-      <h1 className="text-2xl font-semibold">Edit Service</h1>
+      <h1 className="font-display text-2xl">Edit Service</h1>
 
       {/* Service fields */}
       <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">

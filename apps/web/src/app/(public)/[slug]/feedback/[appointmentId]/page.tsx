@@ -97,7 +97,7 @@ export default function FeedbackPage(): React.JSX.Element {
     return (
       <main className="min-h-screen bg-background">
         <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="text-2xl font-semibold">Thank you for your feedback!</h1>
+          <h1 className="font-display text-2xl">Thank you for your feedback!</h1>
           <p className="text-text-secondary">
             Your feedback has been sent to {appointment.provider.businessName}.
           </p>
@@ -110,7 +110,7 @@ export default function FeedbackPage(): React.JSX.Element {
     return (
       <main className="min-h-screen bg-background">
         <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="text-2xl font-semibold">Feedback Already Submitted</h1>
+          <h1 className="font-display text-2xl">Feedback Already Submitted</h1>
           <p className="text-text-secondary">
             You&apos;ve already left feedback for this appointment. Thank you!
           </p>
@@ -123,7 +123,7 @@ export default function FeedbackPage(): React.JSX.Element {
     return (
       <main className="min-h-screen bg-background">
         <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="text-2xl font-semibold">Feedback Not Available</h1>
+          <h1 className="font-display text-2xl">Feedback Not Available</h1>
           <p className="text-text-secondary">
             Feedback can only be left after an appointment is completed.
           </p>
@@ -136,7 +136,7 @@ export default function FeedbackPage(): React.JSX.Element {
     <main className="min-h-screen bg-background">
       <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3">
         <section className="space-y-grid-1">
-          <h1 className="text-2xl font-semibold">Leave Feedback</h1>
+          <h1 className="font-display text-2xl">Leave Feedback</h1>
           <p className="text-text-secondary">
             {appointment.service.name} with {appointment.provider.businessName}
           </p>

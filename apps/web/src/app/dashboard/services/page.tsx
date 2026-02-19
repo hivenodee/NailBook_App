@@ -160,7 +160,7 @@ export default function ServicesPage() {
   return (
     <div className="space-y-grid-3">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Services</h1>
+        <h1 className="font-display text-2xl">Services</h1>
         {!showCreate && (
           <button
             onClick={() => setShowCreate(true)}

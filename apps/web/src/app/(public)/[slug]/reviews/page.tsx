@@ -39,7 +39,7 @@ export default async function PublicReviewsPage({ params }: Props): Promise<Reac
     <main className="min-h-screen bg-background">
       <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3">
         <section className="space-y-grid-1">
-          <h1 className="text-2xl font-semibold">Reviews</h1>
+          <h1 className="font-display text-2xl">Reviews</h1>
           <p className="text-text-secondary">{provider.businessName}</p>
         </section>
 

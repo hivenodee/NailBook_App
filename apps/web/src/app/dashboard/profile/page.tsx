@@ -161,7 +161,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-grid-3 max-w-lg">
-      <h1 className="text-2xl font-semibold">Profile</h1>
+      <h1 className="font-display text-2xl">Profile</h1>
 
       {/* Profile info */}
       <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">

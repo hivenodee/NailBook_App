@@ -125,7 +125,7 @@ export default function WaitlistDashboardPage(): React.JSX.Element {
 
   return (
     <div className="space-y-grid-3">
-      <h1 className="text-2xl font-semibold">Waitlist</h1>
+      <h1 className="font-display text-2xl">Waitlist</h1>
 
       {/* Status tabs */}
       <div className="flex gap-2 overflow-x-auto">
