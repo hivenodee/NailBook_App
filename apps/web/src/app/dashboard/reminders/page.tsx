@@ -136,7 +136,7 @@ export default function RemindersPage(): React.JSX.Element {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse"
+            className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer"
           >
             <div className="flex justify-between items-start">
               <div className="space-y-2 flex-1">

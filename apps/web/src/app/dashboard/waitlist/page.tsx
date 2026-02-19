@@ -147,7 +147,7 @@ export default function WaitlistDashboardPage(): React.JSX.Element {
       {loading ? (
         <div className="space-y-grid-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer">
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">

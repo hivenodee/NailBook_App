@@ -136,7 +136,7 @@ export default function AppointmentDetailPage() {
     return (
       <div className="space-y-grid-3">
         <div className="h-4 bg-border/40 rounded w-16" />
-        <div className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse space-y-grid-2">
+        <div className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer space-y-grid-2">
           <div className="flex justify-between items-start">
             <div className="space-y-2 flex-1">
               <div className="h-5 bg-border/60 rounded w-40" />

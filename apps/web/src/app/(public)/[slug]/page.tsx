@@ -79,7 +79,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         </div>
       )}
 
-      <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3">
+      <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3 animate-fade-in-up">
         {/* Profile header */}
         <section className="space-y-grid-1">
           <div className="flex items-center gap-grid-1">
@@ -206,7 +206,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         <section>
           <h2 className="font-display text-xl mb-grid-1">Services</h2>
           <Suspense fallback={<div className="space-y-grid-1">{provider.services.map((s) => (
-            <div key={s.id} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-32" />
+            <div key={s.id} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-32" />
           ))}</div>}>
             <ServiceList services={provider.services} slug={slug} booksOpen={provider.booksOpen} />
           </Suspense>

@@ -83,7 +83,7 @@ export default function DashboardFeedbackPage(): React.JSX.Element {
       {loading ? (
         <div className="space-y-grid-1">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-28" />
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-28" />
           ))}
         </div>
       ) : items.length === 0 ? (

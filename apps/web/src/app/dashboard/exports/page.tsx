@@ -125,7 +125,7 @@ export default function ExportsPage(): React.JSX.Element {
     return (
       <div className="space-y-grid-3">
         <div className="h-7 bg-border/60 rounded w-20" />
-        <div className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse space-y-grid-2">
+        <div className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer space-y-grid-2">
           <div className="h-5 bg-border/60 rounded w-32" />
           <div className="flex gap-grid-1">
             <div className="h-7 bg-border/40 rounded-button w-28" />

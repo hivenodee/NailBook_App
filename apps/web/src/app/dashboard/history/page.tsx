@@ -107,7 +107,7 @@ export default function HistoryPage(): React.JSX.Element {
       {loading ? (
         <div className="space-y-grid-1">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer">
               <div className="flex justify-between items-start">
                 <div className="space-y-2 flex-1">
                   <div className="h-4 bg-border/60 rounded w-32" />

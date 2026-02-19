@@ -250,7 +250,7 @@ export default function MoneyPage(): React.JSX.Element {
       {analyticsLoading ? (
         <div className="grid grid-cols-2 gap-grid-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-20" />
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-20" />
           ))}
         </div>
       ) : (
@@ -291,7 +291,7 @@ export default function MoneyPage(): React.JSX.Element {
 
       {/* ─── Revenue Chart ─── */}
       {analyticsLoading ? (
-        <div className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse h-[280px]" />
+        <div className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-[280px]" />
       ) : !hasChartData ? (
         <div className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-center h-[280px]">
           <p className="text-text-muted text-sm">Complete your first appointment to see analytics</p>
@@ -382,7 +382,7 @@ export default function MoneyPage(): React.JSX.Element {
       {txLoading ? (
         <div className="space-y-grid-1">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 shadow-card animate-pulse">
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer">
               <div className="flex justify-between items-start">
                 <div className="space-y-2 flex-1">
                   <div className="h-4 bg-border/60 rounded w-28" />

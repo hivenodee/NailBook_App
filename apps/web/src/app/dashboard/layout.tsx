@@ -79,7 +79,7 @@ export default async function DashboardLayout({
         </div>
       </nav>
       <PushRegistration />
-      <main className="max-w-3xl mx-auto px-grid-2 py-grid-3">
+      <main className="max-w-3xl mx-auto px-grid-2 py-grid-3 animate-fade-in-up">
         {children}
       </main>
     </div>
