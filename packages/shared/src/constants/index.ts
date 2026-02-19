@@ -76,3 +76,18 @@ export const BOOKING = {
   SLOT_INCREMENT_MINUTES: 15,
   MAX_ADVANCE_DAYS: 90,
 } as const;
+
+// Notification channels
+export const NOTIFICATION_CHANNELS = ["EMAIL", "SMS", "PUSH"] as const;
+
+// Notification statuses
+export const NOTIFICATION_STATUSES = ["PENDING", "SENT", "DELIVERED", "FAILED", "SKIPPED"] as const;
+
+// Push token platforms
+export const PLATFORMS = ["IOS", "ANDROID", "WEB"] as const;
+
+// Default reminder settings (when provider has none configured)
+export const DEFAULT_REMINDER_SETTINGS = [
+  { hoursBefore: 24, channels: ["EMAIL"] as const, enabled: true },
+  { hoursBefore: 2, channels: ["EMAIL", "SMS"] as const, enabled: true },
+] as const;

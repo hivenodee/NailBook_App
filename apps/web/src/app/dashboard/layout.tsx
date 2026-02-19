@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import DashboardNav from "@/components/DashboardNav";
+import PushRegistration from "@/components/PushRegistration";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export default async function DashboardLayout({
           <DashboardNav badges={badges} />
         </div>
       </nav>
+      <PushRegistration />
       <main className="max-w-3xl mx-auto px-grid-2 py-grid-3">
         {children}
       </main>

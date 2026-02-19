@@ -25,6 +25,8 @@ model User {
   sentMessages    Message[]       @relation("MessageSender")
   favoriteProviders FavoriteProvider[]
   accountEvents   AccountActivityEvent[]
+  pushTokens       PushToken[]
+  notificationLogs NotificationLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,6 +95,7 @@ model Provider {
   messageTemplates MessageTemplate[]
   waitlistEntries  WaitlistEntry[]
   feedback         Feedback[]
+  reminderSettings ReminderSetting[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -289,6 +292,7 @@ model Appointment {
   payments Payment[]
   thread   Thread?
   feedback Feedback?
+  notificationLogs NotificationLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -605,5 +609,79 @@ model WaitlistEntry {
 
   @@unique([providerId, clientEmail, targetDate, targetTime])
   @@index([providerId, targetDate, status])
+  @@index([providerId])
+}
+
+// ─── Push Notifications ──────────────────────────────────
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  Platform
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+}
+
+model NotificationLog {
+  id            String              @id @default(cuid())
+  recipientId   String
+  recipient     User                @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  appointmentId String?
+  appointment   Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  templateType  MessageTemplateType
+  channel       NotificationChannel
+  status        NotificationStatus  @default(PENDING)
+  title         String?
+  body          String
+  metadata      Json?
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  retryCount    Int                 @default(0)
+  createdAt     DateTime            @default(now())
+
+  @@index([recipientId])
+  @@index([appointmentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+model ReminderSetting {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  hoursBefore Int
+  channels   NotificationChannel[]
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([providerId, hoursBefore])
   @@index([providerId])
 }

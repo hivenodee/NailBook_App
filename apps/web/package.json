@@ -22,6 +22,7 @@
     "bullmq": "^5.30.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "expo-server-sdk": "^5.0.0",
     "ioredis": "^5.4.0",
     "next": "^15.1.0",
     "postmark": "^4.0.0",

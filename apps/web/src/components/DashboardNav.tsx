@@ -30,6 +30,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/messages", label: "Messages" },
   { href: "/dashboard/coupons", label: "Coupons" },
   { href: "/dashboard/exports", label: "Exports" },
+  { href: "/dashboard/reminders", label: "Reminders" },
+  { href: "/dashboard/notifications", label: "Notifications" },
   { href: "/dashboard/profile", label: "Profile" },
 ];
 

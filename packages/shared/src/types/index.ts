@@ -11,6 +11,8 @@ import type {
   sendMessageSchema,
   submitFeedbackSchema,
   providerSettingsSchema,
+  registerPushTokenSchema,
+  updateReminderSettingsSchema,
 } from "../validation";
 
 // Inferred types from zod schemas
@@ -25,6 +27,13 @@ export type CreateAddOnInput = z.infer<typeof createAddOnSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type SubmitFeedbackInput = z.infer<typeof submitFeedbackSchema>;
 export type ProviderSettingsInput = z.infer<typeof providerSettingsSchema>;
+export type RegisterPushTokenInput = z.infer<typeof registerPushTokenSchema>;
+export type UpdateReminderSettingsInput = z.infer<typeof updateReminderSettingsSchema>;
+
+// Notification types
+export type NotificationChannel = "EMAIL" | "SMS" | "PUSH";
+export type NotificationStatus = "PENDING" | "SENT" | "DELIVERED" | "FAILED" | "SKIPPED";
+export type Platform = "IOS" | "ANDROID" | "WEB";
 
 // API response wrapper
 export type ApiResponse<T> = {

@@ -142,3 +142,20 @@ export const providerSettingsSchema = z.object({
   cancellationHours: z.number().int().min(0).max(168).optional(),
   noShowFeePercent: z.number().int().min(0).max(100).optional(),
 });
+
+// ─── Push Tokens ──────────────────────────────────────────
+
+export const registerPushTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: z.enum(["IOS", "ANDROID", "WEB"]),
+});
+
+// ─── Reminder Settings ────────────────────────────────────
+
+export const updateReminderSettingsSchema = z.object({
+  settings: z.array(z.object({
+    hoursBefore: z.number().int().min(1).max(168),
+    channels: z.array(z.enum(["EMAIL", "SMS", "PUSH"])).min(1),
+    enabled: z.boolean(),
+  })).min(1).max(5),
+});
