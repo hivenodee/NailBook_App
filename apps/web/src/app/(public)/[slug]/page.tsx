@@ -68,56 +68,99 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Cover image */}
-      {provider.coverImageUrl && (
-        <div className="w-full h-48 bg-border overflow-hidden">
+      {/* Cover image with gradient overlay */}
+      <div className="relative w-full h-[200px] bg-border overflow-hidden">
+        {provider.coverImageUrl ? (
           <img
             src={provider.coverImageUrl}
             alt={provider.businessName}
             className="w-full h-full object-cover"
           />
-        </div>
-      )}
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary-light to-accent-light" />
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
+      </div>
 
-      <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3 animate-fade-in-up">
-        {/* Profile header */}
-        <section className="space-y-grid-1">
-          <div className="flex items-center gap-grid-1">
+      <div className="max-w-lg mx-auto px-grid-2 pb-grid-6 space-y-grid-3 animate-fade-in-up">
+        {/* Profile header — centered, avatar overlapping cover */}
+        <section className="text-center -mt-10 space-y-grid-1">
+          {/* Avatar */}
+          {provider.user.avatarUrl ? (
+            <img
+              src={provider.user.avatarUrl}
+              alt={provider.businessName}
+              className="w-20 h-20 rounded-full border-4 border-surface object-cover mx-auto shadow-soft"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full border-4 border-surface bg-primary-light flex items-center justify-center mx-auto shadow-soft">
+              <span className="font-display text-2xl text-primary">
+                {provider.businessName.charAt(0)}
+              </span>
+            </div>
+          )}
+
+          {/* Name + badge */}
+          <div className="space-y-1">
             <h1 className="font-display text-3xl">{provider.businessName}</h1>
             {provider.isVerified && (
-              <span className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full">
+              <span className="inline-flex text-xs bg-primary-light text-primary px-2.5 py-0.5 rounded-full font-medium">
                 Verified
               </span>
             )}
           </div>
-          {provider.bio && (
-            <p className="text-text-secondary">{provider.bio}</p>
-          )}
+
+          {/* Location + social links */}
           {provider.locationAddress && (
             <p className="text-text-muted text-sm">{provider.locationAddress}</p>
           )}
-          <div className="flex gap-grid-2">
-            {provider.instagramUrl && (
-              <a
-                href={provider.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-text-muted hover:text-text-secondary"
-              >
-                Instagram
-              </a>
-            )}
-            {provider.tiktokUrl && (
-              <a
-                href={provider.tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-text-muted hover:text-text-secondary"
-              >
-                TikTok
-              </a>
-            )}
-          </div>
+          {(provider.instagramUrl || provider.tiktokUrl) && (
+            <div className="flex justify-center gap-grid-2">
+              {provider.instagramUrl && (
+                <a
+                  href={provider.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-text-muted hover:text-text-secondary"
+                >
+                  Instagram
+                </a>
+              )}
+              {provider.tiktokUrl && (
+                <a
+                  href={provider.tiktokUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-text-muted hover:text-text-secondary"
+                >
+                  TikTok
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Trust row: rating + review count */}
+          {reviewStats.count > 0 && reviewStats.avgRating !== null && (
+            <div className="flex items-center justify-center gap-2 text-sm text-text-secondary">
+              <div className="flex gap-0.5 text-status-warning">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <span key={s} className={s <= Math.round(reviewStats.avgRating!) ? "text-status-warning" : "text-border"}>
+                    ★
+                  </span>
+                ))}
+              </div>
+              <span className="font-display">{reviewStats.avgRating}</span>
+              <span className="text-text-muted">·</span>
+              <Link href={`/${slug}/reviews`} className="text-primary hover:underline underline-offset-2">
+                {reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""}
+              </Link>
+            </div>
+          )}
+
+          {/* Bio */}
+          {provider.bio && (
+            <p className="text-text-secondary text-sm max-w-sm mx-auto">{provider.bio}</p>
+          )}
         </section>
 
         {/* Portfolio grid — portfolio-first per design.md */}
@@ -151,42 +194,13 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           )}
         </section>
 
-        {/* Reviews summary */}
-        {reviewStats.count > 0 && (
-          <section>
-            <Link
-              href={`/${slug}/reviews`}
-              className="bg-surface rounded-card p-grid-2 border border-border/50 flex items-center justify-between hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div className="flex items-center gap-grid-2">
-                {reviewStats.avgRating !== null && (
-                  <>
-                    <span className="font-display text-2xl">{reviewStats.avgRating}</span>
-                    <div className="flex gap-0.5 text-yellow-400 text-sm">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <span key={s} className={s <= Math.round(reviewStats.avgRating!) ? "text-yellow-400" : "text-border"}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
-                <span className="text-sm text-text-muted">
-                  {reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <span className="text-sm text-primary font-medium">View all</span>
-            </Link>
-          </section>
-        )}
-
         {/* Books closed banner */}
         {!provider.booksOpen && (
           <section>
-            <div className="bg-amber-50 border border-amber-200 rounded-card p-grid-2 text-center space-y-1">
-              <p className="text-sm font-medium text-amber-800">Books are currently closed</p>
+            <div className="bg-status-warning/10 border border-status-warning/20 rounded-card p-grid-2 text-center space-y-1">
+              <p className="text-sm font-medium text-status-warning">Books are currently closed</p>
               {provider.booksOpenAt && (
-                <p className="text-xs text-amber-700">
+                <p className="text-xs text-text-muted">
                   Books open{" "}
                   {new Date(provider.booksOpenAt).toLocaleString("en-US", {
                     weekday: "long",
