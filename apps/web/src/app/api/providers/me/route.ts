@@ -10,7 +10,7 @@ async function getProviderForUser(clerkId: string) {
     where: { clerkId },
     include: { provider: true },
   });
-  return user?.provider ?? null;
+  return user ? { provider: user.provider, avatarUrl: user.avatarUrl } : null;
 }
 
 // GET /api/providers/me — current user's provider profile
@@ -18,10 +18,10 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
-  const provider = await getProviderForUser(userId);
-  if (!provider) return error("Not a provider", 403);
+  const result = await getProviderForUser(userId);
+  if (!result?.provider) return error("Not a provider", 403);
 
-  return success(provider);
+  return success({ ...result.provider, avatarUrl: result.avatarUrl });
 }
 
 // PATCH /api/providers/me — update current user's provider profile + settings
@@ -29,8 +29,8 @@ export async function PATCH(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
-  const provider = await getProviderForUser(userId);
-  if (!provider) return error("Not a provider", 403);
+  const result = await getProviderForUser(userId);
+  if (!result?.provider) return error("Not a provider", 403);
 
   const body = await request.json();
 
@@ -44,6 +44,7 @@ export async function PATCH(request: NextRequest) {
     "acceptsCashAppPay", "acceptsCash",
     "cancellationHours", "arrivalGraceMinutes",
     "booksOpen", "booksOpenAt", "bookingWindowDays",
+    "bufferMinutes",
   ] as const;
 
   const data: Record<string, unknown> = {};
@@ -65,7 +66,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const updated = await prisma.provider.update({
-      where: { id: provider.id },
+      where: { id: result.provider.id },
       data,
     });
     return success(updated);

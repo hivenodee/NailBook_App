@@ -133,6 +133,10 @@ export type BookingEmailData = {
   clientName?: string | null;
   clientEmail?: string | null;
   timezone?: string;
+  // Self-manage link
+  slug?: string;
+  appointmentId?: string;
+  manageToken?: string;
 };
 
 // ─── Build vars from booking data ─────────────────────────
@@ -159,6 +163,12 @@ function buildBookingVars(data: BookingEmailData): Record<string, string> {
     paymentLine = `Paid: ${formatPrice(data.totalInCents)}`;
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const manageUrl =
+    data.slug && data.appointmentId && data.manageToken
+      ? `${baseUrl}/${data.slug}/manage/${data.appointmentId}?token=${data.manageToken}`
+      : "";
+
   return {
     providerName: data.providerName,
     serviceName: data.serviceName,
@@ -173,6 +183,7 @@ function buildBookingVars(data: BookingEmailData): Record<string, string> {
     cancellationHours: String(data.cancellationHours),
     arrivalGraceMinutes: String(data.arrivalGraceMinutes),
     calendarUrl: calUrl,
+    manageUrl,
   };
 }
 
@@ -289,6 +300,12 @@ export async function sendCompletionThankYou(
     }
   }
 
+  const tipBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const tipUrl =
+    data.slug && data.appointmentId
+      ? `Leave a tip: ${tipBaseUrl}/${data.slug}/tip/${data.appointmentId}`
+      : "";
+
   const vars: Record<string, string> = {
     providerName: data.providerName,
     serviceName: data.serviceName,
@@ -297,6 +314,7 @@ export async function sendCompletionThankYou(
     dateTime: formatDateTime(data.startTime, data.timezone),
     feedbackUrl,
     balanceSection,
+    tipUrl,
   };
 
   await sendTemplateEmail(data.clientEmail, "COMPLETION", vars, providerId);

@@ -22,6 +22,12 @@ type Payment = {
   createdAt: string;
 };
 
+type IntakeResponseData = {
+  id: string;
+  answer: string;
+  question: { label: string; type: string };
+};
+
 type Appointment = {
   id: string;
   status: string;
@@ -36,6 +42,8 @@ type Appointment = {
   notes: string | null;
   isNewClient: boolean;
   inspirationUrl: string | null;
+  recurrenceGroupId: string | null;
+  recurrenceIndex: number | null;
   service: { name: string; durationMinutes: number; priceInCents: number };
   addOns: { id: string; name: string; priceInCents: number; durationMinutes: number }[];
   client: { firstName: string | null; lastName: string | null; avatarUrl: string | null };
@@ -43,6 +51,7 @@ type Appointment = {
   coupon: { code: string; type: string; value: number } | null;
   events: AppointmentEvent[];
   payments: Payment[];
+  intakeResponses?: IntakeResponseData[];
 };
 
 function formatDateTime(iso: string, tz: string) {
@@ -284,6 +293,44 @@ export default function AppointmentDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Recurring series info */}
+      {appointment.recurrenceGroupId && appointment.recurrenceIndex !== null && (
+        <div className="bg-surface rounded-card p-grid-2 shadow-card flex items-center gap-2 text-sm">
+          <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>
+            Part of recurring series (appointment {appointment.recurrenceIndex + 1})
+          </span>
+        </div>
+      )}
+
+      {/* Intake Responses */}
+      {appointment.intakeResponses && appointment.intakeResponses.length > 0 && (
+        <section className="space-y-grid-1">
+          <h2 className="text-lg font-medium">Intake Responses</h2>
+          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
+            {appointment.intakeResponses.map((r) => {
+              let displayAnswer = r.answer;
+              if (r.question.type === "CHECKBOX") {
+                try {
+                  const arr = JSON.parse(r.answer) as string[];
+                  displayAnswer = arr.join(", ");
+                } catch {
+                  // use raw answer
+                }
+              }
+              return (
+                <div key={r.id} className="text-sm">
+                  <p className="text-text-muted text-xs">{r.question.label}</p>
+                  <p className="font-medium">{displayAnswer}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Remaining Balance */}
       {appointment.depositInCents > 0 && (() => {

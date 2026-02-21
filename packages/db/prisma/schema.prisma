@@ -73,6 +73,9 @@ model Provider {
   booksOpenAt        DateTime? // scheduled time to open books (null = no schedule)
   bookingWindowDays  Int       @default(30) // how many days ahead clients can book
 
+  // Buffer between appointments
+  bufferMinutes      Int       @default(0)
+
   // Cancellation policy
   cancellationHours Int @default(24)
   noShowFeePercent  Int @default(100)
@@ -152,11 +155,12 @@ model Service {
   depositType    DepositType @default(NONE)
   depositValue   Int         @default(0) // cents for FLAT, percentage for PERCENT
 
-  addOns       AddOn[]
-  addOnGroups  AddOnGroup[]
-  appointments Appointment[]
-  coupons      Coupon[]
-  waitlistEntries WaitlistEntry[]
+  addOns           AddOn[]
+  addOnGroups      AddOnGroup[]
+  appointments     Appointment[]
+  coupons          Coupon[]
+  waitlistEntries  WaitlistEntry[]
+  intakeQuestions  IntakeQuestion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -283,16 +287,24 @@ model Appointment {
   // Inspiration photo
   inspirationUrl String?
 
+  // Client self-service token
+  manageToken    String?  @unique
+
+  // Recurring booking fields
+  recurrenceGroupId  String?
+  recurrenceIndex    Int?
+
   // Stripe
   stripeSessionId   String?
   stripePaymentIntentId String?
 
-  addOns   AddOn[]
-  events   AppointmentEvent[]
-  payments Payment[]
-  thread   Thread?
-  feedback Feedback?
+  addOns           AddOn[]
+  events           AppointmentEvent[]
+  payments         Payment[]
+  thread           Thread?
+  feedback         Feedback?
   notificationLogs NotificationLog[]
+  intakeResponses  IntakeResponse[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -354,6 +366,7 @@ enum PaymentType {
   FULL
   BALANCE
   REFUND
+  TIP
 }
 
 enum PaymentStatus {
@@ -421,6 +434,37 @@ model Message {
   createdAt DateTime @default(now())
 
   @@index([threadId])
+}
+
+// ─── Intake Forms ─────────────────────────────────────────
+
+model IntakeQuestion {
+  id         String   @id @default(cuid())
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  label      String   // "Do you have any allergies?"
+  type       String   // TEXT, SELECT, CHECKBOX
+  options    Json?    // ["Gel", "Acrylic", "Dip"] for SELECT/CHECKBOX
+  isRequired Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  responses IntakeResponse[]
+  @@index([serviceId])
+}
+
+model IntakeResponse {
+  id            String         @id @default(cuid())
+  appointmentId String
+  appointment   Appointment    @relation(fields: [appointmentId], references: [id])
+  questionId    String
+  question      IntakeQuestion @relation(fields: [questionId], references: [id])
+  answer        String         // JSON string for checkbox arrays
+  createdAt     DateTime       @default(now())
+
+  @@unique([appointmentId, questionId])
+  @@index([appointmentId])
 }
 
 // ─── Feedback & Reviews ────────────────────────────────────
@@ -553,6 +597,7 @@ enum MessageTemplateType {
   WAITLIST_AVAILABLE
   WAITLIST_JOINED
   BALANCE_REQUEST
+  TIP_REQUEST
 }
 
 model MessageTemplate {

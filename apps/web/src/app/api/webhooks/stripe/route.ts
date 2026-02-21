@@ -44,6 +44,36 @@ export async function POST(request: NextRequest) {
 
       if (!appointmentId || !providerId) break;
 
+      // Handle TIP payments — don't change appointment status
+      if (paymentType === "TIP") {
+        await prisma.$transaction(async (tx) => {
+          await tx.payment.create({
+            data: {
+              providerId,
+              appointmentId,
+              amountInCents: session.amount_total || 0,
+              type: "TIP",
+              status: "COMPLETED",
+              method: "CARD",
+              stripePaymentIntentId: session.payment_intent as string,
+            },
+          });
+
+          await tx.appointmentEvent.create({
+            data: {
+              appointmentId,
+              type: "tip_received",
+              actorType: "system",
+              metadata: {
+                stripeEventId: event.id,
+                amount: session.amount_total,
+              },
+            },
+          });
+        });
+        break;
+      }
+
       // Handle BALANCE payments separately — don't change appointment status
       if (paymentType === "BALANCE") {
         await prisma.$transaction(async (tx) => {
@@ -116,7 +146,7 @@ export async function POST(request: NextRequest) {
         where: { id: appointmentId },
         include: {
           service: true,
-          provider: { include: { user: { select: { email: true } } } },
+          provider: { select: { businessName: true, slug: true, timezone: true, locationAddress: true, cancellationHours: true, arrivalGraceMinutes: true, user: { select: { email: true } } } },
         },
       });
 
@@ -142,6 +172,9 @@ export async function POST(request: NextRequest) {
           clientName: appointment.clientName,
           clientEmail: appointment.clientEmail,
           timezone: appointment.provider.timezone,
+          slug: appointment.provider.slug,
+          appointmentId: appointment.id,
+          manageToken: appointment.manageToken ?? undefined,
         };
         try {
           await Promise.all([

@@ -2,21 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { paymentStatusColor } from "@/lib/status-colors";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import SummaryStatCard from "@/components/ui/SummaryStatCard";
+import RevenueChart from "@/components/ui/RevenueChart";
 
 // ─── Types ──────────────────────────────────────────
 
 type Range = "7d" | "30d" | "90d" | "ytd" | "all";
 type Granularity = "daily" | "weekly" | "monthly" | "yearly";
+type ChartMode = "net" | "revenue" | "lost";
 
 type AnalyticsSummary = {
   revenue: number;
@@ -69,13 +62,6 @@ const RANGES: { value: Range; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-const GRANULARITIES: { value: Granularity; label: string }[] = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" },
-];
-
 const RANGE_DEFAULT_GRANULARITY: Record<Range, Granularity> = {
   "7d": "daily",
   "30d": "daily",
@@ -85,13 +71,6 @@ const RANGE_DEFAULT_GRANULARITY: Record<Range, Granularity> = {
 };
 
 const STATUS_FILTERS = ["All", "COMPLETED", "PENDING", "FAILED", "REFUNDED"] as const;
-
-const CHART_COLORS = {
-  revenue: "#7C8C6E",
-  lost: "#C27070",
-  recovered: "#B8A9C9",
-  net: "#2D2D2D",
-};
 
 const PAGE_SIZE = 20;
 
@@ -111,25 +90,11 @@ function typeLabel(type: string) {
       return "Balance";
     case "REFUND":
       return "Refund";
+    case "TIP":
+      return "Tip";
     default:
       return type;
   }
-}
-
-// ─── Chart Tooltip ──────────────────────────────────
-
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ color: string; name: string; value: number }>; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-surface rounded-card p-2 shadow-card border border-border text-xs">
-      <p className="font-medium mb-1">{label}</p>
-      {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color }}>
-          {entry.name}: {formatDollars(entry.value)}
-        </p>
-      ))}
-    </div>
-  );
 }
 
 // ─── Page Component ─────────────────────────────────
@@ -140,6 +105,7 @@ export default function MoneyPage(): React.JSX.Element {
   const [granularity, setGranularity] = useState<Granularity>("daily");
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [chartMode, setChartMode] = useState<ChartMode>("net");
 
   // Transaction state
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -204,164 +170,71 @@ export default function MoneyPage(): React.JSX.Element {
   const summary = analytics?.summary;
   const hasMore = offset + PAGE_SIZE < total;
   const hasPrev = offset > 0;
-  const hasChartData = analytics?.buckets?.some(
-    (b) => b.revenue > 0 || b.lostRevenue > 0 || b.recoveredRevenue > 0
-  );
 
   return (
     <div className="space-y-grid-3">
       <h1 className="font-display text-2xl">Money</h1>
 
-      {/* ─── Range + Granularity Controls ─── */}
-      <div className="flex flex-wrap gap-2">
-        <div className="flex gap-1">
-          {RANGES.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => handleRangeChange(r.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                range === r.value
-                  ? "bg-primary text-white"
-                  : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          {GRANULARITIES.map((g) => (
-            <button
-              key={g.value}
-              onClick={() => setGranularity(g.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                granularity === g.value
-                  ? "bg-primary/20 text-primary"
-                  : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
-              }`}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
+      {/* ─── Range Toggle ─── */}
+      <div className="inline-flex bg-surface-alt rounded-button p-0.5">
+        {RANGES.map((r) => (
+          <button
+            key={r.value}
+            onClick={() => handleRangeChange(r.value)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-[10px] transition-all ${
+              range === r.value
+                ? "bg-surface shadow-card text-text-primary"
+                : "text-text-muted hover:text-text-secondary"
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
       </div>
 
       {/* ─── KPI Cards ─── */}
-      {analyticsLoading ? (
-        <div className="grid grid-cols-2 gap-grid-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-20" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-grid-2">
-          <div className="bg-surface rounded-card p-grid-2 shadow-card">
-            <p className="text-text-muted text-xs">Revenue</p>
-            <p className="font-display text-xl" style={{ color: CHART_COLORS.revenue }}>
-              {formatDollars(summary?.revenue ?? 0)}
-            </p>
-            <p className="text-text-muted text-xs">
-              {summary?.appointmentCount ?? 0} booked{summary?.confirmedCount ? ` (${summary.confirmedCount} upcoming)` : ""}
-            </p>
-          </div>
-          <div className="bg-surface rounded-card p-grid-2 shadow-card">
-            <p className="text-text-muted text-xs">Lost</p>
-            <p className="font-display text-xl" style={{ color: CHART_COLORS.lost }}>
-              {formatDollars(summary?.lostRevenue ?? 0)}
-            </p>
-            <p className="text-text-muted text-xs">
-              {summary?.cancelledCount ?? 0} cancelled, {summary?.noShowCount ?? 0} no-shows
-            </p>
-          </div>
-          <div className="bg-surface rounded-card p-grid-2 shadow-card">
-            <p className="text-text-muted text-xs">Recovered</p>
-            <p className="font-display text-xl" style={{ color: CHART_COLORS.recovered }}>
-              {formatDollars(summary?.recoveredRevenue ?? 0)}
-            </p>
-            <p className="text-text-muted text-xs">{summary?.waitlistRecoveryCount ?? 0} from waitlist</p>
-          </div>
-          <div className="bg-surface rounded-card p-grid-2 shadow-card">
-            <p className="text-text-muted text-xs">Net</p>
-            <p className="font-display text-xl" style={{ color: CHART_COLORS.net }}>
-              {formatDollars(summary?.netRevenue ?? 0)}
-            </p>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-grid-2">
+        <SummaryStatCard
+          label="Revenue"
+          value={formatDollars(summary?.revenue ?? 0)}
+          subtitle={`${summary?.appointmentCount ?? 0} booked${summary?.confirmedCount ? ` (${summary.confirmedCount} upcoming)` : ""}`}
+          accentColor="#7B8B6A"
+          loading={analyticsLoading}
+          animationDelay={0}
+        />
+        <SummaryStatCard
+          label="Net"
+          value={formatDollars(summary?.netRevenue ?? 0)}
+          loading={analyticsLoading}
+          animationDelay={50}
+        />
+        <SummaryStatCard
+          label="Lost"
+          value={formatDollars(summary?.lostRevenue ?? 0)}
+          subtitle={`${summary?.cancelledCount ?? 0} cancelled, ${summary?.noShowCount ?? 0} no-shows`}
+          accentColor="#BF6B6B"
+          loading={analyticsLoading}
+          animationDelay={100}
+        />
+        <SummaryStatCard
+          label="Recovered"
+          value={formatDollars(summary?.recoveredRevenue ?? 0)}
+          subtitle={`${summary?.waitlistRecoveryCount ?? 0} from waitlist`}
+          accentColor="#7A94AA"
+          loading={analyticsLoading}
+          animationDelay={150}
+        />
+      </div>
 
       {/* ─── Revenue Chart ─── */}
-      {analyticsLoading ? (
-        <div className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer h-[280px]" />
-      ) : !hasChartData ? (
-        <div className="bg-surface rounded-card p-grid-2 shadow-card flex items-center justify-center h-[280px]">
-          <p className="text-text-muted text-sm">Complete your first appointment to see analytics</p>
-        </div>
-      ) : (
-        <div className="bg-surface rounded-card p-grid-2 shadow-card">
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={analytics?.buckets} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#8A8A8A" }}
-                tickLine={false}
-                axisLine={{ stroke: "#E5E5E5" }}
-              />
-              <YAxis
-                tickFormatter={(v: number) => `$${(v / 100).toFixed(0)}`}
-                tick={{ fontSize: 11, fill: "#8A8A8A" }}
-                tickLine={false}
-                axisLine={false}
-                width={50}
-              />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-                iconType="plainline"
-              />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                name="Revenue"
-                stroke={CHART_COLORS.revenue}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="lostRevenue"
-                name="Lost"
-                stroke={CHART_COLORS.lost}
-                strokeWidth={1.5}
-                strokeDasharray="5 3"
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="recoveredRevenue"
-                name="Recovered"
-                stroke={CHART_COLORS.recovered}
-                strokeWidth={1.5}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="netRevenue"
-                name="Net"
-                stroke={CHART_COLORS.net}
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <RevenueChart
+        buckets={analytics?.buckets ?? []}
+        loading={analyticsLoading}
+        mode={chartMode}
+        onModeChange={setChartMode}
+      />
 
-      {/* ─── Transaction Filter ─── */}
+      {/* ─── Status Filter Pills ─── */}
       <div className="flex flex-wrap gap-1">
         {STATUS_FILTERS.map((s) => (
           <button
@@ -378,11 +251,11 @@ export default function MoneyPage(): React.JSX.Element {
         ))}
       </div>
 
-      {/* ─── Transaction List ─── */}
+      {/* ─── Transactions ─── */}
       {txLoading ? (
         <div className="space-y-grid-1">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer">
+            <div key={i} className="bg-surface rounded-card p-grid-2 border border-border/50 skeleton-shimmer">
               <div className="flex justify-between items-start">
                 <div className="space-y-2 flex-1">
                   <div className="h-4 bg-border/60 rounded w-28" />
@@ -397,55 +270,105 @@ export default function MoneyPage(): React.JSX.Element {
           ))}
         </div>
       ) : payments.length === 0 ? (
-        <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
+        <div className="bg-surface rounded-card p-grid-2 border border-border/50 text-center">
           <p className="text-text-muted">No payments yet</p>
         </div>
       ) : (
-        <div className="space-y-grid-1">
-          {payments.map((payment) => {
-            const clientName =
-              payment.appointment.client.firstName
-                ? `${payment.appointment.client.firstName} ${payment.appointment.client.lastName || ""}`.trim()
-                : "Client";
+        <>
+          {/* Desktop table */}
+          <div className="hidden lg:block bg-surface rounded-card border border-border/50 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface-alt/50">
+                  <th className="text-left px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Date</th>
+                  <th className="text-left px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Client</th>
+                  <th className="text-left px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Service</th>
+                  <th className="text-right px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Type</th>
+                  <th className="text-left px-grid-2 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => {
+                  const clientName =
+                    payment.appointment.client.firstName
+                      ? `${payment.appointment.client.firstName} ${payment.appointment.client.lastName || ""}`.trim()
+                      : "Client";
 
-            return (
-              <div
-                key={payment.id}
-                className="bg-surface rounded-card p-grid-2 shadow-card"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-sm">{clientName}</p>
-                    <p className="text-text-muted text-xs">
-                      {payment.appointment.service.name}
-                    </p>
-                    <p className="text-text-muted text-xs mt-0.5">
-                      {new Date(payment.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        timeZone: "UTC",
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <p className="font-display text-base">
-                      ${(payment.amountInCents / 100).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {typeLabel(payment.type)}
-                    </p>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${paymentStatusColor(payment.status)}`}
-                    >
-                      {payment.status}
-                    </span>
+                  return (
+                    <tr key={payment.id} className="border-b border-border/30 last:border-b-0 hover:bg-surface-alt/30 transition-colors">
+                      <td className="px-grid-2 py-3 text-text-muted text-xs">
+                        {new Date(payment.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </td>
+                      <td className="px-grid-2 py-3 font-medium">{clientName}</td>
+                      <td className="px-grid-2 py-3 text-text-secondary">{payment.appointment.service.name}</td>
+                      <td className="px-grid-2 py-3 text-right font-display">${(payment.amountInCents / 100).toFixed(2)}</td>
+                      <td className="px-grid-2 py-3 text-text-muted text-xs">{typeLabel(payment.type)}</td>
+                      <td className="px-grid-2 py-3">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${paymentStatusColor(payment.status)}`}>
+                          {payment.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-grid-1">
+            {payments.map((payment, index) => {
+              const clientName =
+                payment.appointment.client.firstName
+                  ? `${payment.appointment.client.firstName} ${payment.appointment.client.lastName || ""}`.trim()
+                  : "Client";
+
+              return (
+                <div
+                  key={payment.id}
+                  className="bg-surface rounded-card p-grid-2 border border-border/50 animate-fade-in-up"
+                  style={{ animationDelay: `${index * 30}ms`, animationFillMode: "both" }}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-sm">{clientName}</p>
+                      <p className="text-text-muted text-xs">
+                        {payment.appointment.service.name}
+                      </p>
+                      <p className="text-text-muted text-xs mt-0.5">
+                        {new Date(payment.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="font-display text-base">
+                        ${(payment.amountInCents / 100).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        {typeLabel(payment.type)}
+                      </p>
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${paymentStatusColor(payment.status)}`}
+                      >
+                        {payment.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* ─── Pagination ─── */}

@@ -98,7 +98,7 @@ export async function GET(
   });
 
   // Generate time slots from availability rules
-  const slots = generateTimeSlots(rules, dateStr, tz, BOOKING.SLOT_INCREMENT_MINUTES, appointments);
+  const slots = generateTimeSlots(rules, dateStr, tz, BOOKING.SLOT_INCREMENT_MINUTES, appointments, provider.bufferMinutes);
 
   await setAvailabilityCache(provider.id, dateStr, slots);
 

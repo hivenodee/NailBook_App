@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { Camera } from "lucide-react";
+import AvatarCropModal from "@/components/AvatarCropModal";
 
 type ProviderData = {
   id: string;
@@ -19,6 +21,8 @@ type ProviderData = {
   booksOpen: boolean;
   booksOpenAt: string | null;
   bookingWindowDays: number;
+  bufferMinutes: number;
+  avatarUrl: string | null;
 };
 
 const WINDOW_PRESETS = [
@@ -29,12 +33,26 @@ const WINDOW_PRESETS = [
   { label: "1 Year", days: 365 },
 ];
 
+const BUFFER_PRESETS = [
+  { label: "None", minutes: 0 },
+  { label: "5 min", minutes: 5 },
+  { label: "10 min", minutes: 10 },
+  { label: "15 min", minutes: 15 },
+  { label: "30 min", minutes: 30 },
+  { label: "45 min", minutes: 45 },
+  { label: "60 min", minutes: 60 },
+];
+
 export default function ProfilePage() {
   const [provider, setProvider] = useState<ProviderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [businessName, setBusinessName] = useState("");
@@ -53,6 +71,7 @@ export default function ProfilePage() {
   const [booksOpenAtDate, setBooksOpenAtDate] = useState("");
   const [booksOpenAtTime, setBooksOpenAtTime] = useState("");
   const [bookingWindowDays, setBookingWindowDays] = useState(30);
+  const [bufferMinutes, setBufferMinutes] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -62,6 +81,7 @@ export default function ProfilePage() {
         if (json.data) {
           const p = json.data as ProviderData;
           setProvider(p);
+          setAvatarUrl(p.avatarUrl || null);
           setBusinessName(p.businessName);
           setBio(p.bio || "");
           setLocationAddress(p.locationAddress || "");
@@ -76,6 +96,7 @@ export default function ProfilePage() {
           setArrivalGraceMinutes(p.arrivalGraceMinutes);
           setBooksOpen(p.booksOpen);
           setBookingWindowDays(p.bookingWindowDays);
+          setBufferMinutes(p.bufferMinutes ?? 0);
           if (p.booksOpenAt) {
             const dt = new Date(p.booksOpenAt);
             setBooksOpenAtDate(dt.toISOString().split("T")[0]);
@@ -90,6 +111,41 @@ export default function ProfilePage() {
     }
     load();
   }, []);
+
+  async function handleAvatarUpload(blob: Blob) {
+    setCropImageSrc(null);
+    setAvatarUploading(true);
+    setErrorMsg(null);
+    try {
+      // 1. Get presigned upload URL (cropper always outputs JPEG)
+      const contentType = "image/jpeg";
+      const res = await fetch("/api/providers/me/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setErrorMsg(json.error?.message || "Upload failed");
+        return;
+      }
+
+      // 2. Upload cropped blob to R2
+      await fetch(json.data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body: blob,
+      });
+
+      // 3. Update local state with cache-bust
+      setAvatarUrl(json.data.avatarUrl + "?t=" + Date.now());
+    } catch (e) {
+      console.error("Avatar upload failed:", e);
+      setErrorMsg("Failed to upload photo. Please try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -117,6 +173,7 @@ export default function ProfilePage() {
             ? new Date(`${booksOpenAtDate}T${booksOpenAtTime}:00`).toISOString()
             : null,
           bookingWindowDays,
+          bufferMinutes,
         }),
       });
       const json = await res.json();
@@ -162,6 +219,76 @@ export default function ProfilePage() {
   return (
     <div className="space-y-grid-3 max-w-lg">
       <h1 className="font-display text-2xl">Profile</h1>
+
+      {/* Profile Picture */}
+      <section className="bg-surface rounded-card p-grid-2 border border-border/50 space-y-grid-2">
+        <h2 className="text-lg font-medium">Profile Picture</h2>
+        <div className="flex items-center gap-grid-3">
+          <div className="relative">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover border-2 border-border"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-surface-alt border-2 border-border flex items-center justify-center">
+                <span className="text-2xl text-text-muted">
+                  {businessName?.charAt(0)?.toUpperCase() || "?"}
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-soft hover:bg-primary-hover transition-colors disabled:opacity-50"
+            >
+              <Camera size={14} />
+            </button>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="text-sm font-medium text-primary hover:text-primary-hover transition-colors disabled:opacity-50"
+            >
+              {avatarUploading ? "Uploading..." : avatarUrl ? "Change photo" : "Upload photo"}
+            </button>
+            <p className="text-xs text-text-muted mt-0.5">JPEG, PNG, or WebP. Max 10MB.</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                  setErrorMsg("File is too large. Max 10MB.");
+                  e.target.value = "";
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => setCropImageSrc(reader.result as string);
+                reader.readAsDataURL(file);
+              }
+              e.target.value = "";
+            }}
+          />
+        </div>
+      </section>
+
+      {/* Crop Modal */}
+      {cropImageSrc && (
+        <AvatarCropModal
+          imageSrc={cropImageSrc}
+          onCropComplete={handleAvatarUpload}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
 
       {/* Profile info */}
       <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
@@ -314,6 +441,27 @@ export default function ProfilePage() {
                 onClick={() => setBookingWindowDays(preset.days)}
                 className={`px-3 py-1.5 rounded-button text-sm font-medium transition-colors border ${
                   bookingWindowDays === preset.days
+                    ? "border-primary bg-primary-light text-primary"
+                    : "border-border bg-background text-text-secondary hover:border-primary/40"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-grid-2 space-y-grid-1">
+          <p className="text-sm font-medium">Buffer Time</p>
+          <p className="text-xs text-text-muted">Cleanup/prep time between appointments.</p>
+          <div className="flex flex-wrap gap-2">
+            {BUFFER_PRESETS.map((preset) => (
+              <button
+                key={preset.minutes}
+                type="button"
+                onClick={() => setBufferMinutes(preset.minutes)}
+                className={`px-3 py-1.5 rounded-button text-sm font-medium transition-colors border ${
+                  bufferMinutes === preset.minutes
                     ? "border-primary bg-primary-light text-primary"
                     : "border-border bg-background text-text-secondary hover:border-primary/40"
                 }`}
