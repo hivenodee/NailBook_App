@@ -22,6 +22,7 @@ export const VARIABLES_BY_TYPE: Record<MessageTemplateType, readonly string[]> =
     "cancellationHours",
     "arrivalGraceMinutes",
     "calendarUrl",
+    "manageUrl",
   ],
   BOOKING_NOTIFICATION: [
     ...COMMON_VARS,
@@ -31,7 +32,7 @@ export const VARIABLES_BY_TYPE: Record<MessageTemplateType, readonly string[]> =
     "paymentLine",
   ],
   CANCELLATION: [...COMMON_VARS, "dateTime", "cancelledBy"],
-  COMPLETION: [...COMMON_VARS, "dateTime", "feedbackUrl", "balanceSection"],
+  COMPLETION: [...COMMON_VARS, "dateTime", "feedbackUrl", "balanceSection", "tipUrl"],
   REMINDER: [...COMMON_VARS, "dateTime", "hoursUntil"],
   FOLLOWUP: [...COMMON_VARS, "dateTime"],
   WAITLIST_AVAILABLE: [...COMMON_VARS, "date", "bookingUrl"],
@@ -43,6 +44,11 @@ export const VARIABLES_BY_TYPE: Record<MessageTemplateType, readonly string[]> =
     "deposit",
     "remainingBalance",
     "paymentUrl",
+  ],
+  TIP_REQUEST: [
+    ...COMMON_VARS,
+    "dateTime",
+    "tipUrl",
   ],
 };
 
@@ -65,9 +71,10 @@ Duration: {{duration}} min
 Cancellation: at least {{cancellationHours}}h in advance for a full refund.
 Arrival: please arrive within {{arrivalGraceMinutes}} minutes of your appointment time.
 
+Manage your booking: {{manageUrl}}
 Add to Calendar: {{calendarUrl}}`,
     smsBody:
-      "Confirmed: {{serviceName}} with {{providerName}} on {{dateTime}}. {{paymentLine}}",
+      "Confirmed: {{serviceName}} with {{providerName}} on {{dateTime}}. {{paymentLine}} Manage: {{manageUrl}}",
   },
   BOOKING_NOTIFICATION: {
     emailSubject: "New Booking — {{serviceName}} with {{clientName}}",
@@ -105,7 +112,8 @@ Service: {{serviceName}}
 With: {{providerName}}
 Date: {{dateTime}}
 {{balanceSection}}
-Leave feedback: {{feedbackUrl}}`,
+Leave feedback: {{feedbackUrl}}
+{{tipUrl}}`,
     smsBody:
       "Thanks for your visit! We hope you loved your {{serviceName}} with {{providerName}}.",
   },
@@ -145,6 +153,16 @@ You've been added to the waitlist for {{serviceName}} with {{providerName}} on {
 We'll notify you as soon as a spot opens up. No action needed on your end until then.`,
     smsBody:
       "You're on the waitlist for {{serviceName}} with {{providerName}} on {{date}}.{{time}} We'll let you know when a spot opens up!",
+  },
+  TIP_REQUEST: {
+    emailSubject: "Leave a tip for {{providerName}}",
+    emailBody: `Hi {{clientName}},
+
+Thanks for your {{serviceName}} with {{providerName}} on {{dateTime}}.
+
+If you'd like to leave a tip, you can do so here: {{tipUrl}}`,
+    smsBody:
+      "Thanks for visiting {{providerName}}! Leave a tip: {{tipUrl}}",
   },
   BALANCE_REQUEST: {
     emailSubject: "Remaining balance — {{providerName}}",
@@ -221,4 +239,6 @@ export const SAMPLE_VARS: Record<string, string> = {
   balanceSection: "",
   remainingBalance: "$60.00",
   paymentUrl: "https://nailbook.app/glamour-nails/pay/abc123",
+  manageUrl: "https://nailbook.app/glamour-nails/manage/abc123?token=xxx",
+  tipUrl: "Leave a tip: https://nailbook.app/glamour-nails/tip/abc123",
 };

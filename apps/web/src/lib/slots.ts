@@ -21,8 +21,10 @@ export function generateTimeSlots(
   timezone: string,
   slotIncrementMinutes: number,
   bookedAppointments: Array<{ startTime: Date; endTime: Date }>,
+  bufferMinutes = 0,
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
+  const bufferMs = bufferMinutes * 60 * 1000;
 
   for (const rule of rules) {
     const [startHour, startMin] = rule.startTime.split(":").map(Number);
@@ -37,8 +39,9 @@ export function generateTimeSlots(
         cursor.getTime() + slotIncrementMinutes * 60 * 1000,
       );
 
+      // Extend each booked appointment's end by buffer time for overlap check
       const isBooked = bookedAppointments.some(
-        (a) => a.startTime < slotEnd && a.endTime > cursor,
+        (a) => a.startTime < slotEnd && new Date(a.endTime.getTime() + bufferMs) > cursor,
       );
 
       slots.push({

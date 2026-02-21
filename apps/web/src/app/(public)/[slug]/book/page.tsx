@@ -3,7 +3,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 
-type BookingStep = "time" | "details" | "confirm";
+type BookingStep = "time" | "details" | "intake" | "confirm";
+
+type IntakeQuestionData = {
+  id: string;
+  label: string;
+  type: string;
+  options: string[] | null;
+  isRequired: boolean;
+  sortOrder: number;
+};
 
 type TimeSlot = {
   startTime: string;
@@ -392,6 +401,15 @@ export default function BookPage(): React.JSX.Element {
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
 
+  // Intake form
+  const [intakeQuestions, setIntakeQuestions] = useState<IntakeQuestionData[]>([]);
+  const [intakeResponses, setIntakeResponses] = useState<Record<string, string>>({});
+
+  // Recurrence
+  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+  const [recurrenceFreq, setRecurrenceFreq] = useState<"WEEKLY" | "BIWEEKLY" | "MONTHLY">("WEEKLY");
+  const [recurrenceCount, setRecurrenceCount] = useState(4);
+
   // Coupon
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -427,6 +445,17 @@ export default function BookPage(): React.JSX.Element {
         }
       })
       .finally(() => setLoading(false));
+  }, [serviceId]);
+
+  // Load intake questions for service
+  useEffect(() => {
+    if (!serviceId) return;
+    fetch(`/api/services/${serviceId}/intake`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data) setIntakeQuestions(json.data);
+      })
+      .catch(() => {});
   }, [serviceId]);
 
   // Reset waitlist form state when date changes
@@ -476,6 +505,18 @@ export default function BookPage(): React.JSX.Element {
           paymentMethod: selectedPaymentMethod,
           addOnIds: selectedAddOns.length > 0 ? selectedAddOns.map((a) => a.id) : undefined,
           couponCode: appliedCoupon?.code || undefined,
+          ...(Object.keys(intakeResponses).length > 0 && {
+            intakeResponses: Object.entries(intakeResponses).map(([questionId, answer]) => ({
+              questionId,
+              answer,
+            })),
+          }),
+          ...(recurrenceEnabled && {
+            recurrence: {
+              frequency: recurrenceFreq,
+              count: recurrenceCount,
+            },
+          }),
         }),
       });
       const json = await res.json();
@@ -823,7 +864,10 @@ export default function BookPage(): React.JSX.Element {
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-grid-2 mb-grid-4">
-          {(["time", "details", "confirm"] as const).map((s, i) => (
+          {(intakeQuestions.length > 0
+            ? (["time", "details", "intake", "confirm"] as const)
+            : (["time", "details", "confirm"] as const)
+          ).map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -841,7 +885,7 @@ export default function BookPage(): React.JSX.Element {
                     : "text-text-muted"
                 }`}
               >
-                {s}
+                {s === "intake" ? "Questions" : s}
               </span>
             </div>
           ))}
@@ -1071,6 +1115,113 @@ export default function BookPage(): React.JSX.Element {
               )}
             </div>
 
+            {/* Recurrence toggle (after time selection) */}
+            {selectedSlot && (
+              <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Repeat this booking?</span>
+                  <button
+                    type="button"
+                    onClick={() => setRecurrenceEnabled(!recurrenceEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      recurrenceEnabled ? "bg-primary" : "bg-border"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        recurrenceEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {recurrenceEnabled && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-text-muted">Frequency</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          ["WEEKLY", "Weekly"],
+                          ["BIWEEKLY", "Every 2 Weeks"],
+                          ["MONTHLY", "Monthly"],
+                        ] as const).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setRecurrenceFreq(val)}
+                            className={`py-2 rounded-button text-xs font-medium transition-colors border ${
+                              recurrenceFreq === val
+                                ? "border-primary bg-primary-light text-primary"
+                                : "border-border bg-background text-text-secondary hover:border-primary/40"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-text-muted">
+                        Number of sessions
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setRecurrenceCount(Math.max(2, recurrenceCount - 1))}
+                          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-text-secondary hover:border-primary/40"
+                        >
+                          -
+                        </button>
+                        <span className="text-lg font-semibold tabular-nums w-6 text-center">
+                          {recurrenceCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRecurrenceCount(Math.min(12, recurrenceCount + 1))}
+                          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-text-secondary hover:border-primary/40"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Date preview */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-text-muted">Upcoming dates</label>
+                      <div className="space-y-1">
+                        {Array.from({ length: recurrenceCount }, (_, i) => {
+                          const base = new Date(selectedSlot.startTime);
+                          const d = new Date(base);
+                          if (recurrenceFreq === "WEEKLY") d.setDate(base.getDate() + i * 7);
+                          else if (recurrenceFreq === "BIWEEKLY") d.setDate(base.getDate() + i * 14);
+                          else d.setMonth(base.getMonth() + i);
+                          return (
+                            <div key={i} className="flex items-center gap-2 text-sm">
+                              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                                {i + 1}
+                              </span>
+                              <span className="text-text-secondary">
+                                {d.toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                  timeZone: service.provider.timezone,
+                                })}
+                              </span>
+                              <span className="text-text-muted text-xs">
+                                {formatTime(d.toISOString(), service.provider.timezone)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <button
               disabled={!selectedSlot || !allGroupsSatisfied}
               onClick={() => setStep("details")}
@@ -1131,6 +1282,125 @@ export default function BookPage(): React.JSX.Element {
               </button>
               <button
                 disabled={!clientName || !clientEmail}
+                onClick={() => setStep(intakeQuestions.length > 0 ? "intake" : "confirm")}
+                className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+              >
+                {intakeQuestions.length > 0 ? "Continue" : "Review Booking"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Step: Intake form */}
+        {step === "intake" && intakeQuestions.length > 0 && (
+          <section className="space-y-grid-2">
+            <h2 className="font-display text-xl">A Few Questions</h2>
+            <p className="text-text-muted text-sm">
+              Help your nail tech prepare for your appointment.
+            </p>
+            <div className="space-y-grid-2">
+              {intakeQuestions.map((q) => (
+                <div key={q.id}>
+                  <label className="block text-sm font-medium mb-1">
+                    {q.label}
+                    {q.isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  {q.type === "TEXT" && (
+                    <textarea
+                      value={intakeResponses[q.id] || ""}
+                      onChange={(e) =>
+                        setIntakeResponses((prev) => ({ ...prev, [q.id]: e.target.value }))
+                      }
+                      rows={2}
+                      className="w-full border border-border rounded-input px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                    />
+                  )}
+                  {q.type === "SELECT" && q.options && (
+                    <div className="space-y-1">
+                      {(q.options as string[]).map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() =>
+                            setIntakeResponses((prev) => ({ ...prev, [q.id]: opt }))
+                          }
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-button text-sm transition-colors border ${
+                            intakeResponses[q.id] === opt
+                              ? "border-primary bg-primary-light text-primary font-medium"
+                              : "border-border bg-background text-text-secondary hover:border-primary/40"
+                          }`}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              intakeResponses[q.id] === opt ? "border-primary" : "border-border"
+                            }`}
+                          >
+                            {intakeResponses[q.id] === opt && (
+                              <div className="w-2 h-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {q.type === "CHECKBOX" && q.options && (
+                    <div className="space-y-1">
+                      {(q.options as string[]).map((opt) => {
+                        const current = intakeResponses[q.id]
+                          ? JSON.parse(intakeResponses[q.id]) as string[]
+                          : [];
+                        const isChecked = current.includes(opt);
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => {
+                              const next = isChecked
+                                ? current.filter((v) => v !== opt)
+                                : [...current, opt];
+                              setIntakeResponses((prev) => ({
+                                ...prev,
+                                [q.id]: JSON.stringify(next),
+                              }));
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-button text-sm transition-colors border ${
+                              isChecked
+                                ? "border-primary bg-primary-light text-primary font-medium"
+                                : "border-border bg-background text-text-secondary hover:border-primary/40"
+                            }`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                isChecked ? "bg-primary border-primary" : "border-border"
+                              }`}
+                            >
+                              {isChecked && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-grid-1">
+              <button
+                onClick={() => setStep("details")}
+                className="flex-1 py-3 rounded-button text-sm font-medium text-text-secondary hover:bg-border/50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                disabled={intakeQuestions.some(
+                  (q) => q.isRequired && !intakeResponses[q.id]
+                )}
                 onClick={() => setStep("confirm")}
                 className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
@@ -1175,6 +1445,14 @@ export default function BookPage(): React.JSX.Element {
                 <span className="text-text-muted">Name</span>
                 <span className="font-medium">{clientName}</span>
               </div>
+              {recurrenceEnabled && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Recurring</span>
+                  <span className="font-medium">
+                    {recurrenceCount}x {recurrenceFreq === "WEEKLY" ? "Weekly" : recurrenceFreq === "BIWEEKLY" ? "Bi-weekly" : "Monthly"}
+                  </span>
+                </div>
+              )}
               {selectedAddOns.length > 0 && (
                 <>
                   <hr className="border-border" />
@@ -1323,7 +1601,7 @@ export default function BookPage(): React.JSX.Element {
 
             <div className="flex gap-grid-1">
               <button
-                onClick={() => setStep("details")}
+                onClick={() => setStep(intakeQuestions.length > 0 ? "intake" : "details")}
                 className="flex-1 py-3 rounded-button text-sm font-medium text-text-secondary hover:bg-border/50 transition-colors"
               >
                 Back

@@ -84,16 +84,16 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
 
       <div className="max-w-lg mx-auto px-grid-2 pb-grid-6 space-y-grid-3 animate-fade-in-up">
         {/* Profile header — centered, avatar overlapping cover */}
-        <section className="text-center -mt-10 space-y-grid-1">
+        <section className="relative z-10 text-center -mt-10 space-y-grid-1">
           {/* Avatar */}
           {provider.user.avatarUrl ? (
             <img
               src={provider.user.avatarUrl}
               alt={provider.businessName}
-              className="w-20 h-20 rounded-full border-4 border-surface object-cover mx-auto shadow-soft"
+              className="w-20 h-20 rounded-full border-4 border-surface object-cover mx-auto shadow-soft relative"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full border-4 border-surface bg-primary-light flex items-center justify-center mx-auto shadow-soft">
+            <div className="w-20 h-20 rounded-full border-4 border-surface bg-primary-light flex items-center justify-center mx-auto shadow-soft relative">
               <span className="font-display text-2xl text-primary">
                 {provider.businessName.charAt(0)}
               </span>

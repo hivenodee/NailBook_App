@@ -9,10 +9,13 @@ type Appointment = {
   status: string;
   startTime: string;
   endTime: string;
+  createdAt: string;
   totalInCents: number;
   depositInCents: number;
   clientName: string | null;
   clientEmail: string | null;
+  recurrenceGroupId: string | null;
+  recurrenceIndex: number | null;
   service: { name: string };
   addOns: { id: string; name: string; priceInCents: number }[];
   client: { firstName: string | null; lastName: string | null };
@@ -56,18 +59,12 @@ export default function HistoryPage(): React.JSX.Element {
   useEffect(() => {
     async function load() {
       try {
-        // Fetch all statuses in parallel
-        const statuses = ["CONFIRMED", "PENDING_PAYMENT", "COMPLETED", "CANCELLED", "NO_SHOW"];
-        const responses = await Promise.all(
-          statuses.map((s) => fetch(`/api/appointments?status=${s}`))
+        const res = await fetch("/api/appointments");
+        const json = await res.json();
+        const all = (json.data || []).sort(
+          (a: Appointment, b: Appointment) =>
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         );
-        const jsons = await Promise.all(responses.map((r) => r.json()));
-        const all = jsons
-          .flatMap((j) => j.data || [])
-          .sort(
-            (a: Appointment, b: Appointment) =>
-              new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-          );
         setAppointments(all);
       } catch (e) {
         console.error("Failed to load appointments:", e);
@@ -83,9 +80,11 @@ export default function HistoryPage(): React.JSX.Element {
       ? appointments
       : appointments.filter((a) => a.status === filter);
 
+  const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+
   return (
     <div className="space-y-grid-3">
-      <h1 className="font-display text-2xl">Appointment History</h1>
+      <h1 className="font-display text-2xl">Appointments</h1>
 
       {/* Filters */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -137,17 +136,30 @@ export default function HistoryPage(): React.JSX.Element {
               appt.client.firstName
                 ? `${appt.client.firstName} ${appt.client.lastName || ""}`.trim()
                 : appt.clientName || appt.clientEmail || "Client";
+            const isNew = new Date(appt.createdAt).getTime() > twentyFourHoursAgo;
 
             return (
               <Link
                 key={appt.id}
                 href={`/dashboard/appointments/${appt.id}`}
-                className="block bg-surface rounded-card p-grid-2 shadow-card hover:shadow-md transition-shadow"
+                className="relative block bg-surface rounded-card p-grid-2 shadow-card hover:shadow-md transition-shadow overflow-hidden"
               >
+                {isNew && (
+                  <span className="absolute top-0 right-0 bg-primary text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-bl-lg">
+                    New
+                  </span>
+                )}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium">{clientDisplay}</p>
-                    <p className="text-sm text-text-muted">{appt.service.name}</p>
+                    <p className="text-sm text-text-muted flex items-center gap-1">
+                      {appt.service.name}
+                      {appt.recurrenceGroupId && (
+                        <svg className="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      )}
+                    </p>
                     {appt.addOns.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         {appt.addOns.map((a) => (

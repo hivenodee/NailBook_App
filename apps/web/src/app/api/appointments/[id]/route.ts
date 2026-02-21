@@ -18,44 +18,51 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/appointments/:id
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   const { id } = await params;
+  const token = new URL(request.url).searchParams.get("token");
 
   const appointment = await prisma.appointment.findUnique({
     where: { id },
     include: {
       service: true,
       addOns: { select: { id: true, name: true, priceInCents: true, durationMinutes: true } },
-      provider: { select: { businessName: true, slug: true, timezone: true } },
+      provider: { select: { businessName: true, slug: true, timezone: true, cancellationHours: true } },
       client: { select: { firstName: true, lastName: true, avatarUrl: true } },
       coupon: { select: { code: true, type: true, value: true } },
       events: { orderBy: { createdAt: "asc" } },
       payments: { orderBy: { createdAt: "desc" } },
       feedback: { select: { id: true } },
+      intakeResponses: { include: { question: { select: { label: true, type: true } } } },
     },
   });
 
   if (!appointment) return error("Appointment not found", 404);
+
+  // If token provided, verify it for public access
+  if (token) {
+    if (appointment.manageToken !== token) return error("Invalid token", 403);
+    return success(appointment);
+  }
+
   return success(appointment);
 }
 
 // PATCH /api/appointments/:id — update status (accept, cancel, complete, reschedule)
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const { userId } = await auth();
-  if (!userId) return error("Unauthorized", 401);
-
   const { id } = await params;
+  const token = new URL(request.url).searchParams.get("token");
   const body = await request.json();
-  const { action, startTime } = body as {
+  const { action, startTime, cancelScope } = body as {
     action: "accept" | "cancel" | "complete" | "reschedule" | "no_show";
     startTime?: string;
+    cancelScope?: "single" | "future"; // for recurring appointments
   };
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    include: { provider: true },
-  });
-  if (!user) return error("User not found", 404);
+  let isProvider = false;
+  let isClient = false;
+  let isTokenAuth = false;
+  let user: { id: string; provider: { id: string } | null } | null = null;
 
   const appointment = await prisma.appointment.findUnique({
     where: { id },
@@ -66,10 +73,34 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
   if (!appointment) return error("Appointment not found", 404);
 
-  // Verify ownership
-  const isProvider = user.provider?.id === appointment.providerId;
-  const isClient = user.id === appointment.clientId;
-  if (!isProvider && !isClient) return error("Forbidden", 403);
+  // Token-based auth for client self-service
+  if (token) {
+    if (appointment.manageToken !== token) return error("Invalid token", 403);
+    isTokenAuth = true;
+    isClient = true;
+    // Only cancel and reschedule allowed via token
+    if (action !== "cancel" && action !== "reschedule") {
+      return error("Only cancel and reschedule are available for self-service", 403);
+    }
+    // Enforce cancellation policy
+    const hoursUntil = (appointment.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursUntil < appointment.provider.cancellationHours) {
+      return error(`Cannot ${action} within ${appointment.provider.cancellationHours} hours of your appointment`, 403);
+    }
+  } else {
+    const { userId } = await auth();
+    if (!userId) return error("Unauthorized", 401);
+
+    user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      include: { provider: true },
+    });
+    if (!user) return error("User not found", 404);
+
+    isProvider = user.provider?.id === appointment.providerId;
+    isClient = user.id === appointment.clientId;
+    if (!isProvider && !isClient) return error("Forbidden", 403);
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     let newStatus = appointment.status;
@@ -116,7 +147,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       data: {
         appointmentId: id,
         type: eventType,
-        actorId: user.id,
+        actorId: isTokenAuth ? appointment.clientId : user?.id,
         actorType: isProvider ? "provider" : "client",
         metadata: action === "reschedule" ? { newStartTime: startTime } : undefined,
       },
@@ -126,6 +157,33 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
 
   if (!updated) return error("Invalid action", 400);
+
+  // Handle "cancel all future" for recurring appointments
+  if (action === "cancel" && cancelScope === "future" && appointment.recurrenceGroupId && appointment.recurrenceIndex !== null) {
+    const futureAppts = await prisma.appointment.findMany({
+      where: {
+        recurrenceGroupId: appointment.recurrenceGroupId,
+        recurrenceIndex: { gt: appointment.recurrenceIndex },
+        status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+      },
+      select: { id: true, startTime: true, providerId: true },
+    });
+    for (const fa of futureAppts) {
+      await prisma.$transaction(async (tx) => {
+        await tx.appointment.update({ where: { id: fa.id }, data: { status: "CANCELLED" } });
+        await tx.appointmentEvent.create({
+          data: {
+            appointmentId: fa.id,
+            type: "cancel",
+            actorType: isProvider ? "provider" : "client",
+            actorId: isTokenAuth ? appointment.clientId : user?.id,
+            metadata: { cancelledAsFuture: true },
+          },
+        });
+      });
+      await invalidateAvailability(fa.providerId, fa.startTime.toISOString().split("T")[0]);
+    }
+  }
 
   // Invalidate availability cache for the appointment's date
   const datesToInvalidate = [appointment.startTime.toISOString().split("T")[0]];

@@ -22,6 +22,15 @@ type AddOn = {
   sortOrder: number;
 };
 
+type IntakeQuestion = {
+  id: string;
+  label: string;
+  type: string;
+  options: string[] | null;
+  isRequired: boolean;
+  sortOrder: number;
+};
+
 type ServiceData = {
   id: string;
   name: string;
@@ -82,6 +91,15 @@ export default function EditServicePage() {
   const [groupRule, setGroupRule] = useState<"OPTIONAL" | "EXACTLY_ONE" | "AT_LEAST_ONE">("OPTIONAL");
   const [savingGroup, setSavingGroup] = useState(false);
 
+  // Intake form state
+  const [intakeQuestions, setIntakeQuestions] = useState<IntakeQuestion[]>([]);
+  const [showIntakeForm, setShowIntakeForm] = useState(false);
+  const [iqLabel, setIqLabel] = useState("");
+  const [iqType, setIqType] = useState<"TEXT" | "SELECT" | "CHECKBOX">("TEXT");
+  const [iqOptions, setIqOptions] = useState("");
+  const [iqRequired, setIqRequired] = useState(false);
+  const [iqSaving, setIqSaving] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/services/${id}?all=true`);
@@ -107,9 +125,20 @@ export default function EditServicePage() {
     }
   }, [id]);
 
+  const loadIntake = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/services/${id}/intake`);
+      const json = await res.json();
+      setIntakeQuestions(json.data || []);
+    } catch (e) {
+      console.error("Failed to load intake questions:", e);
+    }
+  }, [id]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadIntake();
+  }, [load, loadIntake]);
 
   async function handleSave() {
     setSaving(true);
@@ -752,6 +781,175 @@ export default function EditServicePage() {
         {service.addOns.length === 0 && !showAddOn && groups.length === 0 && (
           <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
             <p className="text-text-muted text-sm">No add-ons yet.</p>
+          </div>
+        )}
+      </section>
+
+      {/* Intake Form */}
+      <section className="space-y-grid-2">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-medium">Intake Form</h2>
+          {!showIntakeForm && (
+            <button
+              onClick={() => setShowIntakeForm(true)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Add Question
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-text-muted">
+          Questions clients will answer when booking this service.
+        </p>
+
+        {/* Add question form */}
+        {showIntakeForm && (
+          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
+            <p className="text-sm font-medium">New Question</p>
+            <div>
+              <label className="block text-sm font-medium mb-1">Question</label>
+              <input
+                type="text"
+                value={iqLabel}
+                onChange={(e) => setIqLabel(e.target.value)}
+                maxLength={300}
+                placeholder="e.g. Do you have any allergies?"
+                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Type</label>
+              <div className="flex gap-grid-1">
+                {(["TEXT", "SELECT", "CHECKBOX"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setIqType(t)}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
+                      iqType === t
+                        ? "bg-primary text-white"
+                        : "bg-background text-text-secondary border border-border hover:bg-border/40"
+                    }`}
+                  >
+                    {t === "TEXT" ? "Text" : t === "SELECT" ? "Dropdown" : "Checkboxes"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(iqType === "SELECT" || iqType === "CHECKBOX") && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Options (comma-separated)</label>
+                <input
+                  type="text"
+                  value={iqOptions}
+                  onChange={(e) => setIqOptions(e.target.value)}
+                  placeholder="e.g. Gel, Acrylic, Dip"
+                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            )}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={iqRequired}
+                onChange={(e) => setIqRequired(e.target.checked)}
+                className="rounded border-border"
+              />
+              Required
+            </label>
+            <div className="flex gap-grid-1">
+              <button
+                onClick={async () => {
+                  if (!iqLabel.trim()) return;
+                  setIqSaving(true);
+                  try {
+                    const options =
+                      (iqType === "SELECT" || iqType === "CHECKBOX") && iqOptions
+                        ? iqOptions.split(",").map((o) => o.trim()).filter(Boolean)
+                        : undefined;
+                    const res = await fetch(`/api/services/${id}/intake`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        label: iqLabel.trim(),
+                        type: iqType,
+                        options,
+                        isRequired: iqRequired,
+                        sortOrder: intakeQuestions.length,
+                      }),
+                    });
+                    if (res.ok) {
+                      setIqLabel("");
+                      setIqType("TEXT");
+                      setIqOptions("");
+                      setIqRequired(false);
+                      setShowIntakeForm(false);
+                      await loadIntake();
+                    }
+                  } catch (e) {
+                    console.error("Create question failed:", e);
+                  } finally {
+                    setIqSaving(false);
+                  }
+                }}
+                disabled={iqSaving || !iqLabel.trim()}
+                className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+              >
+                {iqSaving ? "Adding..." : "Add"}
+              </button>
+              <button
+                onClick={() => setShowIntakeForm(false)}
+                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Questions list */}
+        {intakeQuestions.map((q) => (
+          <div
+            key={q.id}
+            className="bg-surface rounded-card p-grid-2 shadow-card flex justify-between items-start"
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium">{q.label}</p>
+              <div className="flex gap-2 mt-0.5">
+                <span className="text-xs text-text-muted">
+                  {q.type === "TEXT" ? "Text" : q.type === "SELECT" ? "Dropdown" : "Checkboxes"}
+                </span>
+                {q.isRequired && (
+                  <span className="text-xs bg-primary-light text-primary px-1.5 py-0.5 rounded-full">
+                    Required
+                  </span>
+                )}
+              </div>
+              {q.options && (q.options as string[]).length > 0 && (
+                <p className="text-xs text-text-muted mt-0.5">
+                  Options: {(q.options as string[]).join(", ")}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch(`/api/services/${id}/intake/${q.id}`, { method: "DELETE" });
+                  await loadIntake();
+                } catch (e) {
+                  console.error("Delete question failed:", e);
+                }
+              }}
+              className="text-xs text-red-500 hover:text-red-700 ml-2"
+            >
+              Delete
+            </button>
+          </div>
+        ))}
+
+        {intakeQuestions.length === 0 && !showIntakeForm && (
+          <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
+            <p className="text-text-muted text-sm">No intake questions yet.</p>
           </div>
         )}
       </section>

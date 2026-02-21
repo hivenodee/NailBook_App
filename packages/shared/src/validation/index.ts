@@ -69,6 +69,16 @@ export const createBookingSchema = z.object({
   ]),
   // Optional coupon code
   couponCode: z.string().max(50).optional(),
+  // Intake form responses
+  intakeResponses: z.array(z.object({
+    questionId: z.string().cuid(),
+    answer: z.string().max(5000),
+  })).optional(),
+  // Recurring booking
+  recurrence: z.object({
+    frequency: z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY"]),
+    count: z.number().int().min(2).max(12),
+  }).optional(),
 });
 
 // ─── AddOn Group ──────────────────────────────────────────
@@ -141,7 +151,20 @@ export const providerSettingsSchema = z.object({
   arrivalGraceMinutes: z.number().int().min(0).max(60).optional(),
   cancellationHours: z.number().int().min(0).max(168).optional(),
   noShowFeePercent: z.number().int().min(0).max(100).optional(),
+  bufferMinutes: z.number().int().min(0).max(60).optional(),
 });
+
+// ─── Intake Questions ─────────────────────────────────────
+
+export const createIntakeQuestionSchema = z.object({
+  label: z.string().min(1).max(300),
+  type: z.enum(["TEXT", "SELECT", "CHECKBOX"]),
+  options: z.array(z.string().min(1).max(100)).max(20).optional(),
+  isRequired: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+export const updateIntakeQuestionSchema = createIntakeQuestionSchema.partial();
 
 // ─── Push Tokens ──────────────────────────────────────────
 

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
@@ -26,11 +27,27 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
+
+  // Build date range filter for startTime
+  const startTimeFilter: Record<string, Date> = {};
+  if (startDate) startTimeFilter.gte = new Date(startDate);
+  if (endDate) startTimeFilter.lt = new Date(endDate);
+  const hasDateFilter = Object.keys(startTimeFilter).length > 0;
 
   // If provider, show their appointments; if client, show their bookings
   const where = user.provider
-    ? { providerId: user.provider.id, ...(status ? { status: status as never } : {}) }
-    : { clientId: user.id, ...(status ? { status: status as never } : {}) };
+    ? {
+        providerId: user.provider.id,
+        ...(status ? { status: status as never } : {}),
+        ...(hasDateFilter ? { startTime: startTimeFilter } : {}),
+      }
+    : {
+        clientId: user.id,
+        ...(status ? { status: status as never } : {}),
+        ...(hasDateFilter ? { startTime: startTimeFilter } : {}),
+      };
 
   const appointments = await prisma.appointment.findMany({
     where,
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
   const result = await parseBody(request, createBookingSchema);
   if (result.error) return result.error;
 
-  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds, couponCode } =
+  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds, couponCode, intakeResponses, recurrence } =
     result.data;
 
   const service = await prisma.service.findUnique({
@@ -165,16 +182,38 @@ export async function POST(request: NextRequest) {
 
   const end = new Date(start.getTime() + (service.durationMinutes + addOnDurationMin) * 60 * 1000);
 
-  // Check for overlapping confirmed appointments
-  const overlap = await prisma.appointment.findFirst({
-    where: {
-      providerId: service.providerId,
-      status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
-      startTime: { lt: end },
-      endTime: { gt: start },
-    },
-  });
-  if (overlap) return error("Time slot is no longer available", 409);
+  // Generate all recurring dates (or just the single date)
+  const recurringDates: { start: Date; end: Date }[] = [{ start, end }];
+  if (recurrence) {
+    for (let i = 1; i < recurrence.count; i++) {
+      const rStart = new Date(start);
+      if (recurrence.frequency === "WEEKLY") rStart.setDate(start.getDate() + i * 7);
+      else if (recurrence.frequency === "BIWEEKLY") rStart.setDate(start.getDate() + i * 14);
+      else rStart.setMonth(start.getMonth() + i);
+      const rEnd = new Date(rStart.getTime() + (service.durationMinutes + addOnDurationMin) * 60 * 1000);
+      recurringDates.push({ start: rStart, end: rEnd });
+    }
+  }
+
+  // Check for overlapping confirmed appointments on ALL dates
+  for (const rd of recurringDates) {
+    const overlap = await prisma.appointment.findFirst({
+      where: {
+        providerId: service.providerId,
+        status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+        startTime: { lt: rd.end },
+        endTime: { gt: rd.start },
+      },
+    });
+    if (overlap) {
+      const conflictDate = rd.start.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      return error(`Time slot on ${conflictDate} is no longer available`, 409);
+    }
+  }
 
   // Calculate deposit (based on discounted total)
   const depositInCents = calculateDeposit(totalPriceCents, service.depositType as "NONE" | "FLAT" | "PERCENT", service.depositValue);
@@ -245,7 +284,10 @@ export async function POST(request: NextRequest) {
   const isFreeAfterDiscount = totalPriceCents === 0;
   const skipStripe = paymentMethod === "CASH" || isFreeAfterDiscount;
 
-  // Create appointment
+  // Create appointment(s)
+  const recurrenceGroupId = recurrence ? randomUUID() : undefined;
+  const manageToken = randomUUID();
+
   const appointment = await prisma.$transaction(async (tx) => {
     // Upsert provider client profile (keyed on email)
     let providerClientId: string | undefined;
@@ -279,6 +321,7 @@ export async function POST(request: NextRequest) {
       isNewClient = !previousAppt;
     }
 
+    // Create the first (primary) appointment — this one gets payment
     const appt = await tx.appointment.create({
       data: {
         providerId: service.providerId,
@@ -298,35 +341,98 @@ export async function POST(request: NextRequest) {
         isNewClient,
         bookedFromWaitlist,
         providerClientId,
+        manageToken,
+        recurrenceGroupId,
+        recurrenceIndex: recurrence ? 0 : undefined,
         ...(selectedAddOns.length > 0 && {
           addOns: { connect: selectedAddOns.map((a) => ({ id: a.id })) },
         }),
       },
     });
 
+    // Create subsequent recurring appointments (auto-confirmed, no payment)
+    if (recurrence && recurringDates.length > 1) {
+      for (let i = 1; i < recurringDates.length; i++) {
+        const rd = recurringDates[i];
+        const recurToken = randomUUID();
+        const recurAppt = await tx.appointment.create({
+          data: {
+            providerId: service.providerId,
+            clientId,
+            serviceId,
+            status: "CONFIRMED",
+            startTime: rd.start,
+            endTime: rd.end,
+            totalInCents: totalPriceCents,
+            depositInCents: 0,
+            discountInCents,
+            couponId,
+            clientName,
+            clientEmail,
+            clientPhone,
+            inspirationUrl,
+            isNewClient: false,
+            bookedFromWaitlist: false,
+            providerClientId,
+            manageToken: recurToken,
+            recurrenceGroupId,
+            recurrenceIndex: i,
+            ...(selectedAddOns.length > 0 && {
+              addOns: { connect: selectedAddOns.map((a) => ({ id: a.id })) },
+            }),
+          },
+        });
+        await tx.appointmentEvent.create({
+          data: {
+            appointmentId: recurAppt.id,
+            type: "created",
+            actorType: clientId ? "client" : "system",
+            actorId: clientId,
+            metadata: { recurring: true, groupId: recurrenceGroupId, index: i },
+          },
+        });
+      }
+    }
+
     // Increment coupon usage
     if (couponId) {
       await tx.coupon.update({
         where: { id: couponId },
-        data: { usedCount: { increment: 1 } },
+        data: { usedCount: { increment: recurrence ? recurrence.count : 1 } },
       });
     }
 
-    // Write event
+    // Write event for primary appointment
     await tx.appointmentEvent.create({
       data: {
         appointmentId: appt.id,
         type: "created",
         actorType: clientId ? "client" : "system",
         actorId: clientId,
+        ...(recurrence && {
+          metadata: { recurring: true, groupId: recurrenceGroupId, index: 0, totalCount: recurrence.count },
+        }),
       },
     });
+
+    // Save intake form responses (on primary appointment only)
+    if (intakeResponses && intakeResponses.length > 0) {
+      await tx.intakeResponse.createMany({
+        data: intakeResponses.map((r: { questionId: string; answer: string }) => ({
+          appointmentId: appt.id,
+          questionId: r.questionId,
+          answer: r.answer,
+        })),
+      });
+    }
 
     return appt;
   });
 
-  // Invalidate availability cache for the booked date
-  await invalidateAvailability(service.providerId, start.toISOString().split("T")[0]);
+  // Invalidate availability cache for all booked dates
+  for (const rd of recurringDates) {
+    await invalidateAvailability(service.providerId, rd.start.toISOString().split("T")[0]);
+  }
 
   // Mark matching waitlist entry as BOOKED (fire-and-forget)
   if (clientEmail) {
@@ -359,6 +465,9 @@ export async function POST(request: NextRequest) {
       clientName,
       clientEmail,
       timezone: service.provider.timezone,
+      slug: service.provider.slug,
+      appointmentId: appointment.id,
+      manageToken,
     };
     try {
       await Promise.all([
