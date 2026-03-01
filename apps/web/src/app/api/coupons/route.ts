@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error, parseBody, withErrorHandler } from "@/lib/api-utils";
 import { createCouponSchema } from "@nailbook/shared";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,10 @@ export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const result = await parseBody(request, createCouponSchema);
   if (result.error) return result.error;
 
-  const { code, type, value, expiresAt, maxUses, serviceIds } = result.data;
+  const { code: rawCode, type, value, expiresAt, maxUses, serviceIds } = result.data;
+
+  // Sanitize free-text input to prevent XSS
+  const code = sanitizeText(rawCode);
 
   // Validate PERCENT <= 100
   if (type === "PERCENT" && value > 100) {

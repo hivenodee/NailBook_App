@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,10 @@ export async function PATCH(
   for (const key of allowedFields) {
     if (key in body) data[key] = body[key];
   }
+
+  // Sanitize free-text inputs to prevent XSS
+  if (typeof data.name === "string") data.name = sanitizeText(data.name);
+  if (typeof data.description === "string") data.description = sanitizeText(data.description);
 
   const updated = await prisma.service.update({
     where: { id },

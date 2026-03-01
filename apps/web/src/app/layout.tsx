@@ -1,8 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "@/styles/globals.css";
+import { validateEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
+
+// Validate environment variables at startup.
+// Wrapped in try/catch so missing vars during `next build` on CI won't crash the build.
+try {
+  validateEnv();
+} catch (e) {
+  // Error is already logged inside validateEnv — nothing more to do at build time.
+}
 
 export const metadata: Metadata = {
   title: "NailBook — Book Your Nail Appointment",

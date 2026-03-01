@@ -11,6 +11,7 @@ import { invalidateAvailability } from "@/lib/cache";
 import { scheduleReminders } from "@/lib/schedule-jobs";
 import { strictRateLimit } from "@/lib/rate-limit";
 import { calculateDiscount, calculateDeposit } from "@/lib/pricing";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +74,16 @@ export async function POST(request: NextRequest) {
   const result = await parseBody(request, createBookingSchema);
   if (result.error) return result.error;
 
-  const { serviceId, startTime, clientName, clientEmail, clientPhone, paymentMethod, inspirationUrl, addOnIds, couponCode, intakeResponses, recurrence } =
+  const { serviceId, startTime, clientName: rawClientName, clientEmail, clientPhone: rawClientPhone, paymentMethod, inspirationUrl, addOnIds, couponCode, intakeResponses: rawIntakeResponses, recurrence } =
     result.data;
+
+  // Sanitize free-text inputs to prevent XSS
+  const clientName = sanitizeText(rawClientName);
+  const clientPhone = sanitizeText(rawClientPhone);
+  const intakeResponses = rawIntakeResponses?.map((r: { questionId: string; answer: string }) => ({
+    ...r,
+    answer: sanitizeText(r.answer),
+  }));
 
   const service = await prisma.service.findUnique({
     where: { id: serviceId },

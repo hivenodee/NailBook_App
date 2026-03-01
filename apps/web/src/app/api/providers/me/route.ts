@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { invalidateAllAvailability } from "@/lib/cache";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,11 @@ export async function PATCH(request: NextRequest) {
   for (const key of settingsFields) {
     if (key in body) data[key] = body[key];
   }
+
+  // Sanitize free-text inputs to prevent XSS
+  if (typeof data.businessName === "string") data.businessName = sanitizeText(data.businessName);
+  if (typeof data.bio === "string") data.bio = sanitizeText(data.bio);
+  if (typeof data.locationAddress === "string") data.locationAddress = sanitizeText(data.locationAddress);
 
   if (Object.keys(data).length === 0) {
     return error("No valid fields provided");

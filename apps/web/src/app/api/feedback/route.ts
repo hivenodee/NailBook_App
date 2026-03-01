@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { success, error, parseBody, withErrorHandler } from "@/lib/api-utils";
 import { submitFeedbackSchema } from "@nailbook/shared";
 import { strictRateLimit } from "@/lib/rate-limit";
+import { sanitizeText } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,10 @@ export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const parsed = await parseBody(request, submitFeedbackSchema);
   if (parsed.error) return parsed.error;
 
-  const { appointmentId, rating, body } = parsed.data;
+  const { appointmentId, rating, body: rawBody } = parsed.data;
+
+  // Sanitize free-text input to prevent XSS
+  const body = sanitizeText(rawBody);
 
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },

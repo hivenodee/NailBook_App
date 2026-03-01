@@ -48,6 +48,21 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",
           },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.clerk.accounts.dev https://clerk.nailbook.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://*.r2.dev https://*.r2.cloudflarestorage.com https://img.clerk.com https://*.tile.openstreetmap.org",
+              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev",
+              "frame-src https://js.stripe.com https://*.clerk.accounts.dev",
+              "worker-src 'self' blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
+            ].join("; "),
+          },
         ],
       },
     ];
@@ -55,14 +70,8 @@ const nextConfig = {
 };
 
 module.exports = withSentryConfig(nextConfig, {
-  // Suppress source map upload warnings when SENTRY_AUTH_TOKEN is not set
-  silent: !process.env.SENTRY_AUTH_TOKEN,
-
-  // Upload source maps for better stack traces
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-
-  // Disable source map upload if auth token is not configured
-  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
-  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  org: process.env.SENTRY_ORG || "",
+  project: process.env.SENTRY_PROJECT || "",
+  disableSourceMapUpload: true,
 });

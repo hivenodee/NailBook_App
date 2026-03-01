@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error, parseBody } from "@/lib/api-utils";
 import { createServiceSchema } from "@nailbook/shared";
+import { sanitizeObject } from "@/lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,12 @@ export async function POST(request: NextRequest) {
   });
   if (!user?.provider) return error("Not a provider", 403);
 
+  // Sanitize free-text inputs to prevent XSS
+  const sanitizedData = sanitizeObject(result.data, ["name", "description"]);
+
   const service = await prisma.service.create({
     data: {
-      ...result.data,
+      ...sanitizedData,
       providerId: user.provider.id,
     },
   });

@@ -69,7 +69,7 @@ export default function ExploreMap({
   onSelectProvider: (id: string | null) => void;
   userLat: number | null;
   userLng: number | null;
-}) {
+}): React.JSX.Element {
   const defaultIcon = useMemo(() => createIcon(false), []);
   const selectedIcon = useMemo(() => createIcon(true), []);
 
