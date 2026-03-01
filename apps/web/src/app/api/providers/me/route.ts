@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
+import { invalidateAllAvailability } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,9 @@ export async function PATCH(request: NextRequest) {
   // Pick only allowed fields to prevent overwriting sensitive data
   const profileFields = [
     "businessName", "bio", "locationAddress",
+    "locationLat", "locationLng",
     "instagramUrl", "tiktokUrl",
+    "category",
   ] as const;
   const settingsFields = [
     "acceptsCard", "acceptsApplePay", "acceptsGooglePay",
@@ -69,6 +72,13 @@ export async function PATCH(request: NextRequest) {
       where: { id: result.provider.id },
       data,
     });
+
+    // Invalidate availability cache when booking-related settings change
+    const bookingFields = ["booksOpen", "booksOpenAt", "bookingWindowDays", "bufferMinutes"];
+    if (bookingFields.some((f) => f in data)) {
+      await invalidateAllAvailability(result.provider.id);
+    }
+
     return success(updated);
   } catch (e) {
     console.error("[providers/me] Update failed:", e);

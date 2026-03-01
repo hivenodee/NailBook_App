@@ -8,7 +8,10 @@ type ProviderData = {
   id: string;
   businessName: string;
   bio: string | null;
+  category: string;
   locationAddress: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   instagramUrl: string | null;
   tiktokUrl: string | null;
   acceptsCard: boolean;
@@ -24,6 +27,15 @@ type ProviderData = {
   bufferMinutes: number;
   avatarUrl: string | null;
 };
+
+const CATEGORY_PRESETS = [
+  { value: "NAILS", label: "Nails" },
+  { value: "HAIR", label: "Hair" },
+  { value: "ESTHETICS", label: "Esthetics" },
+  { value: "BROWS_LASHES", label: "Brows & Lashes" },
+  { value: "MASSAGE", label: "Massage" },
+  { value: "OTHER", label: "Other" },
+];
 
 const WINDOW_PRESETS = [
   { label: "1 Week", days: 7 },
@@ -57,7 +69,10 @@ export default function ProfilePage() {
   // Form state
   const [businessName, setBusinessName] = useState("");
   const [bio, setBio] = useState("");
+  const [category, setCategory] = useState("NAILS");
   const [locationAddress, setLocationAddress] = useState("");
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
   const [instagramUrl, setInstagramUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [acceptsCard, setAcceptsCard] = useState(true);
@@ -84,7 +99,10 @@ export default function ProfilePage() {
           setAvatarUrl(p.avatarUrl || null);
           setBusinessName(p.businessName);
           setBio(p.bio || "");
+          setCategory(p.category || "NAILS");
           setLocationAddress(p.locationAddress || "");
+          setLocationLat(p.locationLat);
+          setLocationLng(p.locationLng);
           setInstagramUrl(p.instagramUrl || "");
           setTiktokUrl(p.tiktokUrl || "");
           setAcceptsCard(p.acceptsCard);
@@ -158,7 +176,10 @@ export default function ProfilePage() {
         body: JSON.stringify({
           businessName,
           bio: bio || null,
+          category,
           locationAddress: locationAddress || null,
+          locationLat,
+          locationLng,
           instagramUrl: instagramUrl || null,
           tiktokUrl: tiktokUrl || null,
           acceptsCard,
@@ -315,6 +336,26 @@ export default function ProfilePage() {
           <p className="text-xs text-text-muted mt-0.5">{bio.length}/500</p>
         </Field>
 
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => setCategory(preset.value)}
+                className={`px-3 py-1.5 rounded-button text-sm font-medium transition-colors border ${
+                  category === preset.value
+                    ? "border-primary bg-primary-light text-primary"
+                    : "border-border bg-background text-text-secondary hover:border-primary/40"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Field label="Location">
           <input
             type="text"
@@ -325,6 +366,29 @@ export default function ProfilePage() {
             className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </Field>
+
+        <div className="flex gap-3">
+          <Field label="Latitude">
+            <input
+              type="number"
+              step="any"
+              value={locationLat ?? ""}
+              onChange={(e) => setLocationLat(e.target.value ? parseFloat(e.target.value) : null)}
+              placeholder="40.7128"
+              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </Field>
+          <Field label="Longitude">
+            <input
+              type="number"
+              step="any"
+              value={locationLng ?? ""}
+              onChange={(e) => setLocationLng(e.target.value ? parseFloat(e.target.value) : null)}
+              placeholder="-74.0060"
+              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </Field>
+        </div>
       </section>
 
       {/* Social links */}

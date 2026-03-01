@@ -102,6 +102,22 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!isProvider && !isClient) return error("Forbidden", 403);
   }
 
+  // ─── Validate status transitions ─────────────────────
+  const VALID_TRANSITIONS: Record<string, string[]> = {
+    accept: ["PENDING_PAYMENT", "CONFIRMED"], // allow accept on CONFIRMED for idempotency
+    cancel: ["PENDING_PAYMENT", "CONFIRMED"],
+    complete: ["CONFIRMED"],
+    no_show: ["CONFIRMED"],
+    reschedule: ["CONFIRMED", "PENDING_PAYMENT"],
+  };
+  const allowedFrom = VALID_TRANSITIONS[action];
+  if (allowedFrom && !allowedFrom.includes(appointment.status)) {
+    return error(
+      `Cannot ${action} an appointment with status ${appointment.status}`,
+      409,
+    );
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     let newStatus = appointment.status;
     let eventType: string = action;
@@ -158,7 +174,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   if (!updated) return error("Invalid action", 400);
 
-  // Handle "cancel all future" for recurring appointments
+  // Handle "cancel all future" for recurring appointments (atomic)
   if (action === "cancel" && cancelScope === "future" && appointment.recurrenceGroupId && appointment.recurrenceIndex !== null) {
     const futureAppts = await prisma.appointment.findMany({
       where: {
@@ -168,20 +184,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       },
       select: { id: true, startTime: true, providerId: true },
     });
-    for (const fa of futureAppts) {
+    if (futureAppts.length > 0) {
       await prisma.$transaction(async (tx) => {
-        await tx.appointment.update({ where: { id: fa.id }, data: { status: "CANCELLED" } });
-        await tx.appointmentEvent.create({
-          data: {
-            appointmentId: fa.id,
-            type: "cancel",
-            actorType: isProvider ? "provider" : "client",
-            actorId: isTokenAuth ? appointment.clientId : user?.id,
-            metadata: { cancelledAsFuture: true },
-          },
-        });
+        for (const fa of futureAppts) {
+          await tx.appointment.update({ where: { id: fa.id }, data: { status: "CANCELLED" } });
+          await tx.appointmentEvent.create({
+            data: {
+              appointmentId: fa.id,
+              type: "cancel",
+              actorType: isProvider ? "provider" : "client",
+              actorId: isTokenAuth ? appointment.clientId : user?.id,
+              metadata: { cancelledAsFuture: true },
+            },
+          });
+        }
       });
-      await invalidateAvailability(fa.providerId, fa.startTime.toISOString().split("T")[0]);
+      // Invalidate cache for all cancelled dates
+      for (const fa of futureAppts) {
+        await invalidateAvailability(fa.providerId, fa.startTime.toISOString().split("T")[0]);
+      }
     }
   }
 

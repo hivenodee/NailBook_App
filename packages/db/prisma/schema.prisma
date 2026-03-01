@@ -40,6 +40,15 @@ enum UserRole {
   ADMIN
 }
 
+enum ProviderCategory {
+  NAILS
+  HAIR
+  ESTHETICS
+  BROWS_LASHES
+  MASSAGE
+  OTHER
+}
+
 model Provider {
   id          String  @id @default(cuid())
   userId      String  @unique
@@ -47,6 +56,7 @@ model Provider {
   slug        String  @unique
   businessName String
   bio         String?
+  category       ProviderCategory @default(NAILS)
   locationAddress String?
   locationLat Float?
   locationLng Float?

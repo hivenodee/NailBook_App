@@ -15,6 +15,7 @@ export const createProviderSchema = z.object({
   locationLng: z.number().min(-180).max(180).optional(),
   instagramUrl: z.string().url().optional().or(z.literal("")),
   tiktokUrl: z.string().url().optional().or(z.literal("")),
+  category: z.enum(["NAILS", "HAIR", "ESTHETICS", "BROWS_LASHES", "MASSAGE", "OTHER"]).optional(),
 });
 
 export const updateProviderSchema = createProviderSchema.partial();
@@ -181,4 +182,15 @@ export const updateReminderSettingsSchema = z.object({
     channels: z.array(z.enum(["EMAIL", "SMS", "PUSH"])).min(1),
     enabled: z.boolean(),
   })).min(1).max(5),
+});
+
+// ─── Provider Search / Discovery ─────────────────────────
+
+export const providerSearchSchema = z.object({
+  category: z.enum(["NAILS", "HAIR", "ESTHETICS", "BROWS_LASHES", "MASSAGE", "OTHER"]).optional(),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+  radiusMiles: z.coerce.number().min(1).max(100).default(25),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });

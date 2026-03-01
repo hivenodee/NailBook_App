@@ -79,9 +79,10 @@ The web dashboard gives providers full control over their business. Every page u
 
 ### Navigation
 
-- Horizontally scrollable nav bar with sage pill active state highlighting
-- Badge counts on key items: Today (today's confirmed appointments), Money (recent payments), Waitlist (active entries), Feedback (new feedback)
-- Links: Today, History, Clients, Services, Hours, Money, Portfolio, Waitlist, Feedback, Messages, Coupons, Exports, Profile
+- Desktop sidebar with 4 sections (Main, Services, Growth, Operations) + mobile bottom tabs with "More" sheet
+- `border-b-2 border-primary` underline active state (not filled pills)
+- 6px dot indicators on key items (not number badges)
+- Links: Today, Calendar, History, Clients, Services, Hours, Money, Portfolio, Waitlist, Feedback, Messages, Coupons, Exports, Reminders, Notifications, Profile
 
 ### Today View (`/dashboard`)
 
@@ -446,36 +447,122 @@ ACTIVE → CANCELLED (client or provider cancels)
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| Background | `#FAF9F7` | Page background, inactive button fills |
-| Surface | `#FFFFFF` | Cards, modals |
-| Border | `#E8E4DF` | Card borders, dividers, button outlines |
-| Primary | `#7C8C6E` | Buttons, active nav, badges |
-| Primary Light | `#E8ECE4` | Active nav pill, hover states |
-| Accent Rose | `#C9A89C` | Highlights |
-| Accent Lavender | `#B8A9C9` | Highlights |
-| Text Primary | `#2D2D2D` | Headings, body text |
-| Text Secondary | `#6B6560` | Supporting text |
-| Text Muted | `#9C958E` | Inactive labels, placeholders |
+| Background | `#F8F6F1` | Warm linen page background |
+| Surface | `#FFFFFF` | Cards, modals, panels |
+| Surface Alt | `#F3EDE6` | Alternating sections, sidebar, hover |
+| Border | `#E5DFD6` | Warm sand dividers, card borders |
+| Primary | `#7B8B6A` | Warm sage CTA buttons, active indicators |
+| Primary Hover | `#667A55` | Deep sage hover state |
+| Primary Light | `#E6EBE1` | Sage tint backgrounds |
+| Accent | `#C4A08A` | Rose gold highlights |
+| Accent Light | `#F0E6DD` | Rose mist backgrounds |
+| Text Primary | `#2A2522` | Rich charcoal headings |
+| Text Secondary | `#6D6560` | Body text |
+| Text Muted | `#9E958C` | Taupe captions, placeholders |
 
-### Status Colors (Soft Tones)
+### Status Colors (Design Token System)
 
 | Status | Style |
 |--------|-------|
-| Confirmed / Completed (payment) | `bg-green-50 text-green-700` |
-| Pending Payment / Pending | `bg-yellow-50 text-yellow-700` |
-| Completed (appointment) | `bg-blue-50 text-blue-700` |
-| Cancelled / Failed | `bg-red-50 text-red-700` |
-| No-Show / Refunded | `bg-gray-100 text-gray-600` |
+| Confirmed / Completed (payment) | `bg-status-success/10 text-status-success` (`#6B8F5C`) |
+| Pending Payment / Pending | `bg-status-warning/10 text-status-warning` (`#C9993A`) |
+| Completed (appointment) | `bg-status-info/10 text-status-info` (`#7A94AA`) |
+| Cancelled / Failed | `bg-status-error/10 text-status-error` (`#BF6B6B`) |
+| No-Show / Refunded | `bg-border/50 text-text-muted` |
+
+### Typography
+
+- **DM Serif Display** (`font-display`): Page headings, prices, KPI amounts, provider names, NailBook wordmark
+- **Inter** (`font-sans`): Body text, buttons, UI labels, captions
 
 ### Layout Principles
 
-- 8-point spacing grid
+- "Quiet Luxury" aesthetic -- warm, calm, self-care-focused
+- 8pt spacing grid (`grid-1` through `grid-6`)
+- Border-based card elevation (`border border-border/50`) with `hover:shadow-soft` lift
+- `skeleton-shimmer` gradient loading states (never `animate-pulse`)
+- `animate-fade-in-up` page entrance animations
+- `border-b-2 border-primary` underline nav active state (not filled pills)
+- 6px dot indicators instead of number badges
 - Portfolio-first layout (images before text)
 - One primary action per screen
 - Money visibility at every step
 - Mobile-first, one-handed usability
-- Animated skeleton loading states on all pages
-- Horizontally scrollable nav with hidden scrollbar
+
+---
+
+## Explore / Discovery (`/explore`)
+
+- Interactive Leaflet map with provider markers (OpenStreetMap tiles)
+- Category filter chips: Nails, Hair, Esthetics, Brows & Lashes, Massage, Other
+- "Use my location" toggle with browser geolocation API
+- Radius selector: 5, 10, 25, 50, 100 miles
+- Provider search API (`GET /api/providers/search`) with haversine distance calculation and bounding box pre-filter
+- Provider cards showing: thumbnail, business name, category badge, star rating, distance, service count, books-open status, verified badge
+- Click card to highlight marker on map; click marker for popup with "View Profile" and Google Maps directions
+- Split layout: map on left (sticky on desktop), scrollable provider list on right
+- Rate limited (60 req/min)
+
+---
+
+## Tipping (`/:slug/tip/:appointmentId`)
+
+- Post-appointment tipping for COMPLETED appointments only
+- Preset amounts: $5, $10, $15, $20 + custom amount input
+- Stripe Checkout for tip payment
+- Duplicate tip guard (prevents double-tipping)
+- Tip URL auto-included in completion email
+- Dashboard money page shows TIP payment type
+- Webhook handler for `checkout.session.completed` with TIP type
+
+---
+
+## Dashboard Calendar (`/dashboard/calendar`)
+
+- Full week-view grid with hourly time slots
+- Mini calendar sidebar for date navigation
+- Appointments displayed as colored blocks on the grid
+- "Block Time" modal for creating time-off directly from calendar
+- Time-off periods shown as blocked-out regions
+- Forward/backward week navigation
+
+---
+
+## Avatar Upload
+
+- Provider avatar upload with crop modal (`AvatarCropModal` component)
+- Presigned R2 upload via `POST /api/providers/me/avatar`
+- 5MB max file size, JPEG/PNG/WebP only
+- Crop interface before upload
+
+---
+
+## Error Tracking (Sentry)
+
+- Client-side error tracking (`sentry.client.config.ts`)
+- Server-side error tracking (`sentry.server.config.ts`)
+- Edge runtime error tracking (`sentry.edge.config.ts`)
+- `onRequestError` instrumentation hook captures all unhandled API errors with route context
+- `error.tsx` and `global-error.tsx` error boundaries with `Sentry.captureException`
+- Source map upload via `withSentryConfig` in `next.config.js`
+- 10% trace sample rate (configurable)
+- Gracefully disabled when `NEXT_PUBLIC_SENTRY_DSN` is not set
+
+---
+
+## Health Check (`/api/health`)
+
+- Database connectivity check (`SELECT 1`)
+- Returns `{ status: "ok" | "degraded", timestamp, checks: { database: "ok" | "error" } }`
+- Returns 200 for ok, 503 for degraded
+
+---
+
+## Legal Pages
+
+- **Privacy Policy** (`/privacy`) — data collection, payment processing, data sharing, retention, rights, security
+- **Terms of Service** (`/terms`) — service description, booking/payments, provider/client responsibilities, liability, dispute resolution
+- Footer links on all pages
 
 ---
 

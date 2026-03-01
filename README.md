@@ -224,20 +224,29 @@ Each template supports email (subject + body) and SMS (body), with provider-cust
 
 The UI follows a warm, calm aesthetic designed specifically for the self-care industry.
 
-**Color tokens:**
-- Background: `#FAF9F7` (warm off-white)
+**Color tokens (Warm Earth palette):**
+- Background: `#F8F6F1` (warm linen)
 - Surface: `#FFFFFF`
-- Border: `#E8E4DF` (warm taupe)
-- Primary: `#7C8C6E` (muted sage)
-- Primary Light: `#E8ECE4`
-- Accent Rose: `#C9A89C`
-- Accent Lavender: `#B8A9C9`
-- Text Primary: `#2D2D2D` (charcoal, not pure black)
-- Text Secondary: `#6B6560`
-- Text Muted: `#9C958E`
+- Surface Alt: `#F3EDE6` (alternating sections)
+- Border: `#E5DFD6` (warm sand)
+- Primary: `#7B8B6A` (warm sage)
+- Primary Hover: `#667A55` (deep sage)
+- Primary Light: `#E6EBE1` (sage tint)
+- Accent: `#C4A08A` (rose gold)
+- Accent Light: `#F0E6DD` (rose mist)
+- Text Primary: `#2A2522` (rich charcoal)
+- Text Secondary: `#6D6560`
+- Text Muted: `#9E958C`
+- Status: Success `#6B8F5C`, Warning `#C9993A`, Error `#BF6B6B`, Info `#7A94AA`
+
+**Typography:** DM Serif Display for headings and prices, Inter for body text.
 
 **Design principles:**
-- 8pt spacing grid
+- "Quiet Luxury" aesthetic -- warm, calm, self-care-focused
+- 8pt spacing grid (`grid-1` through `grid-6`)
+- Border-based card elevation with `hover:shadow-soft`
+- `skeleton-shimmer` gradient loading states (not pulse)
+- `animate-fade-in-up` page entrance animations
 - Portfolio-first layout (images before text)
 - One primary action per screen
 - Money visibility at every step

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { stripe } from "@/lib/stripe";
+import { strictRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const limited = await strictRateLimit(request);
+  if (limited) return limited;
+
   const { id } = await params;
   const body = await request.json();
   const { amountInCents } = body as { amountInCents: number };

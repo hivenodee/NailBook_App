@@ -53,7 +53,8 @@ Data
 External services
 - Auth: Clerk
 - Payments: Stripe
-- Email: Postmark
+- Email: Resend
+- SMS: Twilio
 - Observability: Sentry
 
 ---
@@ -120,8 +121,8 @@ Payments
 
 Notifications
 - Push: Expo Notifications
-- Email: Postmark
-- SMS: deferred
+- Email: Resend
+- SMS: Twilio
 
 ---
 

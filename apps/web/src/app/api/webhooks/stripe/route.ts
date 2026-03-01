@@ -46,6 +46,23 @@ export async function POST(request: NextRequest) {
 
       // Handle TIP payments — don't change appointment status
       if (paymentType === "TIP") {
+        // Guard against duplicate tips (race condition)
+        const existingTip = await prisma.payment.findFirst({
+          where: { appointmentId, type: "TIP", status: "COMPLETED" },
+        });
+        if (existingTip) {
+          // Record the event but skip creating a duplicate payment
+          await prisma.appointmentEvent.create({
+            data: {
+              appointmentId,
+              type: "tip_duplicate_skipped",
+              actorType: "system",
+              metadata: { stripeEventId: event.id },
+            },
+          });
+          break;
+        }
+
         await prisma.$transaction(async (tx) => {
           await tx.payment.create({
             data: {
@@ -97,6 +114,41 @@ export async function POST(request: NextRequest) {
               metadata: {
                 stripeEventId: event.id,
                 amount: session.amount_total,
+              },
+            },
+          });
+        });
+        break;
+      }
+
+      // Guard: only confirm PENDING_PAYMENT appointments (don't revert COMPLETED/CANCELLED)
+      const currentAppt = await prisma.appointment.findUnique({
+        where: { id: appointmentId },
+        select: { status: true },
+      });
+      if (currentAppt && currentAppt.status !== "PENDING_PAYMENT") {
+        // Still record the payment but don't change status
+        await prisma.$transaction(async (tx) => {
+          await tx.payment.create({
+            data: {
+              providerId,
+              appointmentId,
+              amountInCents: session.amount_total || 0,
+              type: paymentType === "DEPOSIT" ? "DEPOSIT" : "FULL",
+              status: "COMPLETED",
+              method: "CARD",
+              stripePaymentIntentId: session.payment_intent as string,
+            },
+          });
+          await tx.appointmentEvent.create({
+            data: {
+              appointmentId,
+              type: "payment_received",
+              actorType: "system",
+              metadata: {
+                stripeEventId: event.id,
+                amount: session.amount_total,
+                note: `Payment recorded but status not changed (was ${currentAppt.status})`,
               },
             },
           });

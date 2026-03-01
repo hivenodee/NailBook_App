@@ -2,8 +2,7 @@ import React from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import Link from "next/link";
-import DashboardNav from "@/components/DashboardNav";
+import SidebarNav from "@/components/layout/SidebarNav";
 import PushRegistration from "@/components/PushRegistration";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +21,18 @@ async function getBadgeCounts(providerId: string) {
   const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
   const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const [today, money, waitlist, feedback] = await Promise.all([
+  const [today, appointments, money, waitlist, feedback] = await Promise.all([
     prisma.appointment.count({
       where: {
         providerId,
         startTime: { gte: startOfToday, lt: endOfToday },
         status: { in: ["CONFIRMED", "PENDING_PAYMENT"] },
+      },
+    }),
+    prisma.appointment.count({
+      where: {
+        providerId,
+        createdAt: { gte: twentyFourHoursAgo },
       },
     }),
     prisma.payment.count({
@@ -51,7 +56,7 @@ async function getBadgeCounts(providerId: string) {
     }),
   ]);
 
-  return { today, money, waitlist, feedback };
+  return { today, appointments, money, waitlist, feedback };
 }
 
 export default async function DashboardLayout({
@@ -60,28 +65,41 @@ export default async function DashboardLayout({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children: any;
 }): Promise<React.JSX.Element> {
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const authResult = await auth();
+    userId = authResult.userId;
+  } catch (e) {
+    console.error("[dashboard/layout] Auth failed:", e);
+    redirect("/");
+  }
   if (!userId) redirect("/");
 
-  const provider = await getProvider(userId);
+  let provider;
+  try {
+    provider = await getProvider(userId);
+  } catch (e) {
+    console.error("[dashboard/layout] getProvider failed:", e);
+    redirect("/");
+  }
   if (!provider) redirect("/");
 
-  const badges = await getBadgeCounts(provider.id);
+  let badges = { today: 0, appointments: 0, money: 0, waitlist: 0, feedback: 0 };
+  try {
+    badges = await getBadgeCounts(provider.id);
+  } catch (e) {
+    console.error("[dashboard/layout] getBadgeCounts failed:", e);
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="bg-surface border-b border-border sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-grid-2 flex items-center h-14 gap-grid-2">
-          <Link href="/dashboard" className="font-display text-xl flex-shrink-0">
-            NailBook
-          </Link>
-          <DashboardNav badges={badges} />
-        </div>
-      </nav>
-      <PushRegistration />
-      <main className="max-w-3xl mx-auto px-grid-2 py-grid-3 animate-fade-in-up">
-        {children}
-      </main>
+    <div className="min-h-screen bg-background flex">
+      <SidebarNav badges={badges} />
+      <div className="flex-1 lg:ml-60 min-h-screen pb-16 lg:pb-0">
+        <PushRegistration />
+        <main className="max-w-4xl mx-auto px-grid-2 lg:px-grid-3 py-grid-3 animate-fade-in-up">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
