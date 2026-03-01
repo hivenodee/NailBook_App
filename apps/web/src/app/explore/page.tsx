@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Star, Navigation, ExternalLink } from "lucide-react";
 import type { MapProvider } from "@/components/ExploreMap";
 
@@ -287,12 +288,14 @@ function ProviderCard({
     >
       <div className="flex gap-3">
         {/* Thumbnail */}
-        <div className="w-16 h-16 rounded-lg overflow-hidden bg-surface-alt flex-shrink-0">
+        <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-surface-alt flex-shrink-0">
           {thumbnail ? (
-            <img
+            <Image
               src={thumbnail}
               alt={p.businessName}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              sizes="64px"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted text-lg font-display">

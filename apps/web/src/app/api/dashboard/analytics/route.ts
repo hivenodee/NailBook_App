@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error } from "@/lib/api-utils";
+import { success, error, withErrorHandler } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +111,7 @@ function generateAllBucketKeys(rangeStart: Date, rangeEnd: Date, granularity: Gr
   return keys;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async function GET(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -225,4 +225,4 @@ export async function GET(request: NextRequest) {
     summary,
     buckets,
   });
-}
+});

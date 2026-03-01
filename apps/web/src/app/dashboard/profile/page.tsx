@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { Camera } from "lucide-react";
 import AvatarCropModal from "@/components/AvatarCropModal";
 
@@ -247,9 +248,11 @@ export default function ProfilePage() {
         <div className="flex items-center gap-grid-3">
           <div className="relative">
             {avatarUrl ? (
-              <img
+              <Image
                 src={avatarUrl}
                 alt="Profile"
+                width={80}
+                height={80}
                 className="w-20 h-20 rounded-full object-cover border-2 border-border"
               />
             ) : (

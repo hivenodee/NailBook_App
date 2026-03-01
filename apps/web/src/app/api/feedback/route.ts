@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error, parseBody } from "@/lib/api-utils";
+import { success, error, parseBody, withErrorHandler } from "@/lib/api-utils";
 import { submitFeedbackSchema } from "@nailbook/shared";
 import { strictRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/feedback — Submit anonymous feedback (no auth required)
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const limited = await strictRateLimit(request);
   if (limited) return limited;
 
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
   });
 
   return success(feedback, 201);
-}
+});
 
 // GET /api/feedback — Provider's feedback list (auth required)
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async function GET(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -84,4 +84,4 @@ export async function GET(request: NextRequest) {
   ]);
 
   return success({ items, total, page, limit });
-}
+});

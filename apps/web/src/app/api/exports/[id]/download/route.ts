@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { error } from "@/lib/api-utils";
+import { error, withErrorHandler } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/exports/:id/download — download CSV file
-export async function GET(
+export const GET = withErrorHandler(async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -40,4 +40,4 @@ export async function GET(
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
-}
+});

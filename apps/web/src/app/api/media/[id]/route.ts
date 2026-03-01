@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error } from "@/lib/api-utils";
+import { success, error, withErrorHandler } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
 // PATCH /api/media/:id — toggle isHidden, update sortOrder
-export async function PATCH(request: NextRequest, { params }: Params) {
+export const PATCH = withErrorHandler(async function PATCH(request: NextRequest, { params }: Params) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -40,10 +40,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
 
   return success(updated);
-}
+});
 
 // DELETE /api/media/:id — hard delete
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export const DELETE = withErrorHandler(async function DELETE(_request: NextRequest, { params }: Params) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -62,4 +62,4 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   await prisma.mediaAsset.delete({ where: { id } });
 
   return success({ deleted: true });
-}
+});

@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error, parseBody } from "@/lib/api-utils";
+import { success, error, parseBody, withErrorHandler } from "@/lib/api-utils";
 import { sendMessageSchema } from "@nailbook/shared";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/messages?threadId=xxx
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async function GET(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
   });
 
   return success(messages);
-}
+});
 
 // POST /api/messages — send a message
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -50,4 +50,4 @@ export async function POST(request: NextRequest) {
   });
 
   return success(message, 201);
-}
+});

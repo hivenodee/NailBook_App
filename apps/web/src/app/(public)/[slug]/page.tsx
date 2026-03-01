@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import ServiceList from "@/components/ServiceList";
@@ -71,10 +72,13 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
       {/* Cover image with gradient overlay */}
       <div className="relative w-full h-[200px] bg-border overflow-hidden">
         {provider.coverImageUrl ? (
-          <img
+          <Image
             src={provider.coverImageUrl}
             alt={provider.businessName}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-light to-accent-light" />
@@ -87,9 +91,11 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         <section className="relative z-10 text-center -mt-10 space-y-grid-1">
           {/* Avatar */}
           {provider.user.avatarUrl ? (
-            <img
+            <Image
               src={provider.user.avatarUrl}
               alt={provider.businessName}
+              width={80}
+              height={80}
               className="w-20 h-20 rounded-full border-4 border-surface object-cover mx-auto shadow-soft relative"
             />
           ) : (
@@ -169,12 +175,14 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
           {provider.mediaAssets.length > 0 ? (
             <div className="grid grid-cols-3 gap-0.5 rounded-card overflow-hidden">
               {provider.mediaAssets.map((asset) => (
-                <div key={asset.id} className="aspect-square bg-border">
+                <div key={asset.id} className="relative aspect-square bg-border">
                   {asset.type === "PHOTO" ? (
-                    <img
+                    <Image
                       src={asset.thumbnailUrl || asset.url}
                       alt="Portfolio"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 512px) 33vw, 170px"
                     />
                   ) : (
                     <video

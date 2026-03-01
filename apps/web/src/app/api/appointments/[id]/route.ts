@@ -39,11 +39,24 @@ export async function GET(request: NextRequest, { params }: Params) {
 
   if (!appointment) return error("Appointment not found", 404);
 
-  // If token provided, verify it for public access
+  // If token provided, verify it for public access (client self-manage flow)
   if (token) {
     if (appointment.manageToken !== token) return error("Invalid token", 403);
     return success(appointment);
   }
+
+  // No token — require Clerk auth and verify the user is the owning provider
+  const { userId } = await auth();
+  if (!userId) return error("Unauthorized", 401);
+
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    include: { provider: true },
+  });
+  if (!user) return error("User not found", 404);
+
+  const isProvider = user.provider?.id === appointment.providerId;
+  if (!isProvider) return error("Forbidden", 403);
 
   return success(appointment);
 }

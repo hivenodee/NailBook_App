@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error } from "@/lib/api-utils";
+import { success, error, withErrorHandler } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
 // GET /api/clients/:id — client detail with appointment history
-export async function GET(request: NextRequest, { params }: Params) {
+export const GET = withErrorHandler(async function GET(request: NextRequest, { params }: Params) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -38,10 +38,10 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 
   return success({ ...client, providerTimezone: user.provider.timezone });
-}
+});
 
 // PATCH /api/clients/:id — update client notes (provider-only)
-export async function PATCH(request: NextRequest, { params }: Params) {
+export const PATCH = withErrorHandler(async function PATCH(request: NextRequest, { params }: Params) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -72,4 +72,4 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
 
   return success(updated);
-}
+});

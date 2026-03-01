@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error, parseBody } from "@/lib/api-utils";
+import { success, error, parseBody, withErrorHandler } from "@/lib/api-utils";
 import { createCouponSchema } from "@nailbook/shared";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/coupons — list coupons for current provider
-export async function GET() {
+export const GET = withErrorHandler(async function GET() {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -26,10 +26,10 @@ export async function GET() {
   });
 
   return success(coupons);
-}
+});
 
 // POST /api/coupons — create a new coupon
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -75,4 +75,4 @@ export async function POST(request: NextRequest) {
   });
 
   return success(coupon, 201);
-}
+});

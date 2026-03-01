@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import { MEDIA_LIMITS } from "@nailbook/shared";
 
 type MediaAsset = {
@@ -174,12 +175,14 @@ export default function PortfolioManagementPage() {
           {media.map((asset) => (
             <div key={asset.id} className="relative group aspect-square bg-border">
               {asset.type === "PHOTO" ? (
-                <img
+                <Image
                   src={asset.thumbnailUrl || asset.url}
                   alt="Portfolio"
-                  className={`w-full h-full object-cover ${
+                  fill
+                  className={`object-cover ${
                     asset.isHidden ? "opacity-40" : ""
                   }`}
+                  sizes="(max-width: 768px) 33vw, 200px"
                 />
               ) : (
                 <video

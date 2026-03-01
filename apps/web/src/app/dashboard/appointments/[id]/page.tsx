@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { statusColor, statusLabel, paymentStatusColor } from "@/lib/status-colors";
 
 type AppointmentEvent = {
@@ -253,11 +254,16 @@ export default function AppointmentDetailPage() {
           {appointment.inspirationUrl && (
             <div>
               <span className="text-text-muted">Inspiration:</span>{" "}
-              <img
-                src={appointment.inspirationUrl}
-                alt="Inspiration"
-                className="mt-1 w-32 h-32 object-cover rounded-card"
-              />
+              <div className="relative mt-1 w-32 h-32">
+                <Image
+                  src={appointment.inspirationUrl}
+                  alt="Inspiration"
+                  fill
+                  className="object-cover rounded-card"
+                  unoptimized
+                  sizes="128px"
+                />
+              </div>
             </div>
           )}
         </div>

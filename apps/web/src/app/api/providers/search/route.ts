@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { success, error } from "@/lib/api-utils";
+import { success, error, withErrorHandler } from "@/lib/api-utils";
 import { rateLimit } from "@/lib/rate-limit";
 import { providerSearchSchema } from "@nailbook/shared";
 
@@ -30,7 +30,7 @@ function haversineDistanceMiles(
   return (EARTH_RADIUS_KM * c) / MILES_TO_KM;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async function GET(request: NextRequest) {
   const limited = await rateLimit(request);
   if (limited) return limited;
 
@@ -158,4 +158,4 @@ export async function GET(request: NextRequest) {
     total: results.length,
     hasMore: offset + limit < results.length,
   });
-}
+});

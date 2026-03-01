@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { success, error } from "@/lib/api-utils";
+import { success, error, withErrorHandler } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/exports — generate CSV export synchronously
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandler(async function POST(request: NextRequest) {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -154,10 +154,10 @@ export async function POST(request: NextRequest) {
     });
     return success(updatedJob, 201);
   }
-}
+});
 
 // GET /api/exports — list export jobs
-export async function GET() {
+export const GET = withErrorHandler(async function GET() {
   const { userId } = await auth();
   if (!userId) return error("Unauthorized", 401);
 
@@ -174,7 +174,7 @@ export async function GET() {
   });
 
   return success(jobs);
-}
+});
 
 function escapeCsv(val: string): string {
   return val.replace(/"/g, '""');
