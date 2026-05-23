@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import SidebarNav from "@/components/layout/SidebarNav";
+import { PageTransition } from "@/components/layout/PageTransition";
 import PushRegistration from "@/components/PushRegistration";
 
 export const dynamic = "force-dynamic";
@@ -92,12 +93,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen flex bg-cream-50 text-ink-900">
       <SidebarNav badges={badges} />
-      <div className="flex-1 lg:ml-60 min-h-screen pb-16 lg:pb-0">
+      <div className="flex-1 lg:ml-[220px] min-h-screen pb-16 lg:pb-0">
         <PushRegistration />
-        <main className="max-w-4xl mx-auto px-grid-2 lg:px-grid-3 py-grid-3 animate-fade-in-up">
-          {children}
+        <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>

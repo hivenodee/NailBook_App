@@ -1,357 +1,32 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams, useParams, useRouter } from "next/navigation";
-
-type BookingStep = "time" | "details" | "intake" | "confirm";
-
-type IntakeQuestionData = {
-  id: string;
-  label: string;
-  type: string;
-  options: string[] | null;
-  isRequired: boolean;
-  sortOrder: number;
-};
-
-type TimeSlot = {
-  startTime: string;
-  endTime: string;
-  available: boolean;
-};
-
-type AddOnGroupData = {
-  id: string;
-  name: string;
-  rule: "OPTIONAL" | "EXACTLY_ONE" | "AT_LEAST_ONE";
-  sortOrder: number;
-};
-
-type AddOnData = {
-  id: string;
-  name: string;
-  priceInCents: number;
-  durationMinutes: number;
-  groupId: string | null;
-  isMandatory: boolean;
-  sortOrder: number;
-};
-
-type ServiceData = {
-  id: string;
-  name: string;
-  priceInCents: number;
-  durationMinutes: number;
-  depositType: "NONE" | "FLAT" | "PERCENT";
-  depositValue: number;
-  addOns: AddOnData[];
-  addOnGroups: AddOnGroupData[];
-  provider: {
-    businessName: string;
-    slug: string;
-    timezone: string;
-    cancellationHours: number;
-    arrivalGraceMinutes: number;
-    acceptsCash: boolean;
-    acceptsCard: boolean;
-    acceptsApplePay: boolean;
-    acceptsGooglePay: boolean;
-    acceptsCashAppPay: boolean;
-    booksOpen: boolean;
-    booksOpenAt: string | null;
-    bookingWindowDays: number;
-  };
-};
-
-type PaymentMethod = "CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_APP_PAY" | "CASH";
-
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  APPLE_PAY: "Apple Pay",
-  GOOGLE_PAY: "Google Pay",
-  CARD: "Card",
-  CASH_APP_PAY: "Cash App Pay",
-  CASH: "Cash",
-};
-
-function getAvailablePaymentMethods(service: ServiceData): PaymentMethod[] {
-  const methods: PaymentMethod[] = [];
-  const p = service.provider;
-  const hasDeposit = service.depositType !== "NONE";
-
-  // Digital methods listed first per design.md
-  if (p.acceptsApplePay) methods.push("APPLE_PAY");
-  if (p.acceptsGooglePay) methods.push("GOOGLE_PAY");
-  if (p.acceptsCard) methods.push("CARD");
-  if (p.acceptsCashAppPay) methods.push("CASH_APP_PAY");
-  // Cash only when no deposit required
-  if (p.acceptsCash && !hasDeposit) methods.push("CASH");
-
-  return methods;
-}
-
-function formatPrice(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatTime(iso: string, tz: string) {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: tz,
-  });
-}
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function getDepositAmount(service: ServiceData, totalCents: number) {
-  if (service.depositType === "FLAT") return Math.min(service.depositValue, totalCents);
-  if (service.depositType === "PERCENT")
-    return Math.round((totalCents * service.depositValue) / 100);
-  return 0;
-}
-
-function getNextDays(count: number): Date[] {
-  const days: Date[] = [];
-  const today = new Date();
-  for (let i = 1; i <= count; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
-function toDateStr(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function BooksClosedCard({
-  booksOpenAt,
-  timezone,
-}: {
-  booksOpenAt: string | null;
-  timezone: string;
-}) {
-  const [timeLeft, setTimeLeft] = useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!booksOpenAt) return;
-    const target = new Date(booksOpenAt).getTime();
-
-    function update() {
-      const diff = target - Date.now();
-      if (diff <= 0) {
-        window.location.reload();
-        return;
-      }
-      setTimeLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
-        seconds: Math.floor((diff % 60000) / 1000),
-      });
-    }
-
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [booksOpenAt]);
-
-  return (
-    <div className="bg-surface rounded-card p-grid-3 shadow-card text-center space-y-grid-2">
-      <div className="w-12 h-12 bg-surface-alt rounded-full flex items-center justify-center mx-auto">
-        <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      </div>
-      <h2 className="font-display text-xl">Books Are Currently Closed</h2>
-
-      {booksOpenAt && timeLeft && (
-        <>
-          <p className="text-sm text-text-muted">Books open in</p>
-          <div className="flex justify-center gap-3">
-            {timeLeft.days > 0 && (
-              <div className="text-center">
-                <span className="text-2xl font-bold tabular-nums">{timeLeft.days}</span>
-                <p className="text-xs text-text-muted">days</p>
-              </div>
-            )}
-            <div className="text-center">
-              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.hours).padStart(2, "0")}</span>
-              <p className="text-xs text-text-muted">hours</p>
-            </div>
-            <div className="text-center">
-              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.minutes).padStart(2, "0")}</span>
-              <p className="text-xs text-text-muted">min</p>
-            </div>
-            <div className="text-center">
-              <span className="text-2xl font-bold tabular-nums">{String(timeLeft.seconds).padStart(2, "0")}</span>
-              <p className="text-xs text-text-muted">sec</p>
-            </div>
-          </div>
-          <p className="text-xs text-text-muted">
-            Opens{" "}
-            {new Date(booksOpenAt).toLocaleString("en-US", {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              timeZone: timezone,
-            })}
-          </p>
-        </>
-      )}
-
-      {!booksOpenAt && (
-        <p className="text-sm text-text-muted">
-          Check back later to book your appointment.
-        </p>
-      )}
-
-      {booksOpenAt && (
-        <p className="text-sm text-text-secondary">
-          Check back then to book your appointment.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function WaitlistForm({
-  serviceId,
-  selectedDate,
-  waitlistSlot,
-  waitlistName,
-  setWaitlistName,
-  waitlistEmail,
-  setWaitlistEmail,
-  waitlistPhone,
-  setWaitlistPhone,
-  waitlistTimePref,
-  setWaitlistTimePref,
-  waitlistSubmitting,
-  setWaitlistSubmitting,
-  onSuccess,
-}: {
-  serviceId: string | null;
-  selectedDate: Date;
-  waitlistSlot: TimeSlot | null;
-  waitlistName: string;
-  setWaitlistName: (v: string) => void;
-  waitlistEmail: string;
-  setWaitlistEmail: (v: string) => void;
-  waitlistPhone: string;
-  setWaitlistPhone: (v: string) => void;
-  waitlistTimePref: "ANY" | "MORNING" | "AFTERNOON" | "EVENING";
-  setWaitlistTimePref: (v: "ANY" | "MORNING" | "AFTERNOON" | "EVENING") => void;
-  waitlistSubmitting: boolean;
-  setWaitlistSubmitting: (v: boolean) => void;
-  onSuccess: () => void;
-}) {
-  return (
-    <div className="mt-3 space-y-2 text-left max-w-xs mx-auto">
-      <div>
-        <label className="block text-xs font-medium mb-0.5">Name</label>
-        <input
-          type="text"
-          value={waitlistName}
-          onChange={(e) => setWaitlistName(e.target.value)}
-          placeholder="Your name"
-          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-0.5">Email</label>
-        <input
-          type="email"
-          value={waitlistEmail}
-          onChange={(e) => setWaitlistEmail(e.target.value)}
-          placeholder="your@email.com"
-          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-0.5">
-          Phone <span className="text-text-muted">(optional)</span>
-        </label>
-        <input
-          type="tel"
-          value={waitlistPhone}
-          onChange={(e) => setWaitlistPhone(e.target.value)}
-          placeholder="(555) 123-4567"
-          className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
-      {/* Only show time preference for day-level waitlist */}
-      {!waitlistSlot && (
-        <div>
-          <label className="block text-xs font-medium mb-0.5">Time preference</label>
-          <select
-            value={waitlistTimePref}
-            onChange={(e) => setWaitlistTimePref(e.target.value as typeof waitlistTimePref)}
-            className="w-full border border-border rounded-input px-3 py-2 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <option value="ANY">Any time</option>
-            <option value="MORNING">Morning (before 12 PM)</option>
-            <option value="AFTERNOON">Afternoon (12–5 PM)</option>
-            <option value="EVENING">Evening (after 5 PM)</option>
-          </select>
-        </div>
-      )}
-      <button
-        type="button"
-        disabled={!waitlistName || !waitlistEmail || waitlistSubmitting}
-        onClick={async () => {
-          if (!serviceId) return;
-          setWaitlistSubmitting(true);
-          try {
-            const res = await fetch("/api/waitlist", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                serviceId,
-                targetDate: toDateStr(selectedDate),
-                ...(waitlistSlot ? { targetTime: waitlistSlot.startTime } : {}),
-                timePreference: waitlistTimePref,
-                clientName: waitlistName,
-                clientEmail: waitlistEmail,
-                clientPhone: waitlistPhone || undefined,
-              }),
-            });
-            if (res.ok) {
-              onSuccess();
-            } else {
-              const json = await res.json();
-              alert(json.error?.message || "Failed to join waitlist");
-            }
-          } catch {
-            alert("Something went wrong. Please try again.");
-          } finally {
-            setWaitlistSubmitting(false);
-          }
-        }}
-        className="w-full bg-primary text-white py-2.5 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-      >
-        {waitlistSubmitting ? "Joining..." : "Join Waitlist"}
-      </button>
-    </div>
-  );
-}
+import * as React from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/Button";
+import { BooksClosedView } from "@/components/booking/BooksClosedView";
+import { StepShell } from "@/components/booking/StepShell";
+import { StepTime } from "@/components/booking/StepTime";
+import { StepDetails } from "@/components/booking/StepDetails";
+import { StepIntake } from "@/components/booking/StepIntake";
+import { StepReview } from "@/components/booking/StepReview";
+import {
+  formatPrice,
+  getAvailablePaymentMethods,
+  getDepositAmount,
+  getNextDays,
+  toDateStr,
+} from "@/components/booking/helpers";
+import type {
+  AppliedCoupon,
+  BookingStep,
+  IntakeQuestionData,
+  PaymentMethod,
+  RecurrenceFreq,
+  ServiceData,
+  TimeSlot,
+  WaitlistTimePref,
+} from "@/components/booking/types";
 
 export default function BookPage(): React.JSX.Element {
   const searchParams = useSearchParams();
@@ -360,70 +35,72 @@ export default function BookPage(): React.JSX.Element {
   const slug = params.slug as string;
   const serviceId = searchParams.get("service");
 
-  const [step, setStep] = useState<BookingStep>("time");
-  const [service, setService] = useState<ServiceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  // ─── State ────────────────────────────────────────────────
+  const [step, setStep] = React.useState<BookingStep>("time");
+  const [direction, setDirection] = React.useState<"forward" | "backward">(
+    "forward",
+  );
+  const [service, setService] = React.useState<ServiceData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  // Waitlist state
-  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
-  const [waitlistSlot, setWaitlistSlot] = useState<TimeSlot | null>(null); // per-slot waitlist
-  const [waitlistName, setWaitlistName] = useState("");
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistPhone, setWaitlistPhone] = useState("");
-  const [waitlistTimePref, setWaitlistTimePref] = useState<"ANY" | "MORNING" | "AFTERNOON" | "EVENING">("ANY");
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
-
-  // Pre-select date from URL query param
   const dateParam = searchParams.get("date");
-
-  // Time selection
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+  const [selectedDate, setSelectedDate] = React.useState<Date>(() => {
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
       const parsed = new Date(`${dateParam}T12:00:00`);
       if (!isNaN(parsed.getTime())) return parsed;
     }
     return getNextDays(1)[0];
   });
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [slots, setSlots] = React.useState<TimeSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = React.useState(false);
+  const [selectedSlot, setSelectedSlot] = React.useState<TimeSlot | null>(null);
 
-  // Add-on selection
-  const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set());
+  const [selectedAddOnIds, setSelectedAddOnIds] = React.useState<Set<string>>(
+    new Set(),
+  );
 
-  // Payment method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    React.useState<PaymentMethod | null>(null);
 
-  // Client details
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+  const [clientName, setClientName] = React.useState("");
+  const [clientEmail, setClientEmail] = React.useState("");
+  const [clientPhone, setClientPhone] = React.useState("");
 
-  // Intake form
-  const [intakeQuestions, setIntakeQuestions] = useState<IntakeQuestionData[]>([]);
-  const [intakeResponses, setIntakeResponses] = useState<Record<string, string>>({});
+  const [intakeQuestions, setIntakeQuestions] = React.useState<
+    IntakeQuestionData[]
+  >([]);
+  const [intakeResponses, setIntakeResponses] = React.useState<
+    Record<string, string>
+  >({});
 
-  // Recurrence
-  const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
-  const [recurrenceFreq, setRecurrenceFreq] = useState<"WEEKLY" | "BIWEEKLY" | "MONTHLY">("WEEKLY");
-  const [recurrenceCount, setRecurrenceCount] = useState(4);
+  const [recurrenceEnabled, setRecurrenceEnabled] = React.useState(false);
+  const [recurrenceFreq, setRecurrenceFreq] =
+    React.useState<RecurrenceFreq>("WEEKLY");
+  const [recurrenceCount, setRecurrenceCount] = React.useState(4);
 
-  // Coupon
-  const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{
-    code: string;
-    type: "PERCENT" | "FIXED";
-    value: number;
-  } | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
-  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponInput, setCouponInput] = React.useState("");
+  const [appliedCoupon, setAppliedCoupon] = React.useState<AppliedCoupon | null>(
+    null,
+  );
+  const [couponError, setCouponError] = React.useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = React.useState(false);
+
+  // Waitlist state
+  const [showWaitlistForm, setShowWaitlistForm] = React.useState(false);
+  const [waitlistSlot, setWaitlistSlot] = React.useState<TimeSlot | null>(null);
+  const [waitlistName, setWaitlistName] = React.useState("");
+  const [waitlistEmail, setWaitlistEmail] = React.useState("");
+  const [waitlistPhone, setWaitlistPhone] = React.useState("");
+  const [waitlistTimePref, setWaitlistTimePref] =
+    React.useState<WaitlistTimePref>("ANY");
+  const [waitlistSubmitting, setWaitlistSubmitting] = React.useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = React.useState(false);
 
   const days = getNextDays(service?.provider.bookingWindowDays ?? 14);
 
-  // Fetch service details + auto-select mandatory add-ons
-  useEffect(() => {
+  // ─── Effects ──────────────────────────────────────────────
+  React.useEffect(() => {
     if (!serviceId) return;
     fetch(`/api/services/${serviceId}`)
       .then((r) => r.json())
@@ -431,7 +108,6 @@ export default function BookPage(): React.JSX.Element {
         if (json.data) {
           const s = json.data as ServiceData;
           setService(s);
-          // Auto-select mandatory add-ons
           const mandatoryIds = s.addOns
             .filter((a) => a.isMandatory)
             .map((a) => a.id);
@@ -447,8 +123,7 @@ export default function BookPage(): React.JSX.Element {
       .finally(() => setLoading(false));
   }, [serviceId]);
 
-  // Load intake questions for service
-  useEffect(() => {
+  React.useEffect(() => {
     if (!serviceId) return;
     fetch(`/api/services/${serviceId}/intake`)
       .then((r) => r.json())
@@ -458,21 +133,19 @@ export default function BookPage(): React.JSX.Element {
       .catch(() => {});
   }, [serviceId]);
 
-  // Reset waitlist form state when date changes
-  useEffect(() => {
+  React.useEffect(() => {
     setShowWaitlistForm(false);
     setWaitlistSuccess(false);
     setWaitlistSlot(null);
   }, [selectedDate]);
 
-  // Fetch slots when date changes
-  const fetchSlots = useCallback(async () => {
+  const fetchSlots = React.useCallback(async () => {
     if (!slug || !selectedDate) return;
     setSlotsLoading(true);
     setSelectedSlot(null);
     try {
       const res = await fetch(
-        `/api/availability/${slug}?date=${toDateStr(selectedDate)}`
+        `/api/availability/${slug}?date=${toDateStr(selectedDate)}`,
       );
       const json = await res.json();
       const avail = json.data || {};
@@ -484,57 +157,132 @@ export default function BookPage(): React.JSX.Element {
     }
   }, [slug, selectedDate]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchSlots();
   }, [fetchSlots]);
 
-  // Submit booking
-  const handleConfirm = async () => {
-    if (!serviceId || !selectedSlot || !selectedPaymentMethod) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          serviceId,
-          startTime: selectedSlot.startTime,
-          clientName,
-          clientEmail,
-          clientPhone: clientPhone || undefined,
-          paymentMethod: selectedPaymentMethod,
-          addOnIds: selectedAddOns.length > 0 ? selectedAddOns.map((a) => a.id) : undefined,
-          couponCode: appliedCoupon?.code || undefined,
-          ...(Object.keys(intakeResponses).length > 0 && {
-            intakeResponses: Object.entries(intakeResponses).map(([questionId, answer]) => ({
-              questionId,
-              answer,
-            })),
-          }),
-          ...(recurrenceEnabled && {
-            recurrence: {
-              frequency: recurrenceFreq,
-              count: recurrenceCount,
-            },
-          }),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        alert(json.error?.message || "Something went wrong. Please try again.");
-        return;
-      }
-      if (json.data?.checkoutUrl) {
-        window.location.href = json.data.checkoutUrl;
-      } else {
-        router.push(`/${slug}/confirmation?appointment=${json.data?.id || json.data?.appointment?.id || ""}`);
-      }
-    } catch {
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
+  // ─── Derived ─────────────────────────────────────────────
+  const selectedAddOns = React.useMemo(
+    () => service?.addOns.filter((a) => selectedAddOnIds.has(a.id)) ?? [],
+    [service, selectedAddOnIds],
+  );
+  const addOnPriceCents = selectedAddOns.reduce(
+    (sum, a) => sum + a.priceInCents,
+    0,
+  );
+  const addOnDurationMin = selectedAddOns.reduce(
+    (sum, a) => sum + a.durationMinutes,
+    0,
+  );
+  const totalBeforeDiscount =
+    (service?.priceInCents ?? 0) + addOnPriceCents;
+  const totalDurationMin = (service?.durationMinutes ?? 0) + addOnDurationMin;
+
+  let discountCents = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === "PERCENT") {
+      discountCents = Math.min(
+        Math.round((totalBeforeDiscount * appliedCoupon.value) / 100),
+        totalBeforeDiscount,
+      );
+    } else {
+      discountCents = Math.min(appliedCoupon.value, totalBeforeDiscount);
     }
-  };
+  }
+  const totalPriceCents = totalBeforeDiscount - discountCents;
+  const depositAmount = service ? getDepositAmount(service, totalPriceCents) : 0;
+  const availableMethods = service ? getAvailablePaymentMethods(service) : [];
+
+  // Validate add-on groups
+  const unsatisfiedGroupIds = React.useMemo(() => {
+    const out = new Set<string>();
+    if (!service) return out;
+    for (const group of service.addOnGroups) {
+      if (group.rule === "OPTIONAL") continue;
+      const groupAddOnIds = service.addOns
+        .filter((a) => a.groupId === group.id)
+        .map((a) => a.id);
+      const selectedCount = groupAddOnIds.filter((id) =>
+        selectedAddOnIds.has(id),
+      ).length;
+      if (group.rule === "EXACTLY_ONE" && selectedCount !== 1) {
+        out.add(group.id);
+      } else if (group.rule === "AT_LEAST_ONE" && selectedCount < 1) {
+        out.add(group.id);
+      }
+    }
+    return out;
+  }, [service, selectedAddOnIds]);
+  const allGroupsSatisfied = unsatisfiedGroupIds.size === 0;
+
+  // Step list (skip intake when no questions)
+  const stepList = React.useMemo<BookingStep[]>(() => {
+    const arr: BookingStep[] = ["time", "details"];
+    if (intakeQuestions.length > 0) arr.push("intake");
+    arr.push("review");
+    return arr;
+  }, [intakeQuestions.length]);
+  const currentIdx = stepList.indexOf(step);
+  const totalSteps = stepList.length;
+
+  // Auto-select first payment method on review
+  React.useEffect(() => {
+    if (
+      step === "review" &&
+      !selectedPaymentMethod &&
+      availableMethods.length > 0
+    ) {
+      setSelectedPaymentMethod(availableMethods[0]);
+    }
+  }, [step, selectedPaymentMethod, availableMethods]);
+
+  // ─── Handlers ────────────────────────────────────────────
+  function goNext() {
+    const next = stepList[currentIdx + 1];
+    if (!next) return;
+    setDirection("forward");
+    setStep(next);
+  }
+  function goBack() {
+    const prev = stepList[currentIdx - 1];
+    if (prev) {
+      setDirection("backward");
+      setStep(prev);
+    } else {
+      router.push(`/${slug}`);
+    }
+  }
+
+  function toggleAddOn(id: string) {
+    if (!service) return;
+    const addon = service.addOns.find((a) => a.id === id);
+    if (!addon || addon.isMandatory) return;
+    const group = addon.groupId
+      ? service.addOnGroups.find((g) => g.id === addon.groupId)
+      : null;
+
+    setSelectedAddOnIds((prev) => {
+      const next = new Set(prev);
+      if (group?.rule === "EXACTLY_ONE") {
+        const groupIds = service.addOns
+          .filter((a) => a.groupId === group.id && !a.isMandatory)
+          .map((a) => a.id);
+        for (const gId of groupIds) next.delete(gId);
+        next.add(id);
+        return next;
+      }
+      if (group?.rule === "AT_LEAST_ONE" && next.has(id)) {
+        const groupIds = service.addOns
+          .filter((a) => a.groupId === group.id)
+          .map((a) => a.id);
+        const selectedInGroup = groupIds.filter((gId) => next.has(gId));
+        if (selectedInGroup.length <= 1) return prev;
+      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function handleApplyCoupon() {
     if (!couponInput.trim() || !serviceId) return;
@@ -548,14 +296,18 @@ export default function BookPage(): React.JSX.Element {
       });
       const json = await res.json();
       if (json.data?.valid) {
-        setAppliedCoupon({ code: json.data.code, type: json.data.type, value: json.data.value });
+        setAppliedCoupon({
+          code: json.data.code,
+          type: json.data.type,
+          value: json.data.value,
+        });
         setCouponError(null);
       } else {
-        setCouponError(json.data?.reason || "Invalid coupon code");
+        setCouponError(json.data?.reason || "That code didn't work.");
         setAppliedCoupon(null);
       }
     } catch {
-      setCouponError("Failed to validate coupon");
+      setCouponError("We couldn't check that code. Try again.");
     } finally {
       setCouponLoading(false);
     }
@@ -567,1055 +319,263 @@ export default function BookPage(): React.JSX.Element {
     setCouponError(null);
   }
 
-  function toggleAddOn(id: string) {
-    if (!service) return;
-    const addon = service.addOns.find((a) => a.id === id);
-    if (!addon) return;
-
-    // Can't toggle mandatory add-ons
-    if (addon.isMandatory) return;
-
-    const group = addon.groupId
-      ? service.addOnGroups.find((g) => g.id === addon.groupId)
-      : null;
-
-    setSelectedAddOnIds((prev) => {
-      const next = new Set(prev);
-
-      if (group?.rule === "EXACTLY_ONE") {
-        // Radio behavior: deselect others in group, select this one
-        const groupAddOnIds = service.addOns
-          .filter((a) => a.groupId === group.id && !a.isMandatory)
-          .map((a) => a.id);
-        for (const gId of groupAddOnIds) next.delete(gId);
-        next.add(id);
-        return next;
+  async function handleConfirm() {
+    if (!serviceId || !selectedSlot || !selectedPaymentMethod) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId,
+          startTime: selectedSlot.startTime,
+          clientName,
+          clientEmail,
+          clientPhone: clientPhone || undefined,
+          paymentMethod: selectedPaymentMethod,
+          addOnIds:
+            selectedAddOns.length > 0
+              ? selectedAddOns.map((a) => a.id)
+              : undefined,
+          couponCode: appliedCoupon?.code || undefined,
+          ...(Object.keys(intakeResponses).length > 0 && {
+            intakeResponses: Object.entries(intakeResponses).map(
+              ([questionId, answer]) => ({ questionId, answer }),
+            ),
+          }),
+          ...(recurrenceEnabled && {
+            recurrence: { frequency: recurrenceFreq, count: recurrenceCount },
+          }),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error?.message || "Something went wrong. Please try again.");
+        return;
       }
-
-      if (group?.rule === "AT_LEAST_ONE" && next.has(id)) {
-        // Don't deselect if it's the last one in the group
-        const groupAddOnIds = service.addOns
-          .filter((a) => a.groupId === group.id)
-          .map((a) => a.id);
-        const selectedInGroup = groupAddOnIds.filter((gId) => next.has(gId));
-        if (selectedInGroup.length <= 1) return prev;
+      if (json.data?.checkoutUrl) {
+        window.location.href = json.data.checkoutUrl;
+      } else {
+        router.push(
+          `/${slug}/confirmation?appointment=${
+            json.data?.id || json.data?.appointment?.id || ""
+          }`,
+        );
       }
-
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  // Group validation
-  const unsatisfiedGroups: string[] = [];
-  if (service) {
-    for (const group of service.addOnGroups) {
-      if (group.rule === "OPTIONAL") continue;
-      const groupAddOnIds = service.addOns
-        .filter((a) => a.groupId === group.id)
-        .map((a) => a.id);
-      const selectedCount = groupAddOnIds.filter((id) => selectedAddOnIds.has(id)).length;
-      if (group.rule === "EXACTLY_ONE" && selectedCount !== 1) {
-        unsatisfiedGroups.push(group.id);
-      } else if (group.rule === "AT_LEAST_ONE" && selectedCount < 1) {
-        unsatisfiedGroups.push(group.id);
-      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
-  const allGroupsSatisfied = unsatisfiedGroups.length === 0;
 
-  const selectedAddOns = service?.addOns.filter((a) => selectedAddOnIds.has(a.id)) ?? [];
-  const addOnPriceCents = selectedAddOns.reduce((sum, a) => sum + a.priceInCents, 0);
-  const addOnDurationMin = selectedAddOns.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const totalBeforeDiscount = (service?.priceInCents ?? 0) + addOnPriceCents;
-  const totalDurationMin = (service?.durationMinutes ?? 0) + addOnDurationMin;
-
-  // Calculate discount
-  let discountCents = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === "PERCENT") {
-      discountCents = Math.min(Math.round(totalBeforeDiscount * appliedCoupon.value / 100), totalBeforeDiscount);
-    } else {
-      discountCents = Math.min(appliedCoupon.value, totalBeforeDiscount);
-    }
-  }
-  const totalPriceCents = totalBeforeDiscount - discountCents;
-  const depositAmount = service ? getDepositAmount(service, totalPriceCents) : 0;
-  const availableMethods = service ? getAvailablePaymentMethods(service) : [];
-  const availableSlots = slots.filter((s) => s.available);
-
-  // Auto-select first available payment method when entering confirm step
-  useEffect(() => {
-    if (step === "confirm" && !selectedPaymentMethod && availableMethods.length > 0) {
-      setSelectedPaymentMethod(availableMethods[0]);
-    }
-  }, [step, selectedPaymentMethod, availableMethods]);
+  // ─── Step gates ──────────────────────────────────────────
+  const canContinueFromTime =
+    !!selectedSlot && allGroupsSatisfied;
+  const canContinueFromDetails = !!clientName && !!clientEmail;
+  const canContinueFromIntake = !intakeQuestions.some(
+    (q) => q.isRequired && !intakeResponses[q.id],
+  );
 
   const isCash = selectedPaymentMethod === "CASH";
   const isFree = totalPriceCents === 0;
   const confirmButtonText = submitting
-    ? "Booking..."
+    ? "Booking…"
     : isFree
-      ? "Confirm Free Booking"
+      ? "Confirm free booking"
       : isCash
-        ? "Confirm Booking"
+        ? "Confirm booking"
         : depositAmount > 0
-          ? `Pay ${formatPrice(depositAmount)} Deposit`
+          ? `Pay ${formatPrice(depositAmount)} deposit`
           : `Pay ${formatPrice(totalPriceCents)}`;
 
+  // ─── Render ──────────────────────────────────────────────
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-muted">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-cream-50">
+        <p className="font-sans text-sm text-ink-500">Loading…</p>
       </main>
     );
   }
 
   if (!service) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-secondary">Service not found.</p>
+      <main className="flex min-h-screen items-center justify-center bg-cream-50">
+        <p className="font-sans text-sm text-ink-500">Service not found.</p>
       </main>
     );
   }
 
-  // Books closed state
   if (service.provider.booksOpen === false) {
-    return (
-      <main className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-grid-2 py-grid-3">
-          <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium text-sm">{service.name}</h3>
-                <p className="text-xs text-text-muted">{service.durationMinutes} min</p>
-              </div>
-              <p className="font-medium text-sm">{formatPrice(service.priceInCents)}</p>
-            </div>
-          </div>
-          <BooksClosedCard
-            booksOpenAt={service.provider.booksOpenAt}
-            timezone={service.provider.timezone}
-          />
-        </div>
-      </main>
-    );
+    return <BooksClosedView service={service} />;
+  }
+
+  // Continue button for the active step
+  let continueLabel = "Continue";
+  let continueDisabled = false;
+  let continueAction: () => void = goNext;
+
+  if (step === "time") {
+    continueDisabled = !canContinueFromTime;
+  } else if (step === "details") {
+    continueDisabled = !canContinueFromDetails;
+    continueLabel = stepList.includes("intake") ? "Continue" : "Review";
+  } else if (step === "intake") {
+    continueDisabled = !canContinueFromIntake;
+    continueLabel = "Review";
+  } else if (step === "review") {
+    continueDisabled = submitting || !selectedPaymentMethod;
+    continueLabel = confirmButtonText;
+    continueAction = handleConfirm;
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-lg mx-auto px-grid-2 py-grid-3">
-        {/* Service summary bar */}
-        <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="font-medium text-sm">{service.name}</h3>
-              <p className="text-xs text-text-muted">
-                {totalDurationMin} min
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-medium text-sm">
-                {formatPrice(totalPriceCents)}
-              </p>
-              {depositAmount > 0 && (
-                <p className="text-xs text-primary">
-                  {formatPrice(depositAmount)} deposit
-                </p>
-              )}
-            </div>
-          </div>
-          {selectedAddOns.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {selectedAddOns.map((a) => (
-                <span key={a.id} className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded-full">
-                  +{a.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Add-ons selector (grouped) */}
-        {service.addOns.length > 0 && (() => {
-          // Group add-ons by groupId; ungrouped go at the end
-          const groups = service.addOnGroups
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((g) => ({
-              ...g,
-              addOns: service.addOns
-                .filter((a) => a.groupId === g.id)
-                .sort((a, b) => a.sortOrder - b.sortOrder),
-            }));
-          const ungrouped = service.addOns
-            .filter((a) => !a.groupId)
-            .sort((a, b) => a.sortOrder - b.sortOrder);
-
-          const renderAddOn = (addon: AddOnData, isRadio: boolean) => {
-            const isSelected = selectedAddOnIds.has(addon.id);
-            const isMandatory = addon.isMandatory;
-            return (
-              <button
-                key={addon.id}
-                type="button"
-                onClick={() => toggleAddOn(addon.id)}
-                disabled={isMandatory}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-button text-sm transition-colors border ${
-                  isMandatory
-                    ? "border-border bg-surface-alt cursor-default opacity-75"
-                    : isSelected
-                      ? "border-primary bg-primary-light"
-                      : "border-border bg-background hover:border-primary/40"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {isRadio ? (
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? "border-primary" : "border-border"
-                      }`}
-                    >
-                      {isSelected && (
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        isSelected
-                          ? "bg-primary border-primary"
-                          : "border-border"
-                      }`}
-                    >
-                      {isSelected && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  )}
-                  <span className={isMandatory ? "text-text-muted" : isSelected ? "font-medium text-primary" : "text-text-secondary"}>
-                    {addon.name}
-                  </span>
-                  {isMandatory && (
-                    <span className="text-xs text-text-muted bg-surface-alt px-1.5 py-0.5 rounded-full">(included)</span>
-                  )}
-                </div>
-                <div className="text-right text-xs text-text-muted">
-                  <span>+{formatPrice(addon.priceInCents)}</span>
-                  {addon.durationMinutes > 0 && (
-                    <span className="ml-2">+{addon.durationMinutes} min</span>
-                  )}
-                </div>
-              </button>
-            );
-          };
-
-          const hasContent = groups.some((g) => g.addOns.length > 0) || ungrouped.length > 0;
-          if (!hasContent) return null;
-
-          return (
-            <div className="bg-surface rounded-card p-grid-2 shadow-card mb-grid-3 space-y-grid-2">
-              <p className="text-sm font-medium">Add-ons</p>
-
-              {groups.map((group) => {
-                if (group.addOns.length === 0) return null;
-                const isUnsatisfied = unsatisfiedGroups.includes(group.id);
-                const isRadio = group.rule === "EXACTLY_ONE";
-                return (
-                  <div key={group.id} className="space-y-grid-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                        {group.name}
-                      </span>
-                      {group.rule === "EXACTLY_ONE" && (
-                        <span className="text-xs text-text-muted">Choose one</span>
-                      )}
-                      {group.rule === "AT_LEAST_ONE" && (
-                        <span className="text-xs text-text-muted">Select at least one</span>
-                      )}
-                    </div>
-                    {group.addOns.map((addon) => renderAddOn(addon, isRadio))}
-                    {isUnsatisfied && (
-                      <p className="text-xs text-red-600">
-                        {group.rule === "EXACTLY_ONE"
-                          ? `Please choose one from "${group.name}"`
-                          : `Please select at least one from "${group.name}"`}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-
-              {ungrouped.length > 0 && (
-                <div className="space-y-grid-1">
-                  {groups.some((g) => g.addOns.length > 0) && (
-                    <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                      Other
-                    </span>
-                  )}
-                  {ungrouped.map((addon) => renderAddOn(addon, false))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-grid-2 mb-grid-4">
-          {(intakeQuestions.length > 0
-            ? (["time", "details", "intake", "confirm"] as const)
-            : (["time", "details", "confirm"] as const)
-          ).map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step === s
-                    ? "bg-primary text-white"
-                    : "bg-border text-text-muted"
-                }`}
-              >
-                {i + 1}
-              </div>
-              <span
-                className={`text-sm capitalize ${
-                  step === s
-                    ? "text-text-primary font-medium"
-                    : "text-text-muted"
-                }`}
-              >
-                {s === "intake" ? "Questions" : s}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Step: Select time */}
-        {step === "time" && (
-          <section className="space-y-grid-2">
-            <h2 className="font-display text-xl">Select a Time</h2>
-
-            {/* Date picker — horizontal scroll */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-grid-2 px-grid-2">
-              {days.map((day) => {
-                const isSelected =
-                  toDateStr(day) === toDateStr(selectedDate);
-                return (
-                  <button
-                    key={toDateStr(day)}
-                    onClick={() => setSelectedDate(day)}
-                    className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-button text-sm transition-colors ${
-                      isSelected
-                        ? "bg-primary text-white"
-                        : "bg-surface text-text-secondary border border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="text-xs font-medium">
-                      {day.toLocaleDateString("en-US", { weekday: "short" })}
-                    </span>
-                    <span className="text-lg font-semibold">
-                      {day.getDate()}
-                    </span>
-                    <span className="text-xs">
-                      {day.toLocaleDateString("en-US", { month: "short" })}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Time slots */}
-            <div className="bg-surface rounded-card p-grid-2 shadow-card">
-              {slotsLoading ? (
-                <p className="text-text-muted text-sm text-center py-grid-4">
-                  Loading times...
-                </p>
-              ) : slots.length === 0 ? (
-                /* No schedule for this day at all */
-                <div className="py-grid-4 text-center">
-                  <p className="text-text-muted text-sm">
-                    No times available on {formatDate(selectedDate)}.
-                  </p>
-                  {waitlistSuccess ? (
-                    <p className="text-sm text-green-700 mt-2">
-                      You&apos;re on the waitlist! We&apos;ll email you if a spot opens up.
-                    </p>
-                  ) : !showWaitlistForm ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (clientName && !waitlistName) setWaitlistName(clientName);
-                        if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
-                        if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
-                        setWaitlistSlot(null);
-                        setShowWaitlistForm(true);
-                      }}
-                      className="text-sm text-primary hover:underline mt-2 inline-block"
-                    >
-                      Join waitlist for this day
-                    </button>
-                  ) : (
-                    <WaitlistForm
-                      serviceId={serviceId}
-                      selectedDate={selectedDate}
-                      waitlistSlot={null}
-                      waitlistName={waitlistName}
-                      setWaitlistName={setWaitlistName}
-                      waitlistEmail={waitlistEmail}
-                      setWaitlistEmail={setWaitlistEmail}
-                      waitlistPhone={waitlistPhone}
-                      setWaitlistPhone={setWaitlistPhone}
-                      waitlistTimePref={waitlistTimePref}
-                      setWaitlistTimePref={setWaitlistTimePref}
-                      waitlistSubmitting={waitlistSubmitting}
-                      setWaitlistSubmitting={setWaitlistSubmitting}
-                      onSuccess={() => {
-                        setWaitlistSuccess(true);
-                        setShowWaitlistForm(false);
-                      }}
-                    />
-                  )}
-                </div>
-              ) : (
-                /* Show ALL slots — available + booked */
-                <div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {slots.map((slot) => {
-                      const isAvailable = slot.available;
-                      const isSelected = selectedSlot?.startTime === slot.startTime;
-                      const isWaitlisting = waitlistSlot?.startTime === slot.startTime;
-
-                      if (isAvailable) {
-                        return (
-                          <button
-                            key={slot.startTime}
-                            onClick={() => {
-                              setSelectedSlot(slot);
-                              setWaitlistSlot(null);
-                              setShowWaitlistForm(false);
-                            }}
-                            className={`py-2.5 rounded-button text-sm font-medium transition-colors ${
-                              isSelected
-                                ? "bg-primary text-white"
-                                : "bg-background text-text-secondary hover:bg-primary-light"
-                            }`}
-                          >
-                            {formatTime(slot.startTime, service.provider.timezone)}
-                          </button>
-                        );
-                      }
-
-                      // Booked slot
-                      return (
-                        <button
-                          key={slot.startTime}
-                          onClick={() => {
-                            setSelectedSlot(null);
-                            setWaitlistSlot(slot);
-                            setShowWaitlistForm(true);
-                            setWaitlistSuccess(false);
-                            if (clientName && !waitlistName) setWaitlistName(clientName);
-                            if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
-                            if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
-                          }}
-                          className={`py-2.5 rounded-button text-sm transition-colors flex flex-col items-center ${
-                            isWaitlisting
-                              ? "bg-amber-100 border border-amber-400 text-amber-800"
-                              : "bg-background text-text-muted border border-border hover:bg-border/40"
-                          }`}
-                        >
-                          <span className="font-medium">{formatTime(slot.startTime, service.provider.timezone)}</span>
-                          <span className="text-[10px]">Booked</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Per-slot waitlist form */}
-                  {waitlistSlot && showWaitlistForm && !waitlistSuccess && (
-                    <div className="mt-3 border-t border-border pt-3">
-                      <p className="text-sm font-medium text-center mb-2">
-                        Join waitlist for {formatTime(waitlistSlot.startTime, service.provider.timezone)} on {formatDate(selectedDate)}
-                      </p>
-                      <WaitlistForm
-                        serviceId={serviceId}
-                        selectedDate={selectedDate}
-                        waitlistSlot={waitlistSlot}
-                        waitlistName={waitlistName}
-                        setWaitlistName={setWaitlistName}
-                        waitlistEmail={waitlistEmail}
-                        setWaitlistEmail={setWaitlistEmail}
-                        waitlistPhone={waitlistPhone}
-                        setWaitlistPhone={setWaitlistPhone}
-                        waitlistTimePref={waitlistTimePref}
-                        setWaitlistTimePref={setWaitlistTimePref}
-                        waitlistSubmitting={waitlistSubmitting}
-                        setWaitlistSubmitting={setWaitlistSubmitting}
-                        onSuccess={() => {
-                          setWaitlistSuccess(true);
-                          setShowWaitlistForm(false);
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Per-slot waitlist success */}
-                  {waitlistSlot && waitlistSuccess && (
-                    <p className="text-sm text-green-700 mt-3 text-center">
-                      You&apos;re on the waitlist for {formatTime(waitlistSlot.startTime, service.provider.timezone)}! We&apos;ll email you if a spot opens up.
-                    </p>
-                  )}
-
-                  {/* Day-level waitlist when all slots are booked */}
-                  {availableSlots.length === 0 && !waitlistSlot && (
-                    <div className="mt-3 border-t border-border pt-3 text-center">
-                      <p className="text-text-muted text-sm">All times are booked.</p>
-                      {waitlistSuccess ? (
-                        <p className="text-sm text-green-700 mt-1">
-                          You&apos;re on the waitlist! We&apos;ll email you if a spot opens up.
-                        </p>
-                      ) : !showWaitlistForm ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (clientName && !waitlistName) setWaitlistName(clientName);
-                            if (clientEmail && !waitlistEmail) setWaitlistEmail(clientEmail);
-                            if (clientPhone && !waitlistPhone) setWaitlistPhone(clientPhone);
-                            setShowWaitlistForm(true);
-                          }}
-                          className="text-sm text-primary hover:underline mt-1 inline-block"
-                        >
-                          Join waitlist for this day
-                        </button>
-                      ) : (
-                        <WaitlistForm
-                          serviceId={serviceId}
-                          selectedDate={selectedDate}
-                          waitlistSlot={null}
-                          waitlistName={waitlistName}
-                          setWaitlistName={setWaitlistName}
-                          waitlistEmail={waitlistEmail}
-                          setWaitlistEmail={setWaitlistEmail}
-                          waitlistPhone={waitlistPhone}
-                          setWaitlistPhone={setWaitlistPhone}
-                          waitlistTimePref={waitlistTimePref}
-                          setWaitlistTimePref={setWaitlistTimePref}
-                          waitlistSubmitting={waitlistSubmitting}
-                          setWaitlistSubmitting={setWaitlistSubmitting}
-                          onSuccess={() => {
-                            setWaitlistSuccess(true);
-                            setShowWaitlistForm(false);
-                          }}
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Recurrence toggle (after time selection) */}
-            {selectedSlot && (
-              <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Repeat this booking?</span>
-                  <button
-                    type="button"
-                    onClick={() => setRecurrenceEnabled(!recurrenceEnabled)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      recurrenceEnabled ? "bg-primary" : "bg-border"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        recurrenceEnabled ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {recurrenceEnabled && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-text-muted">Frequency</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {([
-                          ["WEEKLY", "Weekly"],
-                          ["BIWEEKLY", "Every 2 Weeks"],
-                          ["MONTHLY", "Monthly"],
-                        ] as const).map(([val, label]) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => setRecurrenceFreq(val)}
-                            className={`py-2 rounded-button text-xs font-medium transition-colors border ${
-                              recurrenceFreq === val
-                                ? "border-primary bg-primary-light text-primary"
-                                : "border-border bg-background text-text-secondary hover:border-primary/40"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-text-muted">
-                        Number of sessions
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setRecurrenceCount(Math.max(2, recurrenceCount - 1))}
-                          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-text-secondary hover:border-primary/40"
-                        >
-                          -
-                        </button>
-                        <span className="text-lg font-semibold tabular-nums w-6 text-center">
-                          {recurrenceCount}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setRecurrenceCount(Math.min(12, recurrenceCount + 1))}
-                          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-text-secondary hover:border-primary/40"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Date preview */}
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-text-muted">Upcoming dates</label>
-                      <div className="space-y-1">
-                        {Array.from({ length: recurrenceCount }, (_, i) => {
-                          const base = new Date(selectedSlot.startTime);
-                          const d = new Date(base);
-                          if (recurrenceFreq === "WEEKLY") d.setDate(base.getDate() + i * 7);
-                          else if (recurrenceFreq === "BIWEEKLY") d.setDate(base.getDate() + i * 14);
-                          else d.setMonth(base.getMonth() + i);
-                          return (
-                            <div key={i} className="flex items-center gap-2 text-sm">
-                              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
-                                {i + 1}
-                              </span>
-                              <span className="text-text-secondary">
-                                {d.toLocaleDateString("en-US", {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                  timeZone: service.provider.timezone,
-                                })}
-                              </span>
-                              <span className="text-text-muted text-xs">
-                                {formatTime(d.toISOString(), service.provider.timezone)}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            <button
-              disabled={!selectedSlot || !allGroupsSatisfied}
-              onClick={() => setStep("details")}
-              className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
+    <main className="min-h-screen bg-cream-50 text-ink-900">
+      <div className="mx-auto max-w-md px-6 pt-10 pb-32">
+        <AnimatePresence mode="wait" initial={false} custom={direction}>
+          {step === "time" && (
+            <StepShell
+              key="time"
+              current={currentIdx + 1}
+              total={totalSteps}
+              direction={direction}
+              question="When works for you?"
+              onBack={goBack}
             >
-              Continue
-            </button>
-          </section>
-        )}
+              <StepTime
+                service={service}
+                serviceId={serviceId}
+                days={days}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                slots={slots}
+                slotsLoading={slotsLoading}
+                selectedSlot={selectedSlot}
+                setSelectedSlot={setSelectedSlot}
+                selectedAddOnIds={selectedAddOnIds}
+                toggleAddOn={toggleAddOn}
+                unsatisfiedGroupIds={unsatisfiedGroupIds}
+                recurrenceEnabled={recurrenceEnabled}
+                setRecurrenceEnabled={setRecurrenceEnabled}
+                recurrenceFreq={recurrenceFreq}
+                setRecurrenceFreq={setRecurrenceFreq}
+                recurrenceCount={recurrenceCount}
+                setRecurrenceCount={setRecurrenceCount}
+                waitlistSlot={waitlistSlot}
+                setWaitlistSlot={setWaitlistSlot}
+                showWaitlistForm={showWaitlistForm}
+                setShowWaitlistForm={setShowWaitlistForm}
+                waitlistSuccess={waitlistSuccess}
+                setWaitlistSuccess={setWaitlistSuccess}
+                waitlistName={waitlistName}
+                setWaitlistName={setWaitlistName}
+                waitlistEmail={waitlistEmail}
+                setWaitlistEmail={setWaitlistEmail}
+                waitlistPhone={waitlistPhone}
+                setWaitlistPhone={setWaitlistPhone}
+                waitlistTimePref={waitlistTimePref}
+                setWaitlistTimePref={setWaitlistTimePref}
+                waitlistSubmitting={waitlistSubmitting}
+                setWaitlistSubmitting={setWaitlistSubmitting}
+                prefillName={clientName}
+                prefillEmail={clientEmail}
+                prefillPhone={clientPhone}
+              />
+            </StepShell>
+          )}
 
-        {/* Step: Client details */}
-        {step === "details" && (
-          <section className="space-y-grid-2">
-            <h2 className="font-display text-xl">Your Details</h2>
-            <p className="text-text-muted text-sm">
-              No account needed — just your info so the nail tech can reach you.
-            </p>
-            <div className="space-y-grid-2">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full border border-border rounded-input px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <input
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="w-full border border-border rounded-input px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Phone <span className="text-text-muted">(optional)</span>
-                </label>
-                <input
-                  type="tel"
-                  value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="(555) 123-4567"
-                  className="w-full border border-border rounded-input px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-            <div className="flex gap-grid-1">
-              <button
-                onClick={() => setStep("time")}
-                className="flex-1 py-3 rounded-button text-sm font-medium text-text-secondary hover:bg-border/50 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                disabled={!clientName || !clientEmail}
-                onClick={() => setStep(intakeQuestions.length > 0 ? "intake" : "confirm")}
-                className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                {intakeQuestions.length > 0 ? "Continue" : "Review Booking"}
-              </button>
-            </div>
-          </section>
-        )}
+          {step === "details" && (
+            <StepShell
+              key="details"
+              current={currentIdx + 1}
+              total={totalSteps}
+              direction={direction}
+              question="Who's this for?"
+              subhead="No account needed. Your provider will use this to reach you."
+              onBack={goBack}
+            >
+              <StepDetails
+                name={clientName}
+                setName={setClientName}
+                email={clientEmail}
+                setEmail={setClientEmail}
+                phone={clientPhone}
+                setPhone={setClientPhone}
+              />
+            </StepShell>
+          )}
 
-        {/* Step: Intake form */}
-        {step === "intake" && intakeQuestions.length > 0 && (
-          <section className="space-y-grid-2">
-            <h2 className="font-display text-xl">A Few Questions</h2>
-            <p className="text-text-muted text-sm">
-              Help your nail tech prepare for your appointment.
-            </p>
-            <div className="space-y-grid-2">
-              {intakeQuestions.map((q) => (
-                <div key={q.id}>
-                  <label className="block text-sm font-medium mb-1">
-                    {q.label}
-                    {q.isRequired && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
-                  {q.type === "TEXT" && (
-                    <textarea
-                      value={intakeResponses[q.id] || ""}
-                      onChange={(e) =>
-                        setIntakeResponses((prev) => ({ ...prev, [q.id]: e.target.value }))
-                      }
-                      rows={2}
-                      className="w-full border border-border rounded-input px-3 py-2.5 text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                    />
-                  )}
-                  {q.type === "SELECT" && q.options && (
-                    <div className="space-y-1">
-                      {(q.options as string[]).map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() =>
-                            setIntakeResponses((prev) => ({ ...prev, [q.id]: opt }))
-                          }
-                          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-button text-sm transition-colors border ${
-                            intakeResponses[q.id] === opt
-                              ? "border-primary bg-primary-light text-primary font-medium"
-                              : "border-border bg-background text-text-secondary hover:border-primary/40"
-                          }`}
-                        >
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                              intakeResponses[q.id] === opt ? "border-primary" : "border-border"
-                            }`}
-                          >
-                            {intakeResponses[q.id] === opt && (
-                              <div className="w-2 h-2 rounded-full bg-primary" />
-                            )}
-                          </div>
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {q.type === "CHECKBOX" && q.options && (
-                    <div className="space-y-1">
-                      {(q.options as string[]).map((opt) => {
-                        const current = intakeResponses[q.id]
-                          ? JSON.parse(intakeResponses[q.id]) as string[]
-                          : [];
-                        const isChecked = current.includes(opt);
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => {
-                              const next = isChecked
-                                ? current.filter((v) => v !== opt)
-                                : [...current, opt];
-                              setIntakeResponses((prev) => ({
-                                ...prev,
-                                [q.id]: JSON.stringify(next),
-                              }));
-                            }}
-                            className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-button text-sm transition-colors border ${
-                              isChecked
-                                ? "border-primary bg-primary-light text-primary font-medium"
-                                : "border-border bg-background text-text-secondary hover:border-primary/40"
-                            }`}
-                          >
-                            <div
-                              className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                isChecked ? "bg-primary border-primary" : "border-border"
-                              }`}
-                            >
-                              {isChecked && (
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-grid-1">
-              <button
-                onClick={() => setStep("details")}
-                className="flex-1 py-3 rounded-button text-sm font-medium text-text-secondary hover:bg-border/50 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                disabled={intakeQuestions.some(
-                  (q) => q.isRequired && !intakeResponses[q.id]
-                )}
-                onClick={() => setStep("confirm")}
-                className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                Review Booking
-              </button>
-            </div>
-          </section>
-        )}
+          {step === "intake" && (
+            <StepShell
+              key="intake"
+              current={currentIdx + 1}
+              total={totalSteps}
+              direction={direction}
+              question="A few quick questions"
+              subhead="So your provider can prepare for your appointment."
+              onBack={goBack}
+            >
+              <StepIntake
+                questions={intakeQuestions}
+                responses={intakeResponses}
+                setResponses={setIntakeResponses}
+              />
+            </StepShell>
+          )}
 
-        {/* Step: Confirm & pay */}
-        {step === "confirm" && selectedSlot && (
-          <section className="space-y-grid-2">
-            <h2 className="font-display text-xl">Confirm Booking</h2>
+          {step === "review" && selectedSlot && (
+            <StepShell
+              key="review"
+              current={currentIdx + 1}
+              total={totalSteps}
+              direction={direction}
+              question="Ready to book?"
+              subhead={`Booking with ${service.provider.businessName}.`}
+              onBack={goBack}
+            >
+              <StepReview
+                service={service}
+                selectedSlot={selectedSlot}
+                selectedAddOns={selectedAddOns}
+                totalDurationMin={totalDurationMin}
+                totalBeforeDiscount={totalBeforeDiscount}
+                discountCents={discountCents}
+                totalPriceCents={totalPriceCents}
+                depositAmount={depositAmount}
+                clientName={clientName}
+                recurrenceEnabled={recurrenceEnabled}
+                recurrenceFreq={recurrenceFreq}
+                recurrenceCount={recurrenceCount}
+                appliedCoupon={appliedCoupon}
+                couponInput={couponInput}
+                setCouponInput={setCouponInput}
+                handleApplyCoupon={handleApplyCoupon}
+                removeCoupon={removeCoupon}
+                couponError={couponError}
+                couponLoading={couponLoading}
+                availableMethods={availableMethods}
+                selectedPaymentMethod={selectedPaymentMethod}
+                setSelectedPaymentMethod={setSelectedPaymentMethod}
+              />
+            </StepShell>
+          )}
+        </AnimatePresence>
+      </div>
 
-            <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Service</span>
-                <span className="font-medium">{service.name}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Date</span>
-                <span className="font-medium">
-                  {new Date(selectedSlot.startTime).toLocaleDateString(
-                    "en-US",
-                    { weekday: "long", month: "long", day: "numeric", timeZone: service.provider.timezone }
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Time</span>
-                <span className="font-medium">
-                  {formatTime(selectedSlot.startTime, service.provider.timezone)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Duration</span>
-                <span className="font-medium">
-                  {totalDurationMin} min
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Name</span>
-                <span className="font-medium">{clientName}</span>
-              </div>
-              {recurrenceEnabled && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">Recurring</span>
-                  <span className="font-medium">
-                    {recurrenceCount}x {recurrenceFreq === "WEEKLY" ? "Weekly" : recurrenceFreq === "BIWEEKLY" ? "Bi-weekly" : "Monthly"}
-                  </span>
-                </div>
-              )}
-              {selectedAddOns.length > 0 && (
-                <>
-                  <hr className="border-border" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-muted">Base service</span>
-                    <span className="font-medium">{formatPrice(service.priceInCents)}</span>
-                  </div>
-                  {selectedAddOns.map((a) => (
-                    <div key={a.id} className="flex justify-between text-sm">
-                      <span className="text-text-muted">{a.name}</span>
-                      <span className="font-medium">+{formatPrice(a.priceInCents)}</span>
-                    </div>
-                  ))}
-                </>
-              )}
-              <hr className="border-border" />
-              {discountCents > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-muted">Subtotal</span>
-                    <span className="font-medium">{formatPrice(totalBeforeDiscount)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm text-green-700">
-                    <span>Discount ({appliedCoupon?.code})</span>
-                    <span className="font-medium">-{formatPrice(discountCents)}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Total</span>
-                <span className="font-semibold">
-                  {formatPrice(totalPriceCents)}
-                </span>
-              </div>
-              {!isCash && !isFree && depositAmount > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-muted">Due now</span>
-                    <span className="font-semibold text-primary">
-                      {formatPrice(depositAmount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-text-muted">Due at appointment</span>
-                    <span className="font-medium">
-                      {formatPrice(totalPriceCents - depositAmount)}
-                    </span>
-                  </div>
-                </>
-              )}
-              {isFree && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">Payment</span>
-                  <span className="font-medium text-green-700">Free</span>
-                </div>
-              )}
-              {isCash && !isFree && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-text-muted">Payment</span>
-                  <span className="font-medium">Pay at appointment</span>
-                </div>
-              )}
-            </div>
-
-            {/* Coupon code input */}
-            <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-              {appliedCoupon ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-green-700">
-                      {appliedCoupon.code}
-                    </span>
-                    <span className="text-xs text-text-muted">
-                      {appliedCoupon.type === "PERCENT"
-                        ? `${appliedCoupon.value}% off`
-                        : `${formatPrice(appliedCoupon.value)} off`}
-                    </span>
-                  </div>
-                  <button
-                    onClick={removeCoupon}
-                    className="text-xs text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-medium">Have a code?</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      placeholder="Enter coupon code"
-                      className="flex-1 border border-border rounded-input px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase"
-                    />
-                    <button
-                      onClick={handleApplyCoupon}
-                      disabled={couponLoading || !couponInput.trim()}
-                      className="bg-primary text-white px-4 py-2 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-                    >
-                      {couponLoading ? "..." : "Apply"}
-                    </button>
-                  </div>
-                  {couponError && (
-                    <p className="text-xs text-red-600">{couponError}</p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Payment method selector */}
-            {availableMethods.length > 0 && (
-              <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-                <p className="text-sm font-medium">Payment Method</p>
-                <div className="grid gap-2">
-                  {availableMethods.map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setSelectedPaymentMethod(method)}
-                      className={`flex items-center px-3 py-2.5 rounded-button text-sm font-medium transition-colors border ${
-                        selectedPaymentMethod === method
-                          ? "border-primary bg-primary-light text-primary"
-                          : "border-border bg-background text-text-secondary hover:border-primary/40"
-                      }`}
-                    >
-                      {PAYMENT_METHOD_LABELS[method]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="bg-surface rounded-card p-grid-2 shadow-card text-xs text-text-muted space-y-1">
-              <p>
-                Cancellation: Cancel at least{" "}
-                {service.provider?.cancellationHours || 24}h in advance for a
-                full refund.
-              </p>
-              <p>
-                Arrival: Please arrive within{" "}
-                {service.provider?.arrivalGraceMinutes || 15} minutes of your
-                appointment time.
-              </p>
-            </div>
-
-            <div className="flex gap-grid-1">
-              <button
-                onClick={() => setStep(intakeQuestions.length > 0 ? "intake" : "details")}
-                className="flex-1 py-3 rounded-button text-sm font-medium text-text-secondary hover:bg-border/50 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                disabled={submitting || !selectedPaymentMethod}
-                onClick={handleConfirm}
-                className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
-              >
-                {confirmButtonText}
-              </button>
-            </div>
-          </section>
-        )}
+      {/* Sticky continue bar */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-ink-200 bg-cream-50 px-6 py-4 z-40 safe-bottom">
+        <div className="mx-auto max-w-md">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            disabled={continueDisabled}
+            onClick={continueAction}
+            className="w-full"
+          >
+            {continueLabel}
+          </Button>
+        </div>
       </div>
     </main>
   );

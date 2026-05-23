@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest) {
     "businessName", "bio", "locationAddress",
     "locationLat", "locationLng",
     "instagramUrl", "tiktokUrl",
-    "category",
+    "category", "coverImageUrl",
   ] as const;
   const settingsFields = [
     "acceptsCard", "acceptsApplePay", "acceptsGooglePay",

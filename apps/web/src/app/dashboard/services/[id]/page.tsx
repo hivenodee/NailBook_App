@@ -3,6 +3,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Check, Trash2 } from "lucide-react";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 type AddOnGroup = {
   id: string;
@@ -46,11 +51,14 @@ type ServiceData = {
 
 const RULE_LABELS: Record<string, string> = {
   OPTIONAL: "Optional",
-  EXACTLY_ONE: "Exactly One",
-  AT_LEAST_ONE: "At Least One",
+  EXACTLY_ONE: "Exactly one",
+  AT_LEAST_ONE: "At least one",
 };
 
-export default function EditServicePage() {
+const INPUT_CLASS =
+  "w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50";
+
+export default function EditServicePage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const [service, setService] = useState<ServiceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +66,7 @@ export default function EditServicePage() {
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Form state
+  // Service form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -84,11 +92,12 @@ export default function EditServicePage() {
   const [editAddonMandatory, setEditAddonMandatory] = useState(false);
   const [savingAddon, setSavingAddon] = useState(false);
 
-  // Group create/edit form
+  // Group form state
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState("");
-  const [groupRule, setGroupRule] = useState<"OPTIONAL" | "EXACTLY_ONE" | "AT_LEAST_ONE">("OPTIONAL");
+  const [groupRule, setGroupRule] =
+    useState<"OPTIONAL" | "EXACTLY_ONE" | "AT_LEAST_ONE">("OPTIONAL");
   const [savingGroup, setSavingGroup] = useState(false);
 
   // Intake form state
@@ -115,7 +124,7 @@ export default function EditServicePage() {
         setDepositValue(
           s.depositType === "FLAT"
             ? (s.depositValue / 100).toFixed(2)
-            : String(s.depositValue)
+            : String(s.depositValue),
         );
       }
     } catch (e) {
@@ -221,7 +230,6 @@ export default function EditServicePage() {
     }
   }
 
-  // Add-on edit
   function openAddonEdit(addon: AddOn) {
     setEditingAddonId(addon.id);
     setEditAddonName(addon.name);
@@ -229,10 +237,6 @@ export default function EditServicePage() {
     setEditAddonDuration(String(addon.durationMinutes));
     setEditAddonGroupId(addon.groupId || "");
     setEditAddonMandatory(addon.isMandatory);
-  }
-
-  function closeAddonEdit() {
-    setEditingAddonId(null);
   }
 
   async function handleSaveAddon() {
@@ -259,7 +263,6 @@ export default function EditServicePage() {
     }
   }
 
-  // Group CRUD
   function openGroupForm(group?: AddOnGroup) {
     if (group) {
       setEditingGroupId(group.id);
@@ -313,241 +316,229 @@ export default function EditServicePage() {
     }
   }
 
+  async function handleAddIntakeQuestion() {
+    if (!iqLabel.trim()) return;
+    setIqSaving(true);
+    try {
+      const options =
+        (iqType === "SELECT" || iqType === "CHECKBOX") && iqOptions
+          ? iqOptions.split(",").map((o) => o.trim()).filter(Boolean)
+          : undefined;
+      const res = await fetch(`/api/services/${id}/intake`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: iqLabel.trim(),
+          type: iqType,
+          options,
+          isRequired: iqRequired,
+          sortOrder: intakeQuestions.length,
+        }),
+      });
+      if (res.ok) {
+        setIqLabel("");
+        setIqType("TEXT");
+        setIqOptions("");
+        setIqRequired(false);
+        setShowIntakeForm(false);
+        await loadIntake();
+      }
+    } catch (e) {
+      console.error("Create question failed:", e);
+    } finally {
+      setIqSaving(false);
+    }
+  }
+
+  async function handleDeleteIntakeQuestion(qid: string) {
+    try {
+      await fetch(`/api/services/${id}/intake/${qid}`, { method: "DELETE" });
+      await loadIntake();
+    } catch (e) {
+      console.error("Delete question failed:", e);
+    }
+  }
+
   if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>;
+    return (
+      <div className="max-w-2xl space-y-6">
+        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
+        <div className="h-12 w-48 skeleton-shimmer rounded-md" />
+        <div className="h-64 skeleton-shimmer rounded-md" />
+      </div>
+    );
   }
 
   if (!service) {
     return (
-      <div className="space-y-grid-2">
-        <p className="text-text-muted">Service not found.</p>
-        <Link href="/dashboard/services" className="text-primary text-sm hover:underline">
+      <div className="space-y-3">
+        <p className="font-sans text-base text-ink-500">Service not found.</p>
+        <Link
+          href="/dashboard/services"
+          className="inline-flex items-center gap-1.5 text-sm font-sans font-medium text-rust-500 hover:text-rust-600"
+        >
+          <ArrowLeft size={14} aria-hidden="true" />
           Back to services
         </Link>
       </div>
     );
   }
 
-  // Group add-ons by group, ungrouped at the end
   const groups = (service.addOnGroups || [])
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((g) => ({
       ...g,
-      addOns: service.addOns.filter((a) => a.groupId === g.id).sort((a, b) => a.sortOrder - b.sortOrder),
+      addOns: service.addOns
+        .filter((a) => a.groupId === g.id)
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     }));
-  const ungrouped = service.addOns.filter((a) => !a.groupId).sort((a, b) => a.sortOrder - b.sortOrder);
+  const ungrouped = service.addOns
+    .filter((a) => !a.groupId)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  function renderAddonCard(addon: AddOn) {
+  function renderAddonCard(addon: AddOn): React.JSX.Element {
     if (editingAddonId === addon.id) {
       return (
-        <div key={addon.id} className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1 border border-primary/30">
-          <p className="text-sm font-medium">Edit Add-on</p>
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input
-              type="text"
-              value={editAddonName}
-              onChange={(e) => setEditAddonName(e.target.value)}
-              maxLength={100}
-              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+        <Card key={addon.id} padding="lg" className="border-rust-500/40 space-y-4">
+          <p className="text-sm font-sans font-medium text-ink-900">Edit add-on</p>
+          <FieldText label="Name" value={editAddonName} onChange={setEditAddonName} maxLength={100} />
+          <div className="grid grid-cols-2 gap-3">
+            <FieldText
+              label="Price ($)"
+              type="number"
+              value={editAddonPrice}
+              onChange={setEditAddonPrice}
+              min="0"
+              step="0.01"
+            />
+            <FieldText
+              label="Extra time (min)"
+              type="number"
+              value={editAddonDuration}
+              onChange={setEditAddonDuration}
+              min="0"
+              max="120"
+              step="5"
             />
           </div>
-          <div className="flex gap-grid-2">
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-1">Price ($)</label>
-              <input
-                type="number"
-                value={editAddonPrice}
-                onChange={(e) => setEditAddonPrice(e.target.value)}
-                min="0"
-                step="0.01"
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium mb-1">Extra time (min)</label>
-              <input
-                type="number"
-                value={editAddonDuration}
-                onChange={(e) => setEditAddonDuration(e.target.value)}
-                min="0"
-                max="120"
-                step="5"
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Group</label>
-            <select
-              value={editAddonGroupId}
-              onChange={(e) => setEditAddonGroupId(e.target.value)}
-              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="">No group</option>
-              {(service!.addOnGroups || []).map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={editAddonMandatory}
-              onChange={(e) => setEditAddonMandatory(e.target.checked)}
-              className="rounded border-border"
-            />
-            Mandatory (always included)
-          </label>
-          <div className="flex gap-grid-1">
-            <button
+          <FieldSelect
+            label="Group"
+            value={editAddonGroupId}
+            onChange={setEditAddonGroupId}
+            options={[
+              { value: "", label: "No group" },
+              ...(service!.addOnGroups || []).map((g) => ({ value: g.id, label: g.name })),
+            ]}
+          />
+          <CheckboxRow
+            label="Mandatory (always included)"
+            checked={editAddonMandatory}
+            onChange={setEditAddonMandatory}
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleSaveAddon}
               disabled={savingAddon || !editAddonName.trim() || !editAddonPrice}
-              className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {savingAddon ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={closeAddonEdit}
-              className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
-            >
+              {savingAddon ? "Saving…" : "Save"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditingAddonId(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       );
     }
 
     return (
-      <div
-        key={addon.id}
-        className={`bg-surface rounded-card p-grid-2 shadow-card flex justify-between items-center ${
-          !addon.isActive ? "opacity-60" : ""
-        }`}
-      >
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{addon.name}</span>
-            {addon.isMandatory && (
-              <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                Mandatory
-              </span>
-            )}
-            {!addon.isActive && (
-              <span className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
-                Inactive
-              </span>
-            )}
+      <Card key={addon.id} padding="md" className={addon.isActive ? "" : "opacity-70"}>
+        <div className="flex justify-between items-center gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-sans font-medium text-ink-900">{addon.name}</span>
+              {addon.isMandatory && <Badge variant="verified">Mandatory</Badge>}
+              {!addon.isActive && <Badge variant="status">Inactive</Badge>}
+            </div>
+            <div className="flex gap-3 text-xs font-sans text-ink-500 mt-0.5">
+              <span>+${(addon.priceInCents / 100).toFixed(2)}</span>
+              {addon.durationMinutes > 0 && <span>+{addon.durationMinutes} min</span>}
+            </div>
           </div>
-          <div className="flex gap-3 text-xs text-text-muted mt-0.5">
-            <span>+${(addon.priceInCents / 100).toFixed(2)}</span>
-            {addon.durationMinutes > 0 && (
-              <span>+{addon.durationMinutes} min</span>
-            )}
+          <div className="flex gap-1.5 shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => openAddonEdit(addon)}>
+              Edit
+            </Button>
+            <Button
+              variant={addon.isActive ? "ghost" : "secondary"}
+              size="sm"
+              onClick={() => toggleAddonActive(addon)}
+            >
+              {addon.isActive ? "Disable" : "Enable"}
+            </Button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => openAddonEdit(addon)}
-            className="text-xs font-medium px-3 py-1.5 rounded-button text-text-muted hover:text-primary transition-colors"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => toggleAddonActive(addon)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
-              addon.isActive
-                ? "bg-background text-text-secondary border border-border hover:bg-border/40"
-                : "bg-green-100 text-green-800 hover:bg-green-200"
-            }`}
-          >
-            {addon.isActive ? "Disable" : "Enable"}
-          </button>
-        </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-grid-3 max-w-lg">
-      <Link href="/dashboard/services" className="text-sm text-text-muted hover:text-text-secondary">
-        &larr; Back to services
+    <div className="max-w-2xl space-y-8">
+      <Link
+        href="/dashboard/services"
+        className="inline-flex items-center gap-1.5 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
+      >
+        <ArrowLeft size={14} aria-hidden="true" />
+        Back to services
       </Link>
 
-      <h1 className="font-display text-2xl">Edit Service</h1>
+      <Heading variant="display" className="text-3xl sm:text-4xl">Edit service</Heading>
 
       {/* Service fields */}
-      <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
-        <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={100}
-            className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+      <Card padding="lg" className="space-y-5">
+        <FieldText label="Name" value={name} onChange={setName} maxLength={100} />
+        <FieldText
+          label="Description"
+          value={description}
+          onChange={setDescription}
+          maxLength={500}
+          placeholder="Optional"
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <FieldText
+            label="Price ($)"
+            type="number"
+            value={price}
+            onChange={setPrice}
+            min="0"
+            step="0.01"
+          />
+          <FieldText
+            label="Duration (min)"
+            type="number"
+            value={duration}
+            onChange={setDuration}
+            min="15"
+            max="480"
+            step="15"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={500}
-            placeholder="Optional"
-            className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+        <div className="space-y-2">
+          <label className="block text-sm font-sans font-medium text-ink-700">Deposit</label>
+          <ChipRow
+            options={[
+              { key: "NONE", label: "None" },
+              { key: "FLAT", label: "Flat $" },
+              { key: "PERCENT", label: "Percent %" },
+            ]}
+            selected={depositType}
+            onSelect={(v) => {
+              setDepositType(v);
+              if (v === "NONE") setDepositValue("");
+            }}
           />
-        </div>
-
-        <div className="flex gap-grid-2">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Price ($)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              min="0"
-              step="0.01"
-              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Duration (min)</label>
-            <input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              min="15"
-              max="480"
-              step="15"
-              className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Deposit</label>
-          <div className="flex gap-grid-1">
-            {(["NONE", "FLAT", "PERCENT"] as const).map((dt) => (
-              <button
-                key={dt}
-                type="button"
-                onClick={() => {
-                  setDepositType(dt);
-                  if (dt === "NONE") setDepositValue("");
-                }}
-                className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
-                  depositType === dt
-                    ? "bg-primary text-white"
-                    : "bg-background text-text-secondary border border-border hover:bg-border/40"
-                }`}
-              >
-                {dt === "NONE" ? "None" : dt === "FLAT" ? "Flat $" : "Percent %"}
-              </button>
-            ))}
-          </div>
           {depositType !== "NONE" && (
             <input
               type="number"
@@ -556,211 +547,177 @@ export default function EditServicePage() {
               min="0"
               step={depositType === "FLAT" ? "0.01" : "1"}
               placeholder={depositType === "FLAT" ? "0.00" : "0"}
-              className="mt-2 w-32 border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              className={`${INPUT_CLASS} mt-2 w-32`}
             />
           )}
         </div>
 
-        <div className="flex items-center gap-grid-2">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
+            variant="primary"
+            size="md"
             onClick={handleSave}
             disabled={saving || !name.trim() || !price}
-            className="bg-primary text-white py-3 px-6 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "Saving..." : "Save"}
-          </button>
+            {saving ? "Saving…" : "Save"}
+          </Button>
           {saved && (
-            <span className="text-sm text-green-600 font-medium">Saved</span>
+            <span className="inline-flex items-center gap-1.5 text-sm font-sans text-success">
+              <Check size={14} aria-hidden="true" />
+              Saved
+            </span>
           )}
-          {errorMsg && (
-            <span className="text-sm text-red-600 font-medium">{errorMsg}</span>
-          )}
+          {errorMsg && <span className="text-sm font-sans text-error">{errorMsg}</span>}
         </div>
-      </section>
+      </Card>
 
       {/* Add-on Groups + Add-ons */}
-      <section className="space-y-grid-2">
+      <section className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-medium">Add-ons</h2>
+          <Heading variant="h3" className="text-2xl">Add-ons</Heading>
           <div className="flex gap-2">
             {!showGroupForm && (
-              <button
-                onClick={() => openGroupForm()}
-                className="text-sm font-medium text-text-secondary hover:text-primary"
-              >
-                Add Group
-              </button>
+              <Button variant="ghost" size="sm" onClick={() => openGroupForm()}>
+                Add group
+              </Button>
             )}
             {!showAddOn && (
-              <button
-                onClick={() => setShowAddOn(true)}
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                Add Add-on
-              </button>
+              <Button variant="secondary" size="sm" onClick={() => setShowAddOn(true)}>
+                Add add-on
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Group create/edit form */}
+        {/* Group form */}
         {showGroupForm && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-            <p className="text-sm font-medium">{editingGroupId ? "Edit Group" : "New Group"}</p>
-            <div>
-              <label className="block text-sm font-medium mb-1">Group Name</label>
-              <input
-                type="text"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                maxLength={100}
-                placeholder='e.g. "Nail Length"'
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+          <Card padding="lg" className="space-y-4">
+            <p className="text-sm font-sans font-medium text-ink-900">
+              {editingGroupId ? "Edit group" : "New group"}
+            </p>
+            <FieldText
+              label="Group name"
+              value={groupName}
+              onChange={setGroupName}
+              maxLength={100}
+              placeholder='e.g. "Nail length"'
+            />
+            <div className="space-y-2">
+              <label className="block text-sm font-sans font-medium text-ink-700">
+                Selection rule
+              </label>
+              <ChipRow
+                options={(["OPTIONAL", "EXACTLY_ONE", "AT_LEAST_ONE"] as const).map((r) => ({
+                  key: r,
+                  label: RULE_LABELS[r],
+                }))}
+                selected={groupRule}
+                onSelect={(v) => setGroupRule(v as typeof groupRule)}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Selection Rule</label>
-              <div className="flex gap-grid-1">
-                {(["OPTIONAL", "EXACTLY_ONE", "AT_LEAST_ONE"] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setGroupRule(r)}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
-                      groupRule === r
-                        ? "bg-primary text-white"
-                        : "bg-background text-text-secondary border border-border hover:bg-border/40"
-                    }`}
-                  >
-                    {RULE_LABELS[r]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-grid-1">
-              <button
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleSaveGroup}
                 disabled={savingGroup || !groupName.trim()}
-                className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {savingGroup ? "Saving..." : editingGroupId ? "Update" : "Create"}
-              </button>
-              <button
-                onClick={() => { setShowGroupForm(false); setEditingGroupId(null); }}
-                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
+                {savingGroup ? "Saving…" : editingGroupId ? "Update" : "Create"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowGroupForm(false);
+                  setEditingGroupId(null);
+                }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Create add-on form */}
         {showAddOn && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-            <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
-              <input
-                type="text"
-                value={addonName}
-                onChange={(e) => setAddonName(e.target.value)}
-                maxLength={100}
-                placeholder="e.g. Nail Art"
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+          <Card padding="lg" className="space-y-4">
+            <p className="text-sm font-sans font-medium text-ink-900">New add-on</p>
+            <FieldText
+              label="Name"
+              value={addonName}
+              onChange={setAddonName}
+              maxLength={100}
+              placeholder="e.g. Nail art"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <FieldText
+                label="Price ($)"
+                type="number"
+                value={addonPrice}
+                onChange={setAddonPrice}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+              />
+              <FieldText
+                label="Extra time (min)"
+                type="number"
+                value={addonDuration}
+                onChange={setAddonDuration}
+                min="0"
+                max="120"
+                step="5"
               />
             </div>
-            <div className="flex gap-grid-2">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">Price ($)</label>
-                <input
-                  type="number"
-                  value={addonPrice}
-                  onChange={(e) => setAddonPrice(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">Extra time (min)</label>
-                <input
-                  type="number"
-                  value={addonDuration}
-                  onChange={(e) => setAddonDuration(e.target.value)}
-                  min="0"
-                  max="120"
-                  step="5"
-                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Group</label>
-              <select
-                value={addonGroupId}
-                onChange={(e) => setAddonGroupId(e.target.value)}
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">No group</option>
-                {(service.addOnGroups || []).map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={addonMandatory}
-                onChange={(e) => setAddonMandatory(e.target.checked)}
-                className="rounded border-border"
-              />
-              Mandatory (always included)
-            </label>
-            <div className="flex gap-grid-1">
-              <button
+            <FieldSelect
+              label="Group"
+              value={addonGroupId}
+              onChange={setAddonGroupId}
+              options={[
+                { value: "", label: "No group" },
+                ...(service.addOnGroups || []).map((g) => ({ value: g.id, label: g.name })),
+              ]}
+            />
+            <CheckboxRow
+              label="Mandatory (always included)"
+              checked={addonMandatory}
+              onChange={setAddonMandatory}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleCreateAddon}
                 disabled={creatingAddon || !addonName.trim() || !addonPrice}
-                className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {creatingAddon ? "Adding..." : "Add"}
-              </button>
-              <button
-                onClick={() => setShowAddOn(false)}
-                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
-              >
+                {creatingAddon ? "Adding…" : "Add"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowAddOn(false)}>
                 Cancel
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
-        {/* Grouped add-ons list */}
+        {/* Grouped add-ons */}
         {groups.map((group) => (
-          <div key={group.id} className="space-y-grid-1">
+          <div key={group.id} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold">{group.name}</span>
-                <span className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
-                  {RULE_LABELS[group.rule]}
-                </span>
+                <span className="font-sans font-semibold text-sm text-ink-900">{group.name}</span>
+                <Badge variant="status">{RULE_LABELS[group.rule]}</Badge>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => openGroupForm(group)}
-                  className="text-xs text-text-muted hover:text-primary"
-                >
+              <div className="flex gap-1.5">
+                <Button variant="ghost" size="sm" onClick={() => openGroupForm(group)}>
                   Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteGroup(group.id)}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteGroup(group.id)}>
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
             {group.addOns.length === 0 ? (
-              <p className="text-xs text-text-muted pl-2">No add-ons in this group.</p>
+              <p className="text-xs font-sans text-ink-500 pl-2">No add-ons in this group.</p>
             ) : (
               group.addOns.map((addon) => renderAddonCard(addon))
             )}
@@ -769,9 +726,9 @@ export default function EditServicePage() {
 
         {/* Ungrouped add-ons */}
         {ungrouped.length > 0 && (
-          <div className="space-y-grid-1">
+          <div className="space-y-2">
             {groups.length > 0 && (
-              <span className="text-sm font-semibold text-text-secondary">Other</span>
+              <span className="font-sans font-semibold text-sm text-ink-700">Other</span>
             )}
             {ungrouped.map((addon) => renderAddonCard(addon))}
           </div>
@@ -779,180 +736,217 @@ export default function EditServicePage() {
 
         {/* Empty state */}
         {service.addOns.length === 0 && !showAddOn && groups.length === 0 && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
-            <p className="text-text-muted text-sm">No add-ons yet.</p>
-          </div>
+          <Card padding="lg" className="border-dashed">
+            <p className="text-center text-sm font-sans text-ink-500">No add-ons yet.</p>
+          </Card>
         )}
       </section>
 
       {/* Intake Form */}
-      <section className="space-y-grid-2">
+      <section className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-medium">Intake Form</h2>
+          <Heading variant="h3" className="text-2xl">Intake form</Heading>
           {!showIntakeForm && (
-            <button
-              onClick={() => setShowIntakeForm(true)}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Add Question
-            </button>
+            <Button variant="secondary" size="sm" onClick={() => setShowIntakeForm(true)}>
+              Add question
+            </Button>
           )}
         </div>
-        <p className="text-xs text-text-muted">
-          Questions clients will answer when booking this service.
+        <p className="text-sm font-sans text-ink-500">
+          Questions clients answer when booking this service.
         </p>
 
-        {/* Add question form */}
         {showIntakeForm && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-            <p className="text-sm font-medium">New Question</p>
-            <div>
-              <label className="block text-sm font-medium mb-1">Question</label>
-              <input
-                type="text"
-                value={iqLabel}
-                onChange={(e) => setIqLabel(e.target.value)}
-                maxLength={300}
-                placeholder="e.g. Do you have any allergies?"
-                className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+          <Card padding="lg" className="space-y-4">
+            <p className="text-sm font-sans font-medium text-ink-900">New question</p>
+            <FieldText
+              label="Question"
+              value={iqLabel}
+              onChange={setIqLabel}
+              maxLength={300}
+              placeholder="e.g. Do you have any allergies?"
+            />
+            <div className="space-y-2">
+              <label className="block text-sm font-sans font-medium text-ink-700">Type</label>
+              <ChipRow
+                options={[
+                  { key: "TEXT", label: "Text" },
+                  { key: "SELECT", label: "Dropdown" },
+                  { key: "CHECKBOX", label: "Checkboxes" },
+                ]}
+                selected={iqType}
+                onSelect={(v) => setIqType(v as typeof iqType)}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Type</label>
-              <div className="flex gap-grid-1">
-                {(["TEXT", "SELECT", "CHECKBOX"] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setIqType(t)}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-button transition-colors ${
-                      iqType === t
-                        ? "bg-primary text-white"
-                        : "bg-background text-text-secondary border border-border hover:bg-border/40"
-                    }`}
-                  >
-                    {t === "TEXT" ? "Text" : t === "SELECT" ? "Dropdown" : "Checkboxes"}
-                  </button>
-                ))}
-              </div>
             </div>
             {(iqType === "SELECT" || iqType === "CHECKBOX") && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Options (comma-separated)</label>
-                <input
-                  type="text"
-                  value={iqOptions}
-                  onChange={(e) => setIqOptions(e.target.value)}
-                  placeholder="e.g. Gel, Acrylic, Dip"
-                  className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            )}
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={iqRequired}
-                onChange={(e) => setIqRequired(e.target.checked)}
-                className="rounded border-border"
+              <FieldText
+                label="Options (comma-separated)"
+                value={iqOptions}
+                onChange={setIqOptions}
+                placeholder="e.g. Gel, Acrylic, Dip"
               />
-              Required
-            </label>
-            <div className="flex gap-grid-1">
-              <button
-                onClick={async () => {
-                  if (!iqLabel.trim()) return;
-                  setIqSaving(true);
-                  try {
-                    const options =
-                      (iqType === "SELECT" || iqType === "CHECKBOX") && iqOptions
-                        ? iqOptions.split(",").map((o) => o.trim()).filter(Boolean)
-                        : undefined;
-                    const res = await fetch(`/api/services/${id}/intake`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        label: iqLabel.trim(),
-                        type: iqType,
-                        options,
-                        isRequired: iqRequired,
-                        sortOrder: intakeQuestions.length,
-                      }),
-                    });
-                    if (res.ok) {
-                      setIqLabel("");
-                      setIqType("TEXT");
-                      setIqOptions("");
-                      setIqRequired(false);
-                      setShowIntakeForm(false);
-                      await loadIntake();
-                    }
-                  } catch (e) {
-                    console.error("Create question failed:", e);
-                  } finally {
-                    setIqSaving(false);
-                  }
-                }}
+            )}
+            <CheckboxRow label="Required" checked={iqRequired} onChange={setIqRequired} />
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddIntakeQuestion}
                 disabled={iqSaving || !iqLabel.trim()}
-                className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
-                {iqSaving ? "Adding..." : "Add"}
-              </button>
-              <button
-                onClick={() => setShowIntakeForm(false)}
-                className="bg-background text-text-secondary border border-border py-2 px-4 rounded-button text-sm font-medium hover:bg-border/40 transition-colors"
-              >
+                {iqSaving ? "Adding…" : "Add"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowIntakeForm(false)}>
                 Cancel
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
-        {/* Questions list */}
         {intakeQuestions.map((q) => (
-          <div
-            key={q.id}
-            className="bg-surface rounded-card p-grid-2 shadow-card flex justify-between items-start"
-          >
-            <div className="flex-1">
-              <p className="text-sm font-medium">{q.label}</p>
-              <div className="flex gap-2 mt-0.5">
-                <span className="text-xs text-text-muted">
-                  {q.type === "TEXT" ? "Text" : q.type === "SELECT" ? "Dropdown" : "Checkboxes"}
-                </span>
-                {q.isRequired && (
-                  <span className="text-xs bg-primary-light text-primary px-1.5 py-0.5 rounded-full">
-                    Required
-                  </span>
+          <Card key={q.id} padding="md">
+            <div className="flex justify-between items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-sans font-medium text-ink-900">{q.label}</p>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  <Badge variant="status">
+                    {q.type === "TEXT" ? "Text" : q.type === "SELECT" ? "Dropdown" : "Checkboxes"}
+                  </Badge>
+                  {q.isRequired && <Badge variant="verified">Required</Badge>}
+                </div>
+                {q.options && (q.options as string[]).length > 0 && (
+                  <p className="text-xs font-sans text-ink-500 mt-1.5">
+                    Options: {(q.options as string[]).join(", ")}
+                  </p>
                 )}
               </div>
-              {q.options && (q.options as string[]).length > 0 && (
-                <p className="text-xs text-text-muted mt-0.5">
-                  Options: {(q.options as string[]).join(", ")}
-                </p>
-              )}
+              <button
+                onClick={() => handleDeleteIntakeQuestion(q.id)}
+                aria-label="Delete question"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-pill text-ink-500 hover:text-error hover:bg-cream-100 transition-colors"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                try {
-                  await fetch(`/api/services/${id}/intake/${q.id}`, { method: "DELETE" });
-                  await loadIntake();
-                } catch (e) {
-                  console.error("Delete question failed:", e);
-                }
-              }}
-              className="text-xs text-red-500 hover:text-red-700 ml-2"
-            >
-              Delete
-            </button>
-          </div>
+          </Card>
         ))}
 
         {intakeQuestions.length === 0 && !showIntakeForm && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
-            <p className="text-text-muted text-sm">No intake questions yet.</p>
-          </div>
+          <Card padding="lg" className="border-dashed">
+            <p className="text-center text-sm font-sans text-ink-500">
+              No intake questions yet.
+            </p>
+          </Card>
         )}
       </section>
+    </div>
+  );
+}
+
+/* ────────────────── helpers ────────────────── */
+
+function FieldText({
+  label,
+  value,
+  onChange,
+  type = "text",
+  ...rest
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "type">): React.JSX.Element {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-sans font-medium text-ink-700">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={INPUT_CLASS}
+        {...rest}
+      />
+    </div>
+  );
+}
+
+function FieldSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}): React.JSX.Element {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-sans font-medium text-ink-700">{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function CheckboxRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}): React.JSX.Element {
+  return (
+    <label className="flex items-center gap-2 text-sm font-sans text-ink-700 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-ink-300 text-rust-500 focus:ring-rust-500 focus:ring-offset-cream-50"
+      />
+      {label}
+    </label>
+  );
+}
+
+function ChipRow<T extends string>({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: { key: T; label: string }[];
+  selected: T;
+  onSelect: (val: T) => void;
+}): React.JSX.Element {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = o.key === selected;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onSelect(o.key)}
+            className={
+              "rounded-pill px-4 py-1.5 text-sm font-sans font-medium border transition-colors " +
+              (active
+                ? "bg-rust-500 text-cream-50 border-rust-500"
+                : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+            }
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

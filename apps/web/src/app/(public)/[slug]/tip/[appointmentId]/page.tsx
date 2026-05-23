@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 type AppointmentData = {
   id: string;
@@ -52,7 +56,7 @@ export default function TipPage(): React.JSX.Element {
   }, [appointmentId]);
 
   const existingTip = appointment?.payments.find(
-    (p) => p.type === "TIP" && p.status === "COMPLETED"
+    (p) => p.type === "TIP" && p.status === "COMPLETED",
   );
 
   async function handleTip() {
@@ -86,43 +90,39 @@ export default function TipPage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="max-w-md mx-auto px-grid-2 py-grid-3 w-full">
-          <div className="bg-surface rounded-card p-grid-3 border border-border/50 skeleton-shimmer space-y-grid-2">
-            <div className="h-6 bg-border/60 rounded w-40 mx-auto" />
-            <div className="h-4 bg-border/40 rounded w-64 mx-auto" />
-            <div className="grid grid-cols-4 gap-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-12 bg-border/40 rounded" />
-              ))}
-            </div>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <Card padding="lg" className="max-w-md w-full skeleton-shimmer space-y-4">
+          <div className="h-6 rounded-md w-40 mx-auto skeleton-shimmer" />
+          <div className="h-4 rounded-md w-64 mx-auto skeleton-shimmer" />
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-12 rounded-md skeleton-shimmer" />
+            ))}
           </div>
-        </div>
+        </Card>
       </main>
     );
   }
 
   if (!appointment) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-secondary">{errorMsg || "Appointment not found"}</p>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <p className="font-sans text-base text-ink-500">{errorMsg || "Appointment not found"}</p>
       </main>
     );
   }
 
   if (isSuccess || existingTip) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="max-w-md mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <div className="max-w-md text-center space-y-4">
+          <div className="w-16 h-16 bg-success/10 rounded-pill flex items-center justify-center mx-auto">
+            <Check size={28} className="text-success" aria-hidden="true" />
           </div>
-          <h1 className="font-display text-2xl">Thank you!</h1>
-          <p className="text-text-muted text-sm">
-            Your tip for {appointment.provider.businessName} has been received.
-            {existingTip && ` (${formatPrice(existingTip.amountInCents)})`}
+          <Heading variant="display" className="text-3xl sm:text-4xl">Thank you</Heading>
+          <p className="text-sm font-sans text-ink-500">
+            Your tip for {appointment.provider.businessName} has been received
+            {existingTip ? ` (${formatPrice(existingTip.amountInCents)})` : ""}.
           </p>
         </div>
       </main>
@@ -131,8 +131,10 @@ export default function TipPage(): React.JSX.Element {
 
   if (appointment.status !== "COMPLETED") {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-secondary">Tips can only be left on completed appointments.</p>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <p className="font-sans text-base text-ink-500">
+          Tips can only be left on completed appointments.
+        </p>
       </main>
     );
   }
@@ -140,14 +142,14 @@ export default function TipPage(): React.JSX.Element {
   const tz = appointment.provider.timezone;
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-md mx-auto px-grid-2 py-grid-3 space-y-grid-3">
-        <div className="text-center space-y-grid-1">
-          <h1 className="font-display text-2xl">Leave a Tip</h1>
-          <p className="text-text-muted text-sm">
+    <main className="min-h-screen bg-cream-50">
+      <div className="max-w-md mx-auto px-6 py-12 space-y-8">
+        <div className="text-center space-y-1">
+          <Heading variant="display" className="text-3xl sm:text-4xl">Leave a tip</Heading>
+          <p className="text-sm font-sans text-ink-500">
             {appointment.service.name} with {appointment.provider.businessName}
           </p>
-          <p className="text-text-muted text-xs">
+          <p className="text-xs font-sans text-ink-500">
             {new Date(appointment.startTime).toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
@@ -158,47 +160,52 @@ export default function TipPage(): React.JSX.Element {
         </div>
 
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 rounded-card p-grid-2 text-center">
-            <p className="text-sm text-red-700">{errorMsg}</p>
+          <div className="rounded-md border border-error/30 bg-error/10 px-4 py-3 text-center">
+            <p className="text-sm font-sans text-error">{errorMsg}</p>
           </div>
         )}
 
-        {/* Tip presets */}
-        <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
+        <Card padding="lg" className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
-            {TIP_PRESETS.map((amount) => (
-              <button
-                key={amount}
-                onClick={() => {
-                  setSelectedAmount(amount);
-                  setIsCustom(false);
-                }}
-                className={`py-3 rounded-button text-sm font-medium transition-colors border ${
-                  !isCustom && selectedAmount === amount
-                    ? "border-primary bg-primary-light text-primary"
-                    : "border-border bg-background text-text-secondary hover:border-primary/40"
-                }`}
-              >
-                {formatPrice(amount)}
-              </button>
-            ))}
+            {TIP_PRESETS.map((amount) => {
+              const active = !isCustom && selectedAmount === amount;
+              return (
+                <button
+                  key={amount}
+                  onClick={() => {
+                    setSelectedAmount(amount);
+                    setIsCustom(false);
+                  }}
+                  className={
+                    "py-3 rounded-md text-sm font-sans font-medium transition-colors border " +
+                    (active
+                      ? "bg-rust-500 text-cream-50 border-rust-500"
+                      : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+                  }
+                >
+                  {formatPrice(amount)}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Custom amount */}
-          <div>
+          <div className="space-y-2">
             <button
               onClick={() => setIsCustom(true)}
-              className={`w-full py-2 rounded-button text-sm font-medium transition-colors border mb-2 ${
-                isCustom
-                  ? "border-primary bg-primary-light text-primary"
-                  : "border-border bg-background text-text-secondary hover:border-primary/40"
-              }`}
+              className={
+                "w-full py-2 rounded-md text-sm font-sans font-medium transition-colors border " +
+                (isCustom
+                  ? "bg-rust-500 text-cream-50 border-rust-500"
+                  : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+              }
             >
               Custom amount
             </button>
             {isCustom && (
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-500 font-sans">
+                  $
+                </span>
                 <input
                   type="number"
                   min="1"
@@ -207,23 +214,29 @@ export default function TipPage(): React.JSX.Element {
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full border border-border rounded-button pl-7 pr-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
+                  className="w-full h-11 pl-8 pr-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
                 />
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        <button
+        <Button
+          variant="primary"
+          size="md"
+          className="w-full"
           onClick={handleTip}
           disabled={submitting || (isCustom && (!customAmount || parseFloat(customAmount) < 1))}
-          className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
         >
           {submitting
-            ? "Processing..."
-            : `Leave ${isCustom && customAmount ? `$${parseFloat(customAmount).toFixed(2)}` : formatPrice(selectedAmount)} Tip`}
-        </button>
+            ? "Processing…"
+            : `Leave ${
+                isCustom && customAmount
+                  ? `$${parseFloat(customAmount).toFixed(2)}`
+                  : formatPrice(selectedAmount)
+              } tip`}
+        </Button>
       </div>
     </main>
   );

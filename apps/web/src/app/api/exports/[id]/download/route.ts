@@ -32,7 +32,7 @@ export const GET = withErrorHandler(async function GET(
   }
 
   const today = new Date().toISOString().split("T")[0];
-  const filename = `nailbook-${job.type.toLowerCase()}-${today}.csv`;
+  const filename = `porobook-${job.type.toLowerCase()}-${today}.csv`;
 
   return new Response(job.content, {
     headers: {

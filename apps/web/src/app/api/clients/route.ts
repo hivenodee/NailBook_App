@@ -34,23 +34,40 @@ export const GET = withErrorHandler(async function GET(request: NextRequest) {
     },
     include: {
       appointments: {
-        select: { id: true, startTime: true, status: true },
+        select: {
+          id: true,
+          startTime: true,
+          status: true,
+          totalInCents: true,
+        },
         orderBy: { startTime: "desc" },
       },
     },
     orderBy: { updatedAt: "desc" },
   });
 
-  const result = clients.map((c) => ({
-    id: c.id,
-    name: c.name,
-    email: c.email,
-    phone: c.phone,
-    notes: c.notes,
-    appointmentCount: c.appointments.length,
-    lastAppointmentDate: c.appointments[0]?.startTime ?? null,
-    createdAt: c.createdAt,
-  }));
+  const result = clients.map((c) => {
+    const sortedAppts = c.appointments;
+    const lifetimeSpendInCents = sortedAppts
+      .filter((a) => a.status !== "CANCELLED" && a.status !== "NO_SHOW")
+      .reduce((sum, a) => sum + a.totalInCents, 0);
+    const firstAppointmentDate =
+      sortedAppts.length > 0
+        ? sortedAppts[sortedAppts.length - 1].startTime
+        : null;
+    return {
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      notes: c.notes,
+      appointmentCount: sortedAppts.length,
+      lastAppointmentDate: sortedAppts[0]?.startTime ?? null,
+      firstAppointmentDate,
+      lifetimeSpendInCents,
+      createdAt: c.createdAt,
+    };
+  });
 
   return success(result);
 });

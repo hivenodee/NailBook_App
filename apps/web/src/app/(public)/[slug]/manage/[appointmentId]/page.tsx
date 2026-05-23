@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useParams } from "next/navigation";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 type TimeSlot = {
   startTime: string;
@@ -59,6 +63,20 @@ function getNextDays(count: number): Date[] {
   return days;
 }
 
+function statusBadgeVariant(status: string): "verified" | "warning" | "error" | "neutral" {
+  if (status === "CONFIRMED") return "verified";
+  if (status === "CANCELLED") return "error";
+  if (status === "PENDING_PAYMENT" || status === "PENDING") return "warning";
+  return "neutral";
+}
+
+function statusLabel(status: string): string {
+  if (status === "CONFIRMED") return "Confirmed";
+  if (status === "CANCELLED") return "Cancelled";
+  if (status === "PENDING_PAYMENT") return "Pending payment";
+  return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function ManagePage(): React.JSX.Element {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -107,7 +125,6 @@ export default function ManagePage(): React.JSX.Element {
     load();
   }, [load]);
 
-  // Fetch slots for reschedule
   const fetchSlots = useCallback(async () => {
     if (!showReschedule || !slug) return;
     setSlotsLoading(true);
@@ -179,35 +196,29 @@ export default function ManagePage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="max-w-md mx-auto px-grid-2 py-grid-3 w-full">
-          <div className="bg-surface rounded-card p-grid-3 border border-border/50 skeleton-shimmer space-y-grid-2">
-            <div className="h-6 bg-border/60 rounded w-48" />
-            <div className="space-y-2">
-              <div className="h-4 bg-border/40 rounded w-full" />
-              <div className="h-4 bg-border/40 rounded w-3/4" />
-              <div className="h-4 bg-border/40 rounded w-1/2" />
-            </div>
-          </div>
-        </div>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <Card padding="lg" className="max-w-md w-full skeleton-shimmer space-y-3">
+          <div className="h-6 w-48 skeleton-shimmer rounded-md" />
+          <div className="h-4 w-full skeleton-shimmer rounded-md" />
+          <div className="h-4 w-3/4 skeleton-shimmer rounded-md" />
+          <div className="h-4 w-1/2 skeleton-shimmer rounded-md" />
+        </Card>
       </main>
     );
   }
 
   if (errorMsg && !appointment) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <div className="max-w-md mx-auto px-grid-2 text-center">
-          <p className="text-text-secondary">{errorMsg}</p>
-        </div>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <p className="font-sans text-base text-ink-500 text-center max-w-md">{errorMsg}</p>
       </main>
     );
   }
 
   if (!appointment) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-muted">Loading...</p>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50">
+        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
       </main>
     );
   }
@@ -218,152 +229,150 @@ export default function ManagePage(): React.JSX.Element {
   const canModify = isActive && hoursUntil >= appointment.provider.cancellationHours;
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-md mx-auto px-grid-2 py-grid-3 space-y-grid-3">
-        <h1 className="font-display text-2xl text-center">Manage Booking</h1>
+    <main className="min-h-screen bg-cream-50">
+      <div className="max-w-md mx-auto px-6 py-12 space-y-6">
+        <Heading variant="display" className="text-4xl text-center">Manage booking</Heading>
 
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-card p-grid-2 text-center">
-            <p className="text-sm text-green-700 font-medium">{success}</p>
+          <div className="rounded-md border border-success/30 bg-success/10 px-4 py-3 text-center">
+            <p className="text-sm font-sans text-success font-medium">{success}</p>
           </div>
         )}
 
         {errorMsg && (
-          <div className="bg-red-50 border border-red-200 rounded-card p-grid-2 text-center">
-            <p className="text-sm text-red-700">{errorMsg}</p>
+          <div className="rounded-md border border-error/30 bg-error/10 px-4 py-3 text-center">
+            <p className="text-sm font-sans text-error">{errorMsg}</p>
           </div>
         )}
 
         {/* Appointment details */}
-        <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-          <div className="flex justify-between items-start">
-            <h2 className="font-medium">{appointment.service.name}</h2>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              appointment.status === "CONFIRMED" ? "bg-status-success/10 text-status-success"
-              : appointment.status === "CANCELLED" ? "bg-status-error/10 text-status-error"
-              : "bg-status-warning/10 text-status-warning"
-            }`}>
-              {appointment.status === "CONFIRMED" ? "Confirmed"
-                : appointment.status === "CANCELLED" ? "Cancelled"
-                : appointment.status}
-            </span>
+        <Card padding="lg" className="space-y-4">
+          <div className="flex justify-between items-start gap-3">
+            <h2 className="font-display text-xl text-ink-900">{appointment.service.name}</h2>
+            <Badge variant={statusBadgeVariant(appointment.status)}>
+              {statusLabel(appointment.status)}
+            </Badge>
           </div>
-          <div className="space-y-1 text-sm">
-            <p>
-              <span className="text-text-muted">With:</span>{" "}
-              {appointment.provider.businessName}
-            </p>
-            <p>
-              <span className="text-text-muted">Date:</span>{" "}
-              {formatDateTime(appointment.startTime, tz)}
-            </p>
-            <p>
-              <span className="text-text-muted">Duration:</span>{" "}
-              {appointment.service.durationMinutes} min
-            </p>
-            <p>
-              <span className="text-text-muted">Total:</span>{" "}
-              ${(appointment.totalInCents / 100).toFixed(2)}
-            </p>
+          <dl className="space-y-2 text-sm font-sans">
+            <Row label="With">{appointment.provider.businessName}</Row>
+            <Row label="Date">{formatDateTime(appointment.startTime, tz)}</Row>
+            <Row label="Duration">{appointment.service.durationMinutes} min</Row>
+            <Row label="Total">${(appointment.totalInCents / 100).toFixed(2)}</Row>
             {appointment.depositInCents > 0 && (
-              <p>
-                <span className="text-text-muted">Deposit paid:</span>{" "}
+              <Row label="Deposit paid">
                 ${(appointment.depositInCents / 100).toFixed(2)}
-              </p>
+              </Row>
             )}
-          </div>
-        </div>
+          </dl>
+        </Card>
 
         {/* Policies */}
-        <div className="bg-surface rounded-card p-grid-2 shadow-card text-xs text-text-muted space-y-1">
-          <p>
+        <Card padding="md">
+          <p className="text-xs font-sans text-ink-500">
             Cancellation: at least {appointment.provider.cancellationHours}h in advance.
           </p>
           {!canModify && isActive && (
-            <p className="text-status-warning font-medium">
+            <p className="text-xs font-sans text-warning font-medium mt-1">
               This appointment is within the cancellation window and cannot be modified.
             </p>
           )}
-        </div>
+        </Card>
 
         {/* Actions */}
         {isActive && !showCancelConfirm && !showReschedule && (
-          <div className="flex gap-grid-1">
-            <button
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="md"
+              className="flex-1"
               onClick={() => setShowReschedule(true)}
               disabled={!canModify}
-              className="flex-1 bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Reschedule
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              className="flex-1"
               onClick={() => setShowCancelConfirm(true)}
               disabled={!canModify}
-              className="flex-1 py-3 rounded-button font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Cancel confirmation */}
         {showCancelConfirm && (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-2">
-            <p className="text-sm font-medium">Are you sure you want to cancel?</p>
-            <p className="text-xs text-text-muted">
+          <Card padding="lg" className="space-y-4">
+            <p className="text-sm font-sans font-medium text-ink-900">
+              Are you sure you want to cancel?
+            </p>
+            <p className="text-xs font-sans text-ink-500">
               {appointment.depositInCents > 0
                 ? "Your deposit may be refunded per the provider's cancellation policy."
                 : "This action cannot be undone."}
             </p>
-            <div className="flex gap-grid-1">
-              <button
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                className="flex-1"
                 onClick={handleCancel}
                 disabled={actionLoading}
-                className="flex-1 bg-red-600 text-white py-2.5 rounded-button text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {actionLoading ? "Cancelling..." : "Yes, cancel"}
-              </button>
-              <button
-                onClick={() => { setShowCancelConfirm(false); setErrorMsg(null); }}
-                className="flex-1 py-2.5 rounded-button text-sm font-medium text-text-secondary border border-border hover:bg-border/40 transition-colors"
+                {actionLoading ? "Cancelling…" : "Yes, cancel"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  setShowCancelConfirm(false);
+                  setErrorMsg(null);
+                }}
               >
                 Go back
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Reschedule */}
         {showReschedule && (
-          <div className="space-y-grid-2">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">Pick a new time</h2>
+              <Heading variant="h4" className="text-xl">Pick a new time</Heading>
               <button
-                onClick={() => { setShowReschedule(false); setErrorMsg(null); }}
-                className="text-sm text-text-muted hover:text-text-secondary"
+                onClick={() => {
+                  setShowReschedule(false);
+                  setErrorMsg(null);
+                }}
+                className="text-sm font-sans font-medium text-ink-500 hover:text-ink-700 transition-colors"
               >
                 Cancel
               </button>
             </div>
 
             {/* Date picker */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-grid-2 px-grid-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6">
               {days.map((day) => {
                 const isSelected = toDateStr(day) === toDateStr(selectedDate);
                 return (
                   <button
                     key={toDateStr(day)}
                     onClick={() => setSelectedDate(day)}
-                    className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-button text-sm transition-colors ${
-                      isSelected
-                        ? "bg-primary text-white"
-                        : "bg-surface text-text-secondary border border-border hover:border-primary/40"
-                    }`}
+                    className={
+                      "shrink-0 flex flex-col items-center px-3 py-2 rounded-md text-sm font-sans transition-colors " +
+                      (isSelected
+                        ? "bg-rust-500 text-cream-50 border border-rust-500"
+                        : "bg-cream-50 text-ink-700 border border-ink-200 hover:border-ink-500")
+                    }
                   >
                     <span className="text-xs font-medium">
                       {day.toLocaleDateString("en-US", { weekday: "short" })}
                     </span>
-                    <span className="text-lg font-semibold">{day.getDate()}</span>
+                    <span className="font-display text-xl">{day.getDate()}</span>
                     <span className="text-xs">
                       {day.toLocaleDateString("en-US", { month: "short" })}
                     </span>
@@ -373,11 +382,11 @@ export default function ManagePage(): React.JSX.Element {
             </div>
 
             {/* Time slots */}
-            <div className="bg-surface rounded-card p-grid-2 shadow-card">
+            <Card padding="md">
               {slotsLoading ? (
-                <p className="text-text-muted text-sm text-center py-grid-4">Loading times...</p>
+                <p className="text-sm text-center font-sans text-ink-500 py-8">Loading times…</p>
               ) : slots.filter((s) => s.available).length === 0 ? (
-                <p className="text-text-muted text-sm text-center py-grid-4">
+                <p className="text-sm text-center font-sans text-ink-500 py-8">
                   No times available on this day.
                 </p>
               ) : (
@@ -390,11 +399,12 @@ export default function ManagePage(): React.JSX.Element {
                         <button
                           key={slot.startTime}
                           onClick={() => setSelectedSlot(slot)}
-                          className={`py-2.5 rounded-button text-sm font-medium transition-colors ${
-                            isSelected
-                              ? "bg-primary text-white"
-                              : "bg-background text-text-secondary hover:bg-primary-light"
-                          }`}
+                          className={
+                            "py-2.5 rounded-md text-sm font-sans font-medium transition-colors border " +
+                            (isSelected
+                              ? "bg-rust-500 text-cream-50 border-rust-500"
+                              : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+                          }
                         >
                           {formatTime(slot.startTime, tz)}
                         </button>
@@ -402,18 +412,35 @@ export default function ManagePage(): React.JSX.Element {
                     })}
                 </div>
               )}
-            </div>
+            </Card>
 
-            <button
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full"
               onClick={handleReschedule}
               disabled={!selectedSlot || actionLoading}
-              className="w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
-              {actionLoading ? "Rescheduling..." : "Confirm New Time"}
-            </button>
+              {actionLoading ? "Rescheduling…" : "Confirm new time"}
+            </Button>
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className="flex justify-between gap-3">
+      <dt className="text-ink-500">{label}</dt>
+      <dd className="text-ink-900 font-medium text-right">{children}</dd>
+    </div>
   );
 }

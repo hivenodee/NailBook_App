@@ -32,33 +32,33 @@ const PAGE_SIZE = 20;
 
 // ─── Badge helpers ──────────────────────────────────
 
-function channelBadgeColor(channel: NotificationChannel): string {
+function channelBadgeStyle(channel: NotificationChannel): { backgroundColor: string; color: string } {
   switch (channel) {
     case "EMAIL":
-      return "bg-blue-50 text-blue-700";
+      return { backgroundColor: "var(--bg-muted)", color: "var(--text-tertiary)" };
     case "SMS":
-      return "bg-purple-50 text-purple-700";
+      return { backgroundColor: "rgba(232,164,168,0.1)", color: "var(--primary)" };
     case "PUSH":
-      return "bg-green-50 text-green-700";
+      return { backgroundColor: "rgba(212,165,116,0.1)", color: "var(--accent)" };
     default:
-      return "bg-border/40 text-text-muted";
+      return { backgroundColor: "var(--bg-border)", color: "var(--text-tertiary)" };
   }
 }
 
-function statusBadgeColor(status: NotificationStatus): string {
+function statusBadgeStyle(status: NotificationStatus): { backgroundColor: string; color: string } {
   switch (status) {
     case "PENDING":
-      return "bg-yellow-50 text-yellow-700";
+      return { backgroundColor: "rgba(212,165,116,0.1)", color: "var(--accent)" };
     case "SENT":
-      return "bg-blue-50 text-blue-700";
+      return { backgroundColor: "var(--bg-muted)", color: "var(--text-tertiary)" };
     case "DELIVERED":
-      return "bg-green-50 text-green-700";
+      return { backgroundColor: "rgba(212,165,116,0.1)", color: "var(--accent)" };
     case "FAILED":
-      return "bg-red-50 text-red-700";
+      return { backgroundColor: "rgba(200,100,100,0.1)", color: "var(--ember-deep)" };
     case "SKIPPED":
-      return "bg-border/40 text-text-muted";
+      return { backgroundColor: "var(--bg-border)", color: "var(--text-tertiary)" };
     default:
-      return "bg-border/40 text-text-muted";
+      return { backgroundColor: "var(--bg-border)", color: "var(--text-tertiary)" };
   }
 }
 
@@ -129,31 +129,32 @@ export default function NotificationsPage(): React.JSX.Element {
     return (
       <div className="space-y-grid-3">
         <div>
-          <div className="h-7 bg-border/60 rounded w-44 mb-2" />
-          <div className="h-4 bg-border/40 rounded w-64" />
+          <div className="h-7 rounded w-44 mb-2" style={{ backgroundColor: "var(--bg-muted)" }} />
+          <div className="h-4 rounded w-64" style={{ backgroundColor: "var(--bg-border)" }} />
         </div>
         <div className="flex gap-1">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-8 bg-border/40 rounded-full w-20" />
+            <div key={i} className="h-8 rounded-full w-20" style={{ backgroundColor: "var(--bg-border)" }} />
           ))}
         </div>
         <div className="space-y-grid-1">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="bg-surface rounded-card p-grid-2 border border-border/30 skeleton-shimmer"
+              className="rounded-[10px] p-grid-2 skeleton-shimmer"
+              style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--bg-border)" }}
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="h-4 bg-border/60 rounded w-24" />
-                    <div className="h-5 bg-border/40 rounded-full w-14" />
+                    <div className="h-4 rounded w-24" style={{ backgroundColor: "var(--bg-muted)" }} />
+                    <div className="h-5 rounded-full w-14" style={{ backgroundColor: "var(--bg-border)" }} />
                   </div>
-                  <div className="h-3 bg-border/40 rounded w-48" />
+                  <div className="h-3 rounded w-48" style={{ backgroundColor: "var(--bg-border)" }} />
                 </div>
                 <div className="space-y-2 text-right">
-                  <div className="h-5 bg-border/40 rounded-full w-20 ml-auto" />
-                  <div className="h-3 bg-border/40 rounded w-24 ml-auto" />
+                  <div className="h-5 rounded-full w-20 ml-auto" style={{ backgroundColor: "var(--bg-border)" }} />
+                  <div className="h-3 rounded w-24 ml-auto" style={{ backgroundColor: "var(--bg-border)" }} />
                 </div>
               </div>
             </div>
@@ -168,8 +169,11 @@ export default function NotificationsPage(): React.JSX.Element {
   return (
     <div className="space-y-grid-3">
       <div>
-        <h1 className="font-display text-2xl">Notification History</h1>
-        <p className="text-text-secondary text-sm mt-1">
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-2xl">Notification History</h1>
+          <div className="section-divider" />
+        </div>
+        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
           Track delivery status of all sent notifications
         </p>
       </div>
@@ -182,9 +186,10 @@ export default function NotificationsPage(): React.JSX.Element {
             onClick={() => handleStatusFilter(s)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
               statusFilter === s
-                ? "bg-primary text-white"
-                : "bg-background text-text-secondary border border-border hover:border-primary/30 hover:text-text-primary"
+                ? "bg-ember text-white"
+                : ""
             }`}
+            style={statusFilter !== s ? { backgroundColor: "var(--bg-base)", color: "var(--text-secondary)", border: "1px solid var(--bg-border)" } : undefined}
           >
             {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
           </button>
@@ -193,8 +198,8 @@ export default function NotificationsPage(): React.JSX.Element {
 
       {/* Notification list */}
       {notifications.length === 0 ? (
-        <div className="rounded-card border-2 border-dashed border-border p-grid-4 text-center">
-          <p className="text-text-muted text-sm">
+        <div className="rounded-[10px] border-2 border-dashed p-grid-4 text-center" style={{ borderColor: "var(--bg-border)" }}>
+          <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             No notifications sent yet. Notifications will appear here once
             reminders are sent to your clients.
           </p>
@@ -204,7 +209,8 @@ export default function NotificationsPage(): React.JSX.Element {
           {notifications.map((n) => (
             <div
               key={n.id}
-              className="bg-surface rounded-card p-grid-2 shadow-card"
+              className="rounded-[10px] p-grid-2 shadow-card"
+              style={{ backgroundColor: "var(--bg-card)" }}
             >
               <div className="flex justify-between items-start gap-grid-1">
                 <div className="flex-1 min-w-0">
@@ -213,25 +219,27 @@ export default function NotificationsPage(): React.JSX.Element {
                       {templateLabel(n.templateType)}
                     </span>
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${channelBadgeColor(n.channel)}`}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                      style={channelBadgeStyle(n.channel)}
                     >
                       {n.channel}
                     </span>
                   </div>
                   {(n.title || n.body) && (
-                    <p className="text-text-muted text-xs mt-1 truncate">
+                    <p className="text-xs mt-1 truncate" style={{ color: "var(--text-tertiary)" }}>
                       {truncate(n.title || n.body, 80)}
                     </p>
                   )}
                 </div>
                 <div className="text-right flex-shrink-0">
                   <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadgeColor(n.status)}`}
+                    className="text-xs font-medium px-2 py-0.5 rounded-full"
+                    style={statusBadgeStyle(n.status)}
                   >
                     {n.status}
                   </span>
                   {n.sentAt && (
-                    <p className="text-text-muted text-xs mt-1">
+                    <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
                       {new Date(n.sentAt).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
@@ -253,7 +261,8 @@ export default function NotificationsPage(): React.JSX.Element {
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="text-sm font-medium px-4 py-2 rounded-button bg-background text-text-secondary border border-border hover:bg-border/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm font-medium px-4 py-2 rounded-[4px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: "var(--bg-base)", color: "var(--text-secondary)", border: "1px solid var(--bg-border)" }}
           >
             {loadingMore ? "Loading..." : "Load More"}
           </button>

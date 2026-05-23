@@ -3,6 +3,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Check } from "lucide-react";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 type AppointmentRow = {
   id: string;
@@ -28,28 +33,47 @@ type ClientDetail = {
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
-  PENDING_PAYMENT: "Pending Payment",
+  PENDING_PAYMENT: "Pending payment",
   CONFIRMED: "Confirmed",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-  NO_SHOW: "No Show",
+  NO_SHOW: "No show",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  CONFIRMED: "bg-status-success/10 text-status-success",
-  COMPLETED: "bg-status-info/10 text-status-info",
-  CANCELLED: "bg-status-error/10 text-status-error",
-  PENDING_PAYMENT: "bg-status-warning/10 text-status-warning",
-  NO_SHOW: "bg-border/50 text-text-muted",
-  DRAFT: "bg-border/50 text-text-muted",
-};
+function statusVariant(status: string): "verified" | "warning" | "error" | "neutral" | "status" {
+  if (status === "CONFIRMED") return "verified";
+  if (status === "PENDING_PAYMENT") return "warning";
+  if (status === "CANCELLED" || status === "NO_SHOW") return "error";
+  if (status === "COMPLETED") return "neutral";
+  return "status";
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTime(iso: string, tz: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: tz,
+  });
+}
+
+function formatPrice(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 export default function ClientDetailPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Notes editing
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
@@ -91,36 +115,22 @@ export default function ClientDetailPage(): React.JSX.Element {
     }
   }
 
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  function formatTime(iso: string, tz: string) {
-    return new Date(iso).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: tz,
-    });
-  }
-
-  function formatPrice(cents: number) {
-    return `$${(cents / 100).toFixed(2)}`;
-  }
-
   if (loading) {
-    return <p className="text-text-muted text-sm">Loading...</p>;
+    return (
+      <div className="max-w-2xl space-y-6">
+        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
+        <div className="h-32 skeleton-shimmer rounded-md" />
+        <div className="h-48 skeleton-shimmer rounded-md" />
+      </div>
+    );
   }
 
   if (!client) {
     return (
-      <div className="space-y-grid-2">
-        <p className="text-text-muted">Client not found.</p>
-        <Link href="/dashboard/clients" className="text-primary text-sm hover:underline">
+      <div className="space-y-3">
+        <p className="font-sans text-base text-ink-500">Client not found.</p>
+        <Link href="/dashboard/clients" className="text-sm font-sans font-medium text-rust-500 hover:text-rust-600 inline-flex items-center gap-1.5">
+          <ArrowLeft size={14} aria-hidden="true" />
           Back to clients
         </Link>
       </div>
@@ -128,115 +138,138 @@ export default function ClientDetailPage(): React.JSX.Element {
   }
 
   const confirmedAppts = client.appointments.filter(
-    (a) => a.status === "CONFIRMED" || a.status === "COMPLETED"
+    (a) => a.status === "CONFIRMED" || a.status === "COMPLETED",
   );
   const totalSpent = confirmedAppts.reduce((sum, a) => sum + a.totalInCents, 0);
 
   return (
-    <div className="space-y-grid-3 max-w-lg">
-      <Link href="/dashboard/clients" className="text-sm text-text-muted hover:text-text-secondary">
-        &larr; Back to clients
+    <div className="max-w-2xl space-y-8">
+      <Link
+        href="/dashboard/clients"
+        className="inline-flex items-center gap-1.5 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
+      >
+        <ArrowLeft size={14} aria-hidden="true" />
+        Back to clients
       </Link>
 
       {/* Client header */}
-      <div className="bg-surface rounded-card p-grid-2 shadow-card">
-        <h1 className="text-xl font-semibold">{client.name || "No name"}</h1>
-        <p className="text-sm text-text-muted mt-0.5">{client.email}</p>
-        {client.phone && (
-          <p className="text-sm text-text-muted">{client.phone}</p>
-        )}
-        <div className="flex gap-grid-3 mt-grid-2">
-          <div>
-            <p className="text-lg font-semibold">{client.appointments.length}</p>
-            <p className="text-xs text-text-muted">
-              {client.appointments.length === 1 ? "Visit" : "Visits"}
-            </p>
-          </div>
-          <div>
-            <p className="text-lg font-semibold">{formatPrice(totalSpent)}</p>
-            <p className="text-xs text-text-muted">Total Spent</p>
-          </div>
-          <div>
-            <p className="text-lg font-semibold">
-              {client.appointments[0]
-                ? formatDate(client.appointments[0].startTime)
-                : "N/A"}
-            </p>
-            <p className="text-xs text-text-muted">Last Visit</p>
-          </div>
+      <Card padding="lg" className="space-y-5">
+        <div className="space-y-1">
+          <Heading variant="display" className="text-3xl">{client.name || "No name"}</Heading>
+          <p className="text-sm font-sans text-ink-500">{client.email}</p>
+          {client.phone && (
+            <p className="text-sm font-sans text-ink-500">{client.phone}</p>
+          )}
         </div>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-ink-100">
+          <Stat label={client.appointments.length === 1 ? "Visit" : "Visits"}>
+            {client.appointments.length}
+          </Stat>
+          <Stat label="Total spent">{formatPrice(totalSpent)}</Stat>
+          <Stat label="Last visit">
+            {client.appointments[0] ? formatDate(client.appointments[0].startTime) : "—"}
+          </Stat>
+        </div>
+      </Card>
 
       {/* Internal notes */}
-      <section className="bg-surface rounded-card p-grid-2 shadow-card space-y-grid-1">
-        <p className="text-sm font-medium">Internal Notes</p>
-        <p className="text-xs text-text-muted">Only visible to you. Never shown to the client.</p>
+      <Card padding="lg" className="space-y-3">
+        <div>
+          <p className="text-sm font-sans font-medium text-ink-900">Internal notes</p>
+          <p className="text-xs font-sans text-ink-500 mt-0.5">
+            Only visible to you. Never shown to the client.
+          </p>
+        </div>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Prefers gel over acrylic, allergic to acetone..."
+          placeholder="e.g. Prefers gel over acrylic, allergic to acetone…"
           rows={4}
-          className="w-full border border-border rounded-button px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          className="w-full px-4 py-3 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 resize-none"
         />
-        <div className="flex items-center gap-grid-2">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleSaveNotes}
             disabled={savingNotes}
-            className="bg-primary text-white py-2 px-4 rounded-button text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-50"
           >
-            {savingNotes ? "Saving..." : "Save Notes"}
-          </button>
+            {savingNotes ? "Saving…" : "Save notes"}
+          </Button>
           {notesSaved && (
-            <span className="text-sm text-green-600 font-medium">Saved</span>
+            <span className="inline-flex items-center gap-1.5 text-sm font-sans text-success">
+              <Check size={14} aria-hidden="true" />
+              Saved
+            </span>
           )}
         </div>
-      </section>
+      </Card>
 
       {/* Appointment history */}
-      <section className="space-y-grid-2">
-        <h2 className="text-lg font-medium">Appointment History</h2>
+      <section className="space-y-4">
+        <Heading variant="h3" className="text-2xl">Appointment history</Heading>
         {client.appointments.length === 0 ? (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-center">
-            <p className="text-text-muted text-sm">No appointments yet.</p>
-          </div>
+          <Card padding="lg" className="border-dashed">
+            <p className="text-center text-sm font-sans text-ink-500">No appointments yet.</p>
+          </Card>
         ) : (
-          <div className="space-y-grid-1">
+          <div className="space-y-3">
             {client.appointments.map((appt) => (
               <Link
                 key={appt.id}
                 href={`/dashboard/appointments/${appt.id}`}
-                className="block bg-surface rounded-card p-grid-2 shadow-card hover:shadow-md transition-shadow"
+                className="block"
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm font-medium">{appt.service.name}</p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      {formatDate(appt.startTime)} at {formatTime(appt.startTime, client.providerTimezone)}
-                    </p>
-                    {appt.addOns.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {appt.addOns.map((a, i) => (
-                          <span key={i} className="text-xs bg-surface-alt text-text-muted px-1.5 py-0.5 rounded-full">
-                            {a.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                <Card padding="lg" hoverLift>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-sans font-medium text-ink-900">{appt.service.name}</p>
+                      <p className="text-xs font-sans text-ink-500 mt-0.5">
+                        {formatDate(appt.startTime)} at {formatTime(appt.startTime, client.providerTimezone)}
+                      </p>
+                      {appt.addOns.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {appt.addOns.map((a, i) => (
+                            <span
+                              key={i}
+                              className="text-xs font-sans rounded-pill bg-cream-100 text-ink-700 border border-ink-200 px-2.5 py-0.5"
+                            >
+                              {a.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0 space-y-1.5">
+                      <Badge variant={statusVariant(appt.status)}>
+                        {STATUS_LABELS[appt.status] || appt.status}
+                      </Badge>
+                      <p className="text-sm font-sans font-medium text-ink-900">
+                        {formatPrice(appt.totalInCents)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[appt.status] || "bg-border/50 text-text-muted"}`}>
-                      {STATUS_LABELS[appt.status] || appt.status}
-                    </span>
-                    <p className="text-sm font-medium mt-1">
-                      {formatPrice(appt.totalInCents)}
-                    </p>
-                  </div>
-                </div>
+                </Card>
               </Link>
             ))}
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div>
+      <p className="font-display text-2xl text-ink-900 leading-none">{children}</p>
+      <p className="text-xs font-sans text-ink-500 mt-1">{label}</p>
     </div>
   );
 }

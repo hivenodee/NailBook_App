@@ -35,13 +35,27 @@ export async function POST(
     return error("Tips can only be left on completed appointments", 400);
   }
 
-  // Check if tip already exists
+  // Atomic check: prevent duplicate tip checkouts (race-safe)
+  // Check for any existing TIP payment (COMPLETED or PENDING) to prevent concurrent sessions
   const existingTip = await prisma.payment.findFirst({
-    where: { appointmentId: id, type: "TIP", status: "COMPLETED" },
+    where: { appointmentId: id, type: "TIP", status: { in: ["COMPLETED", "PENDING"] } },
   });
   if (existingTip) {
     return error("A tip has already been received for this appointment", 400);
   }
+
+  // Create a PENDING payment record first to claim the slot, then create the Stripe session.
+  // If a concurrent request arrives, the findFirst above will catch the PENDING record.
+  const tipPayment = await prisma.payment.create({
+    data: {
+      providerId: appointment.providerId,
+      appointmentId: id,
+      amountInCents,
+      type: "TIP",
+      status: "PENDING",
+      method: "CARD",
+    },
+  });
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -62,6 +76,7 @@ export async function POST(
       appointmentId: id,
       providerId: appointment.providerId,
       paymentType: "TIP",
+      paymentId: tipPayment.id,
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}?success=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}`,

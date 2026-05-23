@@ -2,10 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { Star } from "lucide-react";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export default function FeedbackPage(): React.JSX.Element {
   const params = useParams<{ slug: string; appointmentId: string }>();
-  const { slug, appointmentId } = params;
+  const { appointmentId } = params;
 
   const [appointment, setAppointment] = useState<{
     service: { name: string };
@@ -62,7 +66,7 @@ export default function FeedbackPage(): React.JSX.Element {
         setErrorMsg(json.error?.message || "Something went wrong");
       }
     } catch {
-      setErrorMsg("Network error — please try again");
+      setErrorMsg("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -70,16 +74,16 @@ export default function FeedbackPage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-text-muted">Loading...</p>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50">
+        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
       </main>
     );
   }
 
   if (errorMsg && !appointment) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-red-600">{errorMsg}</p>
+      <main className="min-h-screen flex items-center justify-center bg-cream-50">
+        <p className="text-sm font-sans text-error">{errorMsg}</p>
       </main>
     );
   }
@@ -95,10 +99,10 @@ export default function FeedbackPage(): React.JSX.Element {
 
   if (submitted) {
     return (
-      <main className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="font-display text-2xl">Thank you for your feedback!</h1>
-          <p className="text-text-secondary">
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <div className="max-w-md text-center space-y-3">
+          <Heading variant="h2">Thank you</Heading>
+          <p className="font-sans text-base text-ink-500">
             Your feedback has been sent to {appointment.provider.businessName}.
           </p>
         </div>
@@ -108,11 +112,11 @@ export default function FeedbackPage(): React.JSX.Element {
 
   if (alreadySubmitted) {
     return (
-      <main className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="font-display text-2xl">Feedback Already Submitted</h1>
-          <p className="text-text-secondary">
-            You&apos;ve already left feedback for this appointment. Thank you!
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <div className="max-w-md text-center space-y-3">
+          <Heading variant="h2">Feedback already submitted</Heading>
+          <p className="font-sans text-base text-ink-500">
+            You've already left feedback for this appointment. Thank you.
           </p>
         </div>
       </main>
@@ -121,10 +125,10 @@ export default function FeedbackPage(): React.JSX.Element {
 
   if (appointment.status !== "COMPLETED") {
     return (
-      <main className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-grid-2 py-grid-3 text-center space-y-grid-2">
-          <h1 className="font-display text-2xl">Feedback Not Available</h1>
-          <p className="text-text-secondary">
+      <main className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <div className="max-w-md text-center space-y-3">
+          <Heading variant="h2">Feedback not available</Heading>
+          <p className="font-sans text-base text-ink-500">
             Feedback can only be left after an appointment is completed.
           </p>
         </div>
@@ -133,74 +137,85 @@ export default function FeedbackPage(): React.JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3">
-        <section className="space-y-grid-1">
-          <h1 className="font-display text-2xl">Leave Feedback</h1>
-          <p className="text-text-secondary">
+    <main className="min-h-screen bg-cream-50">
+      <div className="max-w-lg mx-auto px-6 py-12 space-y-8">
+        <header className="space-y-1">
+          <Heading variant="display" className="text-3xl sm:text-4xl">Leave feedback</Heading>
+          <p className="font-sans text-base text-ink-500">
             {appointment.service.name} with {appointment.provider.businessName}
           </p>
-          <p className="text-text-muted text-sm">{dateStr}</p>
-        </section>
+          <p className="font-sans text-sm text-ink-500">{dateStr}</p>
+        </header>
 
-        <form onSubmit={handleSubmit} className="space-y-grid-2">
-          {/* Star rating (optional) */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Rating <span className="text-text-muted">(optional)</span>
-            </label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(rating === star ? null : star)}
-                  className={`text-2xl transition-colors ${
-                    rating !== null && star <= rating
-                      ? "text-yellow-400"
-                      : "text-border hover:text-yellow-300"
-                  }`}
-                >
-                  ★
-                </button>
-              ))}
+        <Card padding="lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Star rating (optional) */}
+            <div className="space-y-2">
+              <label className="block text-sm font-sans font-medium text-ink-700">
+                Rating <span className="font-normal text-ink-500">(optional)</span>
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => {
+                  const active = rating !== null && star <= rating;
+                  return (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(rating === star ? null : star)}
+                      aria-label={`${star} star${star !== 1 ? "s" : ""}`}
+                      className="p-1 transition-transform hover:scale-110"
+                    >
+                      <Star
+                        size={28}
+                        className={
+                          active
+                            ? "fill-rust-500 text-rust-500"
+                            : "text-ink-200 hover:text-rust-400"
+                        }
+                      />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Text area */}
-          <div>
-            <label htmlFor="feedback-body" className="block text-sm font-medium mb-1">
-              Your feedback
-            </label>
-            <textarea
-              id="feedback-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Tell us about your experience..."
-              rows={4}
-              maxLength={2000}
-              required
-              className="w-full rounded-card border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            />
-            <p className="text-xs text-text-muted mt-0.5">{body.length}/2000</p>
-          </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="feedback-body"
+                className="block text-sm font-sans font-medium text-ink-700"
+              >
+                Your feedback
+              </label>
+              <textarea
+                id="feedback-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Tell us about your experience…"
+                rows={5}
+                maxLength={2000}
+                required
+                className="w-full px-4 py-3 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 resize-none"
+              />
+              <p className="text-xs font-sans text-ink-500 text-right">{body.length}/2000</p>
+            </div>
 
-          {errorMsg && (
-            <p className="text-sm text-red-600">{errorMsg}</p>
-          )}
+            {errorMsg && <p className="text-sm font-sans text-error">{errorMsg}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting || !body.trim()}
-            className="w-full bg-primary text-white py-2.5 rounded-card text-sm font-medium hover:bg-primary-dark disabled:opacity-50 transition-colors"
-          >
-            {submitting ? "Submitting..." : "Submit Feedback"}
-          </button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={submitting || !body.trim()}
+              className="w-full"
+            >
+              {submitting ? "Submitting…" : "Submit feedback"}
+            </Button>
 
-          <p className="text-xs text-text-muted text-center">
-            Your feedback is anonymous and sent directly to the provider.
-          </p>
-        </form>
+            <p className="text-xs font-sans text-ink-500 text-center">
+              Your feedback is anonymous and sent directly to the provider.
+            </p>
+          </form>
+        </Card>
       </div>
     </main>
   );

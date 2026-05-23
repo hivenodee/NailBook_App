@@ -46,12 +46,13 @@ export async function POST(request: NextRequest) {
 
       // Handle TIP payments — don't change appointment status
       if (paymentType === "TIP") {
-        // Guard against duplicate tips (race condition)
-        const existingTip = await prisma.payment.findFirst({
+        const { paymentId } = session.metadata || {};
+
+        // Guard against duplicate completed tips
+        const existingCompleted = await prisma.payment.findFirst({
           where: { appointmentId, type: "TIP", status: "COMPLETED" },
         });
-        if (existingTip) {
-          // Record the event but skip creating a duplicate payment
+        if (existingCompleted) {
           await prisma.appointmentEvent.create({
             data: {
               appointmentId,
@@ -64,17 +65,30 @@ export async function POST(request: NextRequest) {
         }
 
         await prisma.$transaction(async (tx) => {
-          await tx.payment.create({
-            data: {
-              providerId,
-              appointmentId,
-              amountInCents: session.amount_total || 0,
-              type: "TIP",
-              status: "COMPLETED",
-              method: "CARD",
-              stripePaymentIntentId: session.payment_intent as string,
-            },
-          });
+          // Update the PENDING payment record created at checkout time
+          if (paymentId) {
+            await tx.payment.update({
+              where: { id: paymentId },
+              data: {
+                status: "COMPLETED",
+                amountInCents: session.amount_total || 0,
+                stripePaymentIntentId: session.payment_intent as string,
+              },
+            });
+          } else {
+            // Fallback for sessions created before this change
+            await tx.payment.create({
+              data: {
+                providerId,
+                appointmentId,
+                amountInCents: session.amount_total || 0,
+                type: "TIP",
+                status: "COMPLETED",
+                method: "CARD",
+                stripePaymentIntentId: session.payment_intent as string,
+              },
+            });
+          }
 
           await tx.appointmentEvent.create({
             data: {
@@ -269,7 +283,15 @@ export async function POST(request: NextRequest) {
 
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const { appointmentId } = session.metadata || {};
+      const { appointmentId, paymentType, paymentId } = session.metadata || {};
+
+      // Clean up PENDING tip payment if the checkout session expired
+      if (paymentType === "TIP" && paymentId) {
+        await prisma.payment.update({
+          where: { id: paymentId },
+          data: { status: "FAILED" },
+        }).catch(() => { /* payment may already be cleaned up */ });
+      }
 
       if (appointmentId) {
         const expiredAppt = await prisma.appointment.findUnique({

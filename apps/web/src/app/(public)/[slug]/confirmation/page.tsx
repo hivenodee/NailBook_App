@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import * as React from "react";
 import Link from "next/link";
-import { useSearchParams, useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { Button } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
 
 type AppointmentData = {
   id: string;
@@ -13,22 +16,15 @@ type AppointmentData = {
   clientName: string | null;
   clientEmail: string | null;
   status: string;
-  service: {
-    name: string;
-    durationMinutes: number;
-  };
-  provider: {
-    businessName: string;
-    slug: string;
-    timezone: string;
-  };
+  service: { name: string; durationMinutes: number };
+  provider: { businessName: string; slug: string; timezone: string };
 };
 
-function formatPrice(cents: number) {
+function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatTime(iso: string, tz: string) {
+function formatTime(iso: string, tz: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -36,7 +32,7 @@ function formatTime(iso: string, tz: string) {
   });
 }
 
-function formatDate(iso: string, tz: string) {
+function formatDate(iso: string, tz: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -45,29 +41,31 @@ function formatDate(iso: string, tz: string) {
   });
 }
 
-function toCalendarDate(iso: string) {
+function toCalendarDate(iso: string): string {
   return new Date(iso)
     .toISOString()
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}/, "");
 }
 
-function buildGoogleCalendarUrl(appt: AppointmentData) {
+function buildGoogleCalendarUrl(appt: AppointmentData): string {
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: `${appt.service.name} — ${appt.provider.businessName}`,
     dates: `${toCalendarDate(appt.startTime)}/${toCalendarDate(appt.endTime)}`,
-    details: `Booked via NailBook\nService: ${appt.service.name}\nDuration: ${appt.service.durationMinutes} min`,
+    details: `Booked via PoroBook\nService: ${appt.service.name}\nDuration: ${appt.service.durationMinutes} min`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  PENDING_PAYMENT: { label: "Processing Payment", className: "bg-yellow-100 text-yellow-800" },
-  CONFIRMED: { label: "Confirmed", className: "bg-green-100 text-green-800" },
-  CANCELLED: { label: "Cancelled", className: "bg-red-100 text-red-800" },
-  COMPLETED: { label: "Completed", className: "bg-blue-100 text-blue-800" },
-  NO_SHOW: { label: "No Show", className: "bg-gray-100 text-gray-800" },
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
+
+const stagger: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
 };
 
 export default function ConfirmationPage(): React.JSX.Element {
@@ -76,33 +74,34 @@ export default function ConfirmationPage(): React.JSX.Element {
   const slug = params.slug as string;
   const appointmentId = searchParams.get("appointment");
 
-  const [appt, setAppt] = useState<AppointmentData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timedOut, setTimedOut] = useState(false);
-  const pollCount = useRef(0);
+  const [appt, setAppt] = React.useState<AppointmentData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [timedOut, setTimedOut] = React.useState(false);
+  const pollCount = React.useRef(0);
+  const reduce = useReducedMotion();
 
-  const fetchAppointment = useCallback(async () => {
+  const fetchAppointment = React.useCallback(async () => {
     if (!appointmentId) return null;
     const res = await fetch(`/api/appointments/${appointmentId}`);
     const json = await res.json();
     return json.data as AppointmentData | null;
   }, [appointmentId]);
 
-  // Initial fetch
-  useEffect(() => {
+  React.useEffect(() => {
     if (!appointmentId) {
       setLoading(false);
       return;
     }
     fetchAppointment()
-      .then((data) => { if (data) setAppt(data); })
+      .then((data) => {
+        if (data) setAppt(data);
+      })
       .finally(() => setLoading(false));
   }, [appointmentId, fetchAppointment]);
 
-  // Poll while PENDING_PAYMENT (every 3s, max 60s = 20 polls)
-  useEffect(() => {
+  // Poll while pending payment, max ~60s.
+  React.useEffect(() => {
     if (!appt || appt.status !== "PENDING_PAYMENT") return;
-
     const interval = setInterval(async () => {
       pollCount.current += 1;
       if (pollCount.current >= 20) {
@@ -113,196 +112,177 @@ export default function ConfirmationPage(): React.JSX.Element {
       const data = await fetchAppointment();
       if (data) {
         setAppt(data);
-        if (data.status !== "PENDING_PAYMENT") {
-          clearInterval(interval);
-        }
+        if (data.status !== "PENDING_PAYMENT") clearInterval(interval);
       }
     }, 3000);
-
     return () => clearInterval(interval);
   }, [appt?.status, fetchAppointment]);
 
   const isPending = appt?.status === "PENDING_PAYMENT" && !timedOut;
-  const isConfirmed = appt?.status === "CONFIRMED" || appt?.status === "COMPLETED";
+  const isConfirmed =
+    appt?.status === "CONFIRMED" || appt?.status === "COMPLETED";
   const isFailed = timedOut || (appt && !isPending && !isConfirmed);
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-grid-2">
-      <div className="max-w-md w-full text-center space-y-grid-3">
-        {/* Status icon */}
-        {isPending && (
-          <>
-            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-yellow-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-            <h1 className="font-display text-2xl">Processing Payment</h1>
-            <p className="text-text-secondary">
-              Waiting for payment confirmation. This usually takes a few seconds...
-            </p>
-          </>
-        )}
+    <main className="flex min-h-screen items-center justify-center bg-cream-50 text-ink-900 px-6 py-16">
+      <motion.div
+        className="w-full max-w-md text-center"
+        initial={reduce ? false : "hidden"}
+        animate="visible"
+        variants={stagger}
+      >
+        {/* Eyebrow status indicator */}
+        <motion.p
+          variants={fadeUp}
+          className="font-display italic text-sm text-ink-500 mb-6"
+        >
+          {isPending && "Processing"}
+          {isConfirmed && "Confirmed"}
+          {isFailed && "Something went wrong"}
+          {loading && !appt && "Loading"}
+        </motion.p>
 
-        {isConfirmed && (
-          <>
-            <div className="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center mx-auto">
-              <svg
-                className="w-8 h-8 text-primary"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.5 12.75l6 6 9-13.5"
-                />
-              </svg>
-            </div>
-            <h1 className="font-display text-2xl">You&apos;re Booked!</h1>
-            <p className="text-text-secondary">
-              A confirmation has been sent to your email. Your nail tech will see
-              your appointment right away.
-            </p>
-          </>
-        )}
-
-        {isFailed && (
-          <>
-            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto">
-              <svg
-                className="w-8 h-8 text-yellow-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                />
-              </svg>
-            </div>
-            <h1 className="font-display text-2xl">Payment Not Completed</h1>
-            <p className="text-text-secondary">
-              We didn&apos;t receive a payment confirmation. You can try booking
-              again or contact the provider.
-            </p>
-          </>
-        )}
-
-        {loading ? (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-left">
-            <p className="text-sm text-text-muted text-center">Loading details...</p>
-          </div>
-        ) : appt ? (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-left space-y-grid-1">
-            {/* Status badge */}
-            {STATUS_BADGE[appt.status] && (
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Status</span>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[appt.status].className}`}>
-                  {STATUS_BADGE[appt.status].label}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Service</span>
-              <span className="font-medium">{appt.service.name}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Provider</span>
-              <span className="font-medium">{appt.provider.businessName}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Date</span>
-              <span className="font-medium">{formatDate(appt.startTime, appt.provider.timezone)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Time</span>
-              <span className="font-medium">{formatTime(appt.startTime, appt.provider.timezone)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Duration</span>
-              <span className="font-medium">{appt.service.durationMinutes} min</span>
-            </div>
-            <hr className="border-border" />
-            <div className="flex justify-between text-sm">
-              <span className="text-text-muted">Total</span>
-              <span className="font-semibold">{formatPrice(appt.totalInCents)}</span>
-            </div>
-            {appt.depositInCents > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Deposit</span>
-                <span className="font-semibold text-primary">
-                  {formatPrice(appt.depositInCents)}
-                </span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-surface rounded-card p-grid-2 shadow-card text-left">
-            <p className="text-sm text-text-muted text-center">
-              Booking confirmed! Check your email for details.
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-grid-1">
-          {isConfirmed && appt ? (
-            <a
-              href={buildGoogleCalendarUrl(appt)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors text-center"
-            >
-              Add to Calendar
-            </a>
-          ) : isFailed && appt ? (
-            <Link
-              href={`/${slug}/book?service=${appt.service.name}`}
-              className="block w-full bg-primary text-white py-3 rounded-button font-medium hover:bg-primary-hover transition-colors text-center"
-            >
-              Try Again
-            </Link>
-          ) : isPending ? (
-            <button
-              disabled
-              className="w-full bg-primary text-white py-3 rounded-button font-medium opacity-50"
-            >
-              Waiting for payment confirmation...
-            </button>
-          ) : (
-            <button
-              disabled
-              className="w-full bg-primary text-white py-3 rounded-button font-medium opacity-50"
-            >
-              Add to Calendar
-            </button>
+        {/* Headline */}
+        <motion.div variants={fadeUp}>
+          {isPending && (
+            <Heading variant="display" className="text-4xl md:text-5xl">
+              Hang tight.
+            </Heading>
           )}
+          {isConfirmed && (
+            <Heading variant="display" className="text-4xl md:text-5xl">
+              You're booked.
+            </Heading>
+          )}
+          {isFailed && (
+            <Heading variant="display" className="text-4xl md:text-5xl">
+              Payment didn't go through.
+            </Heading>
+          )}
+          {loading && !appt && (
+            <Heading variant="display" className="text-4xl md:text-5xl">
+              One moment.
+            </Heading>
+          )}
+        </motion.div>
+
+        {/* Supporting line */}
+        <motion.p
+          variants={fadeUp}
+          className="mt-5 mx-auto max-w-sm font-sans text-base text-ink-500 leading-relaxed"
+        >
+          {isPending &&
+            "Waiting on payment confirmation. This usually takes a few seconds."}
+          {isConfirmed &&
+            "A confirmation is on its way to your email. Your provider sees your appointment now."}
+          {isFailed &&
+            "We didn't receive a payment confirmation. You can try again or get in touch with the provider."}
+          {loading && !appt && "Checking on your booking."}
+        </motion.p>
+
+        {/* Appointment details — only when we have data */}
+        {appt && (
+          <motion.div
+            variants={fadeUp}
+            className="mt-12 rounded-md border border-ink-200 bg-cream-50 p-6 text-left space-y-2.5"
+          >
+            <DetailRow label="Service" value={appt.service.name} />
+            <DetailRow label="Provider" value={appt.provider.businessName} />
+            <DetailRow
+              label="Date"
+              value={formatDate(appt.startTime, appt.provider.timezone)}
+            />
+            <DetailRow
+              label="Time"
+              value={formatTime(appt.startTime, appt.provider.timezone)}
+            />
+            <DetailRow
+              label="Duration"
+              value={`${appt.service.durationMinutes} min`}
+            />
+            <hr className="border-ink-200" />
+            <DetailRow
+              label="Total"
+              value={formatPrice(appt.totalInCents)}
+              emphasize
+            />
+            {appt.depositInCents > 0 && (
+              <DetailRow
+                label="Paid today"
+                value={formatPrice(appt.depositInCents)}
+                accent
+              />
+            )}
+          </motion.div>
+        )}
+
+        {/* CTA */}
+        <motion.div variants={fadeUp} className="mt-10 space-y-4">
+          {isConfirmed && appt && (
+            <Link href={buildGoogleCalendarUrl(appt)} target="_blank" rel="noopener noreferrer" className="block">
+              <Button variant="primary" size="lg" className="w-full">
+                Add to calendar
+              </Button>
+            </Link>
+          )}
+
+          {isFailed && appt && (
+            <Link href={`/${slug}/book?service=${appt.id}`} className="block">
+              <Button variant="primary" size="lg" className="w-full">
+                Try again
+              </Button>
+            </Link>
+          )}
+
+          {isPending && (
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              disabled
+              className="w-full"
+            >
+              Waiting for confirmation…
+            </Button>
+          )}
+
           <Link
             href={`/${slug}`}
-            className="block text-sm text-primary hover:underline"
+            className="inline-block font-sans text-sm text-ink-500 hover:text-ink-900 transition-colors underline-offset-4 hover:underline"
           >
-            Back to {appt?.provider.businessName || "provider"}
+            Back to {appt?.provider.businessName ?? "provider"}
           </Link>
-          <p className="text-sm text-text-muted">
-            Want to manage your bookings?{" "}
-            <Link href="/" className="text-primary hover:underline">
-              Create an account
-            </Link>{" "}
-            or{" "}
-            <Link href="/" className="text-primary hover:underline">
-              get the app
-            </Link>
-            .
-          </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </main>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  emphasize = false,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+  accent?: boolean;
+}): React.JSX.Element {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="font-sans text-sm text-ink-500">{label}</span>
+      <span
+        className={
+          emphasize
+            ? "font-display text-base text-ink-900"
+            : accent
+              ? "font-sans text-sm text-rust-500"
+              : "font-sans text-sm text-ink-900"
+        }
+      >
+        {value}
+      </span>
+    </div>
   );
 }

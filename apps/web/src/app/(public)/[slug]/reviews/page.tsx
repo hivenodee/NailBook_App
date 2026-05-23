@@ -1,10 +1,27 @@
 import React from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Star } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { Heading } from "@/components/ui/Heading";
+import { Card } from "@/components/ui/Card";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const provider = await prisma.provider.findUnique({
+    where: { slug },
+    select: { businessName: true },
+  });
+  if (!provider) return { title: "Not found" };
+  return {
+    title: `Reviews · ${provider.businessName}`,
+    description: `What clients are saying about ${provider.businessName}.`,
+  };
+}
 
 export default async function PublicReviewsPage({ params }: Props): Promise<React.JSX.Element> {
   const { slug } = await params;
@@ -36,53 +53,41 @@ export default async function PublicReviewsPage({ params }: Props): Promise<Reac
       : null;
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-lg mx-auto px-grid-2 py-grid-3 space-y-grid-3">
-        <section className="space-y-grid-1">
-          <h1 className="font-display text-2xl">Reviews</h1>
-          <p className="text-text-secondary">{provider.businessName}</p>
-        </section>
+    <main className="min-h-screen bg-cream-50">
+      <div className="max-w-xl mx-auto px-6 py-12 space-y-8">
+        <header className="space-y-1">
+          <Heading variant="display" className="text-3xl sm:text-4xl">Reviews</Heading>
+          <p className="font-sans text-base text-ink-500">{provider.businessName}</p>
+        </header>
 
         {reviews.length > 0 ? (
           <>
             {/* Aggregate stats */}
-            <section className="bg-surface rounded-card p-grid-2 shadow-card flex items-center gap-grid-2">
+            <Card padding="lg" className="flex items-center gap-5">
               {avgRating !== null && (
-                <div className="text-3xl font-bold">{avgRating}</div>
+                <p className="font-display text-5xl text-ink-900 leading-none">{avgRating}</p>
               )}
-              <div>
+              <div className="space-y-1">
                 {avgRating !== null && (
-                  <div className="flex gap-0.5 text-yellow-400">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <span key={s} className={s <= Math.round(avgRating) ? "text-yellow-400" : "text-border"}>
-                        ★
-                      </span>
-                    ))}
-                  </div>
+                  <Stars value={Math.round(avgRating)} size={16} />
                 )}
-                <p className="text-sm text-text-muted">
+                <p className="font-sans text-sm text-ink-500">
                   {reviews.length} review{reviews.length !== 1 ? "s" : ""}
                 </p>
               </div>
-            </section>
+            </Card>
 
             {/* Review list */}
-            <section className="space-y-grid-2">
+            <section className="space-y-4">
               {reviews.map((review) => (
-                <div key={review.id} className="bg-surface rounded-card p-grid-2 shadow-card space-y-1">
-                  {review.rating !== null && (
-                    <div className="flex gap-0.5 text-sm">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <span key={s} className={s <= review.rating! ? "text-yellow-400" : "text-border"}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-sm">{review.body}</p>
-                  <div className="flex gap-2 text-xs text-text-muted">
+                <Card key={review.id} padding="lg" className="space-y-3">
+                  {review.rating !== null && <Stars value={review.rating} size={14} />}
+                  <p className="font-sans text-base text-ink-900 leading-relaxed">
+                    {review.body}
+                  </p>
+                  <div className="flex gap-2 text-xs font-sans text-ink-500">
                     <span>{review.appointment.service.name}</span>
-                    <span>·</span>
+                    <span aria-hidden="true">·</span>
                     <span>
                       {new Date(review.createdAt).toLocaleDateString("en-US", {
                         month: "short",
@@ -91,16 +96,31 @@ export default async function PublicReviewsPage({ params }: Props): Promise<Reac
                       })}
                     </span>
                   </div>
-                </div>
+                </Card>
               ))}
             </section>
           </>
         ) : (
-          <div className="border-2 border-dashed border-border rounded-card p-grid-3 text-center">
-            <p className="text-text-muted text-sm">No reviews yet</p>
-          </div>
+          <Card padding="lg" className="border-dashed">
+            <p className="text-center text-sm font-sans text-ink-500">No reviews yet.</p>
+          </Card>
         )}
       </div>
     </main>
+  );
+}
+
+function Stars({ value, size = 14 }: { value: number; size?: number }): React.JSX.Element {
+  return (
+    <div className="flex gap-0.5" aria-label={`${value} out of 5`}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          size={size}
+          aria-hidden="true"
+          className={s <= value ? "fill-rust-500 text-rust-500" : "text-ink-200"}
+        />
+      ))}
+    </div>
   );
 }

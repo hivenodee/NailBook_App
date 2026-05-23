@@ -2,6 +2,10 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 type BalanceData = {
   totalInCents: number;
@@ -51,22 +55,18 @@ export default function PayBalancePage(): React.JSX.Element {
   // Poll for payment confirmation when returning from Stripe
   useEffect(() => {
     if (!isSuccess || !data || data.isPaid) return;
-
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/appointments/${appointmentId}/balance`);
         if (res.ok) {
           const json = await res.json();
           setData(json.data);
-          if (json.data.isPaid) {
-            clearInterval(interval);
-          }
+          if (json.data.isPaid) clearInterval(interval);
         }
       } catch {
         // ignore polling errors
       }
     }, 2000);
-
     return () => clearInterval(interval);
   }, [isSuccess, data, appointmentId]);
 
@@ -91,18 +91,18 @@ export default function PayBalancePage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-text-muted text-sm">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-cream-50">
+        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="bg-surface rounded-card p-grid-3 shadow-card max-w-sm w-full text-center">
-          <p className="text-red-600 text-sm">{error || "Not found"}</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <Card padding="lg" className="max-w-sm w-full text-center">
+          <p className="text-sm font-sans text-error">{error || "Not found"}</p>
+        </Card>
       </div>
     );
   }
@@ -110,18 +110,16 @@ export default function PayBalancePage(): React.JSX.Element {
   // Already paid
   if (data.isPaid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="bg-surface rounded-card p-grid-3 shadow-card max-w-sm w-full text-center space-y-grid-2">
-          <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <Card padding="lg" className="max-w-sm w-full text-center space-y-4">
+          <div className="w-14 h-14 mx-auto bg-success/10 rounded-pill flex items-center justify-center">
+            <Check size={24} className="text-success" aria-hidden="true" />
           </div>
-          <h1 className="font-display text-xl">Balance Paid</h1>
-          <p className="text-text-muted text-sm">
+          <Heading variant="h3" className="text-2xl">Balance paid</Heading>
+          <p className="text-sm font-sans text-ink-500">
             Your balance for {data.service.name} with {data.provider.businessName} has been paid in full.
           </p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -129,61 +127,61 @@ export default function PayBalancePage(): React.JSX.Element {
   // Success polling state
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="bg-surface rounded-card p-grid-3 shadow-card max-w-sm w-full text-center space-y-grid-2">
-          <div className="w-8 h-8 mx-auto border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <h1 className="text-lg font-semibold">Confirming payment...</h1>
-          <p className="text-text-muted text-sm">
-            This should only take a moment.
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+        <Card padding="lg" className="max-w-sm w-full text-center space-y-4">
+          <div className="w-8 h-8 mx-auto border-2 border-rust-500 border-t-transparent rounded-pill animate-spin" />
+          <Heading variant="h4" className="text-lg">Confirming payment…</Heading>
+          <p className="text-sm font-sans text-ink-500">This should only take a moment.</p>
+        </Card>
       </div>
     );
   }
 
   // Balance due
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="bg-surface rounded-card p-grid-3 shadow-card max-w-sm w-full space-y-grid-2">
-        <div className="text-center">
-          <h1 className="font-display text-xl">{data.provider.businessName}</h1>
-          <p className="text-text-muted text-sm">{data.service.name}</p>
+    <div className="min-h-screen flex items-center justify-center bg-cream-50 px-6">
+      <Card padding="lg" className="max-w-sm w-full space-y-6">
+        <div className="text-center space-y-1">
+          <Heading variant="h3" className="text-2xl">{data.provider.businessName}</Heading>
+          <p className="text-sm font-sans text-ink-500">{data.service.name}</p>
           {data.clientName && (
-            <p className="text-text-muted text-xs mt-1">for {data.clientName}</p>
+            <p className="text-xs font-sans text-ink-500">for {data.clientName}</p>
           )}
         </div>
 
-        <div className="border-t border-border pt-grid-2 space-y-2 text-sm">
+        <div className="pt-5 space-y-2 text-sm font-sans border-t border-ink-100">
           <div className="flex justify-between">
-            <span className="text-text-muted">Total</span>
-            <span className="font-medium">{formatPrice(data.totalInCents)}</span>
+            <span className="text-ink-500">Total</span>
+            <span className="text-ink-900 font-medium">{formatPrice(data.totalInCents)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Deposit paid</span>
-            <span>{formatPrice(data.depositInCents)}</span>
+            <span className="text-ink-500">Deposit paid</span>
+            <span className="text-ink-700">{formatPrice(data.depositInCents)}</span>
           </div>
           {data.balancePaidInCents > 0 && (
             <div className="flex justify-between">
-              <span className="text-text-muted">Balance paid</span>
-              <span>{formatPrice(data.balancePaidInCents)}</span>
+              <span className="text-ink-500">Balance paid</span>
+              <span className="text-ink-700">{formatPrice(data.balancePaidInCents)}</span>
             </div>
           )}
-          <div className="flex justify-between border-t border-border pt-2">
-            <span className="font-medium">Remaining</span>
-            <span className="font-semibold text-lg">
+          <div className="flex justify-between pt-3 border-t border-ink-100">
+            <span className="font-medium text-ink-900">Remaining</span>
+            <span className="font-display text-xl text-ink-900">
               {formatPrice(data.remainingInCents)}
             </span>
           </div>
         </div>
 
-        <button
+        <Button
+          variant="primary"
+          size="md"
+          className="w-full"
           onClick={handlePay}
           disabled={paying}
-          className="w-full bg-primary text-white py-3 rounded-button font-medium text-sm hover:bg-primary-hover transition-colors disabled:opacity-50"
         >
-          {paying ? "Redirecting..." : `Pay ${formatPrice(data.remainingInCents)}`}
-        </button>
-      </div>
+          {paying ? "Redirecting…" : `Pay ${formatPrice(data.remainingInCents)}`}
+        </Button>
+      </Card>
     </div>
   );
 }

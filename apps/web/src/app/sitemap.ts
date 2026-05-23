@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://nailbook.app";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://porobook.app";
 
   const staticPages: MetadataRoute.Sitemap = [
     {
