@@ -1,0 +1,75 @@
+Task,Phase,Priority,Status,Effort (hrs),Owner,Notes
+Rotate the leaked Firecrawl API key,A,Critical,Not started,0.25,Justice,Revoke at firecrawl.dev/dashboard then update .mcp.json locally
+Add .gitignore block for .mcp.json + .firecrawl/ + docs/design/ + check-appts.mjs,A,Critical,Not started,0.25,Justice,Repo root .gitignore
+Decide on apps/web/public/brand/ (102MB),A,Important,Not started,0.5,Justice,Options: commit / git-lfs / move to CDN
+Decide on docs/design/ (56MB screenshots),A,Polish,Not started,0.1,Justice,Recommendation: gitignore
+Stage and commit in logical chunks,A,Critical,Not started,1,Justice,7 suggested commits in playbook
+Push to GitHub,A,Critical,Not started,0.1,Justice,git push origin main
+Verify GitHub has no secrets,A,Critical,Not started,0.25,Justice,Check that .mcp.json and .env.local are absent
+Start all dev servers,B,Important,Not started,0.25,Justice,Web Worker Stripe-listen Prisma-Studio Redis
+Clear stale PENDING_PAYMENT rows in Prisma Studio,B,Important,Not started,0.1,Justice,Localhost:5555
+Test client flow: Discover providers (/explore),B,Important,Not started,0.5,Justice,Filters map mobile feed/map toggle
+Test client flow: Provider profile,B,Important,Not started,0.5,Justice,Cover avatar portfolio sticky book bar
+Test client flow: Reviews page,B,Important,Not started,0.25,Justice,Aggregate individual reviews stars
+Re-auth Stripe CLI (stripe login),B,Critical,Not started,0.1,Justice,Required for webhook forwarder
+Start stripe listen webhook forwarder,B,Critical,Not started,0.1,Justice,stripe listen --forward-to localhost:3000/api/webhooks/stripe
+Test client flow: Book end-to-end with Stripe test card,B,Critical,Not started,0.5,Justice,4242 card horizontal slides webhook fires confirmation email
+Test client flow: Manage appointment (reschedule cancel),B,Important,Not started,0.5,Justice,From email manage link
+Test client flow: Pay remaining balance + tip + feedback,B,Important,Not started,0.5,Justice,From completion email
+Test client flow: Edge cases (cash free recurring waitlist),B,Important,Not started,1,Justice,Each is its own variant
+Test provider flow: Dashboard Today,B,Important,Not started,0.25,Justice,KPIs activity refresh on error
+Test provider flow: Services CRUD,B,Important,Not started,0.5,Justice,Create edit add-on groups intake questions
+Test provider flow: Availability changes,B,Important,Not started,0.5,Justice,Weekly hours time-off blocks
+Test provider flow: Portfolio upload,B,Important,Not started,0.25,Justice,Will fail until R2 wired in D5
+Test provider flow: Profile customization,B,Important,Not started,0.5,Justice,Cover avatar sticky save books-open
+Test provider flow: Reminders + template editing,B,Important,Not started,0.5,Justice,Toggle 24h edit template
+Test provider flow: Money page + CSV export,B,Important,Not started,0.5,Justice,Range granularity export download
+Test provider flow: Coupons creation,B,Important,Not started,0.5,Justice,PERCENT FLAT service scoping
+Test provider flow: Messages + templates,B,Important,Not started,0.25,Justice,Thread reply variable insertion
+Test provider flow: Exports + import,B,Important,Not started,0.5,Justice,CSV generate + drag-drop import
+Test on phone via 10.0.0.70:3000,B,Important,Not started,0.5,Justice,Sticky bars touch targets no horizontal scroll
+Watch worker logs for 5 minutes,B,Important,Not started,0.25,Justice,Confirm scheduled ticks
+Check NotificationLog table in Prisma Studio,B,Important,Not started,0.25,Justice,SENT DELIVERED rows after worker runs
+Build provider onboarding wizard,C,Critical,Not started,16,Justice,Biggest engineering blocker. 5 steps: business+slug -> photo+bio -> first service -> hours -> review
+Decide verification flow: manual vs self-serve,C,Important,Not started,0.25,Justice,Recommendation: manual for beta (flip isVerified in Prisma)
+Build Stripe Connect onboarding (Standard accounts),C,Critical,Not started,24,Justice,Provider stripeAccountId field exists schema-side
+Add Sentry to apps/worker,C,Polish,Not started,0.5,Justice,Sentry.init in src/index.ts top
+Decide Notifications page: Inbox vs Settings vs both,C,Polish,Not started,0.5,Justice,Currently deferred. Hide nav for beta if not built
+Add Provider.phone field (optional),C,Polish,Not started,2,Justice,Schema + UI update
+Sign up for Upstash Redis,D,Critical,Not started,0.5,Justice,upstash.com same region as Vercel
+Deploy web to Vercel,D,Critical,Not started,2,Justice,Set build cmd + root dir + env vars
+Deploy worker to Railway (or Render),D,Critical,Not started,2,Justice,Worker cant run on Vercel
+Buy custom domain,D,Critical,Not started,0.5,Justice,porobook.app via Namecheap/Porkbun
+Point DNS at Vercel + wait for SSL,D,Critical,Not started,1,Justice,Including propagation
+Create R2 production bucket,D,Critical,Not started,1,Justice,porobook-prod-media + CORS + API tokens
+Verify Resend sending domain,D,Critical,Not started,2,Justice,SPF DKIM DMARC propagation
+Buy Twilio production phone number,D,Important,Not started,0.5,Justice,Trial cant message unverified numbers
+Update CSP for production domains,D,Critical,Not started,0.5,Justice,In next.config.js
+Switch Clerk to production tenant,D,Critical,Not started,1,Justice,Requires production domain
+Smoke test production with Stripe test card,D,Critical,Not started,1,Justice,End-to-end booking on prod domain
+Get Stripe live keys,E,Critical,Not started,2,Justice,Requires entity EIN bank account
+Submit Stripe Connect platform application,E,Critical,Not started,1,Justice,1-3 day approval window
+Update production env with sk_live_,E,Critical,Not started,0.25,Justice,And new webhook secret
+Re-deploy web + worker with live keys,E,Critical,Not started,0.5,Justice,
+Smoke test live with $0.50 charge,E,Critical,Not started,0.5,Justice,Real card real money real refund
+Verify Stripe Tax enabled,E,Important,Not started,0.5,Justice,Or explicit decision to skip
+Form LLC,F,Critical,Not started,3,Justice,Stripe Atlas ($500 1 week) or DIY in state
+Get EIN from IRS,F,Critical,Not started,0.25,Justice,Free 15 min online at irs.gov
+Open business bank account,F,Critical,Not started,2,Justice,Mercury or Brex
+Use Termly to generate marketplace TOS,F,Critical,Not started,2,Justice,Verify 7 clauses present (marketplace disclaimer liability cap etc)
+Use Termly for privacy policy,F,Critical,Not started,1,Justice,List Clerk Stripe Resend Twilio R2 as processors
+Review Stripe merchant agreement,F,Important,Not started,1,Justice,Read before activating live mode
+Quote insurance (defer purchase),F,Polish,Not started,1,Justice,GL + E&O. Get quotes ready but buy before 50 providers
+Define beta criteria,G,Important,Not started,0.5,Justice,3-5 Black female pros in your city using Square/GlossGenius/IG DM
+Recruit 3-5 beta providers via network,G,Critical,Not started,8,Justice,Friends of friends not cold DMs
+Onboarding call SOP document,G,Important,Not started,1,Justice,30 min Zoom + manual verify in Prisma
+Set up monitoring dashboard,G,Important,Not started,1,Justice,Sentry + Stripe + Notion bugs board + Friday check-ins
+Pricing decision: free vs paid beta,G,Important,Not started,0.5,Justice,Recommendation: free first 6 months
+Conduct each onboarding call,G,Critical,Not started,3,Justice,30 min per provider including manual isVerified flip
+First-week monitoring per provider,G,Critical,Not started,5,Justice,Daily Sentry + Stripe + DM check-ins
+Remove invite-only gate from signup,H,Important,Not started,0.5,Justice,After 2 weeks clean beta
+Build provider verification UI flow,H,Important,Not started,16,Justice,Self-serve with review queue (or stick with manual)
+Verify robots.txt + sitemap.xml,H,Important,Not started,1,Justice,Submit to Google + Bing Search Console
+Launch announcement on IG/TikTok,H,Important,Not started,3,Justice,Use brand photography + clear CTA
+Set up support email + FAQ + SLA,H,Important,Not started,2,Justice,support@porobook.app 24h response
+Decide on paid acquisition,H,Polish,Not started,1,Justice,Wait until 50+ providers + $5k GMV/mo

@@ -1,4 +1,4 @@
-# NailBook Deployment Guide
+# Porobook Deployment Guide
 
 Step-by-step instructions to go from zero to a running production deployment.
 
@@ -97,7 +97,7 @@ Without Redis configured, rate limiting is disabled and availability is served u
 
 ## Step 7: Storage (Cloudflare R2) -- Optional
 
-1. Create an R2 bucket at https://dash.cloudflare.com/ (e.g., `nailbook-media`)
+1. Create an R2 bucket at https://dash.cloudflare.com/ (e.g., `porobook-media`)
 2. Enable public access on the bucket (or connect a custom domain)
 3. Configure CORS on the bucket:
    - Allowed Origins: `https://yourdomain.com`
@@ -108,7 +108,7 @@ Without Redis configured, rate limiting is disabled and availability is served u
    - `R2_ACCOUNT_ID` -- your Cloudflare account ID (from dashboard URL)
    - `R2_ACCESS_KEY_ID` -- from the API token
    - `R2_SECRET_ACCESS_KEY` -- from the API token
-   - `R2_BUCKET_NAME` -- your bucket name (e.g., `nailbook-media`)
+   - `R2_BUCKET_NAME` -- your bucket name (e.g., `porobook-media`)
    - `R2_PUBLIC_URL` -- the public URL for your bucket (e.g., `https://pub-xxx.r2.dev`)
 
 Without R2 configured, portfolio uploads are disabled.
@@ -139,7 +139,7 @@ Without Sentry configured, errors are logged to the console only.
 
 ### Vercel Environment Variable Notes
 
-- `NEXT_PUBLIC_APP_URL` must be your production URL (e.g., `https://nailbook.app`)
+- `NEXT_PUBLIC_APP_URL` must be your production URL (e.g., `https://porobook.app`)
 - Stripe keys should be live mode keys (start with `sk_live_` and `pk_live_`)
 - The `STRIPE_WEBHOOK_SECRET` must match the webhook endpoint registered for your production URL
 

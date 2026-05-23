@@ -1,4 +1,4 @@
-# NailBook Deployment Checklist
+# Porobook Deployment Checklist
 
 Last updated: 2026-02-16
 
@@ -57,7 +57,7 @@ REDIS_TOKEN=...
 R2_ACCOUNT_ID=...
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=nailbook-media
+R2_BUCKET_NAME=porobook-media
 R2_PUBLIC_URL=https://media.yourdomain.com
 ```
 
@@ -101,7 +101,7 @@ EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
 
 ## Cloudflare R2
 
-- [ ] Create bucket (e.g., `nailbook-media`)
+- [ ] Create bucket (e.g., `porobook-media`)
 - [ ] Enable public access or connect custom domain
 - [ ] Configure CORS policy:
   - Allowed Origins: `https://yourdomain.com`

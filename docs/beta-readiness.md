@@ -1,4 +1,4 @@
-# NailBook Beta Readiness & Production Prep Audit
+# Porobook Beta Readiness & Production Prep Audit
 
 **Audit Date**: 2026-02-22
 **Scope**: Full monorepo — `apps/web`, `apps/worker`, `apps/mobile`, `packages/*`
@@ -8,7 +8,7 @@
 
 ## A. Executive Summary
 
-NailBook has a **solid V1 feature set** — 22 Prisma models, 41+ REST endpoints, Stripe payments, email/SMS notifications, and a provider dashboard. The codebase follows good patterns: lazy service initialization, event sourcing for appointments, provider-scoped multi-tenancy, and webhook idempotency.
+Porobook has a **solid V1 feature set** — 22 Prisma models, 41+ REST endpoints, Stripe payments, email/SMS notifications, and a provider dashboard. The codebase follows good patterns: lazy service initialization, event sourcing for appointments, provider-scoped multi-tenancy, and webhook idempotency.
 
 **However, 6 critical issues must be fixed before beta:**
 
@@ -167,7 +167,7 @@ Content-type is validated (images only) but file size is not validated before ge
 2 moderate  — various
 ```
 
-None are directly exploitable in NailBook's usage patterns. All are in transitive dependencies from Expo and AWS SDK.
+None are directly exploitable in Porobook's usage patterns. All are in transitive dependencies from Expo and AWS SDK.
 
 **Fix**: Run `pnpm audit fix` where possible. Monitor for upstream patches. Consider `pnpm.overrides` for critical ones.
 

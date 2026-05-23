@@ -1,4 +1,4 @@
-# NailBook V1 Audit
+# Porobook V1 Audit
 
 Last updated: 2026-02-16
 
@@ -557,6 +557,6 @@ No cleanup needed. These are appropriate for production logging.
 ### Hardcoded Values
 
 - All URLs use `process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"` fallback pattern
-- Sample data in `templates.ts` SAMPLE_VARS uses `nailbook.app` placeholder domain
+- Sample data in `templates.ts` SAMPLE_VARS uses `porobook.app` placeholder domain
 - No hardcoded secrets or test API keys
 - Stripe API version pinned to `"2025-02-24.acacia"` (correct for installed SDK)

@@ -1,11 +1,11 @@
 ––––––––––––
 claude.md
-NailBook — V1 Product Guardrails & Feature Spec
+Porobook — V1 Product Guardrails & Feature Spec
 ––––––––––––
 
 purpose of this file
 
-This file defines the authoritative V1 scope for NailBook.
+This file defines the authoritative V1 scope for Porobook.
 
 Claude must:
 
@@ -23,7 +23,7 @@ If something is not listed here, it is out of scope for V1.
 
 product summary
 
-NailBook is a mobile-first nail booking and payments platform with a public booking web flow optimized for social traffic.
+Porobook is a mobile-first nail booking and payments platform with a public booking web flow optimized for social traffic.
 
 Providers operate inside the mobile app.
 Clients can book instantly through a provider’s public link without installing the app.
@@ -379,8 +379,8 @@ first-time clients book from social without installing the app
 
 payment outcomes are never ambiguous
 
-providers trust NailBook with money handling
+providers trust Porobook with money handling
 
-users describe NailBook as “easy,” “clear,” and “made for nail techs”
+users describe Porobook as “easy,” “clear,” and “made for nail techs”
 
 Any UI work must comply with ui.md. If a requested UI change conflicts, flag it instead of implementing.

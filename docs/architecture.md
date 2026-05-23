@@ -1,9 +1,9 @@
-# NailBook Architecture (MVP → Early Scale, Supabase Deferred)
+# Porobook Architecture (MVP → Early Scale, Supabase Deferred)
 
-Last updated: 2026-02-07  
+Last updated: 2026-02-07
 Owner: Justice Heughan
 
-This document is the source of truth for NailBook’s system architecture.  
+This document is the source of truth for Porobook’s system architecture.  
 CLAUDE.md should reference this file and must not duplicate infrastructure decisions.
 
 ---
