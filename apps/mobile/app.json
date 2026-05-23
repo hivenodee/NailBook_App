@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "NailBook",
-    "slug": "nailbook",
+    "name": "Porobook",
+    "slug": "porobook",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "nailbook",
+    "scheme": "porobook",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#FAF9F7"
@@ -32,7 +32,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "NailBook needs access to your photos to upload portfolio images."
+          "photosPermission": "Porobook needs access to your photos to upload portfolio images."
         }
       ]
     ]

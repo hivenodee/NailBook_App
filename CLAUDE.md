@@ -1,4 +1,4 @@
-# NailBook — Agent & Development Guidelines
+# Porobook — Agent & Development Guidelines
 
 This file is automatically loaded by Claude Code for every session in this repo. All agents (lead, teammates, subagents) must follow these rules.
 
@@ -71,7 +71,7 @@ nailbook/
 18. **Loading states**: Use `skeleton-shimmer` CSS class (gradient sweep animation) from `globals.css`. Never use `animate-pulse`. Never plain "Loading..." text.
 19. **Empty states**: Dashed border for "no data yet", solid card for "no results for filter".
 20. **8pt spacing grid**: Use `grid-1` (8px) through `grid-6` (48px) spacing tokens.
-21. **Typography**: Use `font-display` (DM Serif Display) for page headings, prices, KPI amounts, provider names, and the NailBook wordmark. Use `font-sans` (Inter) for body text, buttons, and UI labels.
+21. **Typography**: Use `font-display` (Playfair Display) for page headings, prices, KPI amounts, provider names, and the Porobook wordmark. Use `font-sans` (Inter) for body text, buttons, and UI labels.
 22. **Card elevation**: Use border-based cards (`border border-border/50`) with `hover:shadow-soft hover:-translate-y-0.5` for interactive cards. Do not use heavy box shadows.
 23. **Nav active state**: Use `border-b-2 border-primary` underline for active nav items. Do not use filled pill backgrounds. Use 6px dot indicators instead of number badges.
 

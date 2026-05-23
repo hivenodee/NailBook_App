@@ -1,6 +1,6 @@
-# NailBook — Feature Summary
+# Porobook — Feature Summary
 
-A complete inventory of every feature shipped in the NailBook V1 web platform.
+A complete inventory of every feature shipped in the Porobook V1 web platform.
 
 ---
 
@@ -472,7 +472,7 @@ ACTIVE → CANCELLED (client or provider cancels)
 
 ### Typography
 
-- **DM Serif Display** (`font-display`): Page headings, prices, KPI amounts, provider names, NailBook wordmark
+- **Playfair Display** (`font-display`): Page headings, prices, KPI amounts, provider names, Porobook wordmark
 - **Inter** (`font-sans`): Body text, buttons, UI labels, captions
 
 ### Layout Principles

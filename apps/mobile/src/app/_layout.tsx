@@ -1,10 +1,31 @@
-import { useEffect } from "react";
-import { Platform } from "react-native";
+import { useEffect, useCallback } from "react";
+import { Platform, View, ActivityIndicator } from "react-native";
 import { Slot } from "expo-router";
 import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@/lib/auth";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as SplashScreen from "expo-splash-screen";
+import {
+  useFonts,
+  PlayfairDisplay_900Black,
+  PlayfairDisplay_700Bold_Italic,
+} from "@expo-google-fonts/playfair-display";
+import {
+  DMSans_300Light,
+  DMSans_400Regular,
+  DMSans_500Medium,
+} from "@expo-google-fonts/dm-sans";
+import {
+  JosefinSans_300Light,
+  JosefinSans_600SemiBold,
+} from "@expo-google-fonts/josefin-sans";
+import {
+  CormorantGaramond_400Regular_Italic,
+} from "@expo-google-fonts/cormorant-garamond";
+import { colors } from "@/constants/theme";
+
+SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
@@ -55,12 +76,39 @@ function PushTokenRegistration() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_900Black,
+    PlayfairDisplay_700Bold_Italic,
+    DMSans_300Light,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    JosefinSans_300Light,
+    JosefinSans_600SemiBold,
+    CormorantGaramond_400Regular_Italic,
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.charcoal, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={colors.ember} />
+      </View>
+    );
+  }
+
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <PushTokenRegistration />
-        <Slot />
-      </ClerkLoaded>
-    </ClerkProvider>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <PushTokenRegistration />
+          <Slot />
+        </ClerkLoaded>
+      </ClerkProvider>
+    </View>
   );
 }

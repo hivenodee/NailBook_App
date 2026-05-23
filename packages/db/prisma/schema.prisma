@@ -369,6 +369,7 @@ model Payment {
 
   @@index([providerId])
   @@index([appointmentId])
+  @@index([appointmentId, type])
 }
 
 enum PaymentType {

@@ -6,11 +6,11 @@ export default function SearchScreen() {
     <View style={styles.container}>
       <TextInput
         style={styles.searchInput}
-        placeholder="Search nail techs, styles..."
+        placeholder="Search providers, styles..."
         placeholderTextColor={colors.text.muted}
       />
       <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Find your nail tech</Text>
+        <Text style={styles.emptyTitle}>Find your provider</Text>
         <Text style={styles.emptySubtitle}>
           Search by name, location, or specialty
         </Text>

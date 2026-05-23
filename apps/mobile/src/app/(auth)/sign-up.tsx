@@ -10,7 +10,7 @@ export default function SignUpScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>
-          Join NailBook to book appointments and manage your profile
+          Join Porobook to book appointments and manage your profile
         </Text>
 
         <Pressable

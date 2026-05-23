@@ -8,7 +8,7 @@ export default function MessagesScreen() {
       <View style={styles.emptyState}>
         <Text style={styles.emptyTitle}>No messages</Text>
         <Text style={styles.emptySubtitle}>
-          Chat with your nail tech about upcoming appointments
+          Chat with your provider about upcoming appointments
         </Text>
       </View>
     </View>

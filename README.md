@@ -1,10 +1,10 @@
-# NailBook
+# Porobook
 
 A mobile-first nail booking and payments platform with a public booking web flow optimized for social traffic. Providers operate from the mobile app; clients book instantly through a shareable link without installing anything.
 
 ## Overview
 
-NailBook is a monorepo containing three applications and three shared packages, built for independent nail technicians who need a professional booking system they can share from their Instagram or TikTok bio.
+Porobook is a monorepo containing three applications and three shared packages, built for independent nail technicians who need a professional booking system they can share from their Instagram or TikTok bio.
 
 **Core idea:** A nail tech creates their profile, sets up services and availability, then shares a single link. Clients tap it, pick a service, choose a time, pay their deposit, and they're booked -- all in under 90 seconds, no app required.
 
@@ -239,7 +239,7 @@ The UI follows a warm, calm aesthetic designed specifically for the self-care in
 - Text Muted: `#9E958C`
 - Status: Success `#6B8F5C`, Warning `#C9993A`, Error `#BF6B6B`, Info `#7A94AA`
 
-**Typography:** DM Serif Display for headings and prices, Inter for body text.
+**Typography:** Playfair Display for headings and prices, Inter for body text.
 
 **Design principles:**
 - "Quiet Luxury" aesthetic -- warm, calm, self-care-focused

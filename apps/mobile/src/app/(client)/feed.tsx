@@ -6,7 +6,7 @@ export default function FeedScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Discover</Text>
       <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Explore nail techs near you</Text>
+        <Text style={styles.emptyTitle}>Explore providers near you</Text>
         <Text style={styles.emptySubtitle}>
           Browse portfolios and find your next appointment
         </Text>

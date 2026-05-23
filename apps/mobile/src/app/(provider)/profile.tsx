@@ -4,7 +4,7 @@ import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 export default function ProviderProfileScreen() {
   const handleShareLink = async () => {
     await Share.share({
-      message: "Book with me on NailBook!",
+      message: "Book with me on Porobook!",
       // URL will be dynamic: ${APP_URL}/${slug}
     });
   };

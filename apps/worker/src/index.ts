@@ -7,7 +7,7 @@ import { startNotificationRetryWorker } from "./jobs/notification-retry";
 import { cleanupQueue, pushReceiptQueue, notificationRetryQueue } from "./queue";
 
 async function main() {
-  console.log("Starting NailBook worker...");
+  console.log("Starting Porobook worker...");
 
   // Start all job workers
   const reminderWorker = startReminderWorker();

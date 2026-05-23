@@ -12,7 +12,7 @@ export default function SignInScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>NailBook</Text>
+        <Text style={styles.title}>Porobook</Text>
         <Text style={styles.subtitle}>
           Sign in to manage your bookings
         </Text>
