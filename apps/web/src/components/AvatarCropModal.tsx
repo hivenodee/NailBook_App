@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
+import { motion, useReducedMotion } from "framer-motion";
 
 type AvatarCropModalProps = {
   imageSrc: string;
@@ -61,6 +62,7 @@ export default function AvatarCropModal({
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
+  const reduce = useReducedMotion();
 
   const onCropDone = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedArea(croppedAreaPixels);
@@ -81,18 +83,29 @@ export default function AvatarCropModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Scrim */}
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
+      <motion.div
+        className="absolute inset-0 bg-ink-900/50"
+        onClick={onCancel}
+        aria-hidden="true"
+        initial={reduce ? false : { opacity: 0 }}
+        animate={reduce ? undefined : { opacity: 1 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      />
 
-      {/* Modal */}
-      <div className="relative bg-surface rounded-card w-[90vw] max-w-md mx-4 overflow-hidden animate-fade-in-up">
-        <div className="px-grid-3 py-grid-2 border-b border-border">
-          <h3 className="font-display text-lg">Adjust Photo</h3>
-          <p className="text-xs text-text-muted">Drag to reposition, scroll to zoom</p>
+      <motion.div
+        className="relative rounded-md w-[90vw] max-w-md mx-4 overflow-hidden bg-cream-50 border border-ink-200 shadow-soft"
+        initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+        animate={reduce ? undefined : { opacity: 1, scale: 1 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        <div className="px-6 py-4 border-b border-ink-100">
+          <h3 className="font-display text-xl text-ink-900">Adjust photo</h3>
+          <p className="text-xs font-sans text-ink-500 mt-0.5">
+            Drag to reposition, scroll to zoom.
+          </p>
         </div>
 
-        {/* Crop area */}
-        <div className="relative h-[300px] bg-black">
+        <div className="relative h-[300px] bg-ink-900">
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -106,9 +119,8 @@ export default function AvatarCropModal({
           />
         </div>
 
-        {/* Zoom slider */}
-        <div className="px-grid-3 py-grid-2 flex items-center gap-3">
-          <span className="text-xs text-text-muted">-</span>
+        <div className="px-6 py-4 flex items-center gap-3">
+          <span className="text-xs font-sans text-ink-500">−</span>
           <input
             type="range"
             min={1}
@@ -116,17 +128,16 @@ export default function AvatarCropModal({
             step={0.05}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-primary h-1"
+            className="flex-1 h-1 accent-rust-500"
           />
-          <span className="text-xs text-text-muted">+</span>
+          <span className="text-xs font-sans text-ink-500">+</span>
         </div>
 
-        {/* Actions */}
-        <div className="px-grid-3 py-grid-2 border-t border-border flex justify-end gap-2">
+        <div className="px-6 py-4 flex justify-end gap-2 border-t border-ink-100">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-text-secondary rounded-button border border-border hover:bg-surface-alt transition-colors"
+            className="inline-flex items-center justify-center h-9 px-4 text-sm font-sans font-medium bg-cream-50 text-ink-900 border border-ink-700 rounded-md transition-all duration-200 hover:border-ink-900 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
           >
             Cancel
           </button>
@@ -134,12 +145,12 @@ export default function AvatarCropModal({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-button hover:bg-primary-hover transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center h-9 px-4 text-sm font-sans font-medium bg-rust-500 text-cream-50 border border-rust-500 rounded-md transition-all duration-200 hover:bg-rust-600 hover:border-rust-600 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

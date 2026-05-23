@@ -17,12 +17,13 @@ export type MapProvider = {
 
 function createIcon(selected: boolean) {
   const size = selected ? 20 : 14;
-  const color = selected ? "#667A55" : "#7B8B6A";
+  // rust-600 selected, rust-400 default — matches design tokens
+  const color = selected ? "#A85F1F" : "#D4843D";
   return L.divIcon({
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #FBF8F3;box-shadow:0 1px 4px rgba(26,22,20,0.2);"></div>`,
   });
 }
 
@@ -77,7 +78,7 @@ export default function ExploreMap({
     <MapContainer
       center={[39.8, -98.5]}
       zoom={4}
-      className="w-full h-full rounded-card"
+      className="w-full h-full rounded-md"
       style={{ minHeight: "300px" }}
     >
       <TileLayer
@@ -103,32 +104,30 @@ export default function ExploreMap({
           >
             <Popup>
               <div className="min-w-[180px] space-y-1.5 p-0.5">
-                <p className="font-display text-base font-semibold text-text-primary">
+                <p className="font-display text-base text-ink-900">
                   {p.businessName}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                <div className="flex items-center gap-2 text-xs font-sans text-ink-700">
                   {p.avgRating !== null && (
                     <span className="flex items-center gap-0.5">
-                      <span className="text-yellow-500">&#9733;</span>
+                      <span className="text-rust-500">★</span>
                       {p.avgRating.toFixed(1)}
                     </span>
                   )}
-                  {p.distance !== null && (
-                    <span>{p.distance.toFixed(1)} mi</span>
-                  )}
+                  {p.distance !== null && <span>{p.distance.toFixed(1)} mi</span>}
                 </div>
-                <div className="flex gap-2 pt-1">
+                <div className="flex gap-3 pt-1">
                   <a
                     href={`/${p.slug}`}
-                    className="text-xs font-medium text-primary hover:text-primary-hover transition-colors"
+                    className="text-xs font-sans font-medium text-rust-500 hover:text-rust-600 transition-colors"
                   >
-                    View Profile
+                    View profile
                   </a>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${p.locationLat},${p.locationLng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-medium text-text-muted hover:text-text-secondary transition-colors"
+                    className="text-xs font-sans font-medium text-ink-500 hover:text-ink-700 transition-colors"
                   >
                     Directions
                   </a>

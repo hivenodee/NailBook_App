@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Heading } from "@/components/ui/Heading";
+import { Button } from "@/components/ui/Button";
 
 type BlockTimeModalProps = {
   initialDate: Date;
@@ -20,6 +23,9 @@ function formatTimeInput(hour: number, minute: number = 0): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+const INPUT_CLASS =
+  "w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50";
+
 export default function BlockTimeModal({
   initialDate,
   initialHour,
@@ -33,6 +39,7 @@ export default function BlockTimeModal({
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const reduce = useReducedMotion();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,7 +62,6 @@ export default function BlockTimeModal({
         setErrorMsg(data.error?.message || "Failed to create time block");
         return;
       }
-
       onCreated();
     } catch {
       setErrorMsg("Network error");
@@ -66,110 +72,108 @@ export default function BlockTimeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Scrim */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <motion.div
+        className="absolute inset-0 bg-ink-900/50"
+        onClick={onClose}
+        aria-hidden="true"
+        initial={reduce ? false : { opacity: 0 }}
+        animate={reduce ? undefined : { opacity: 1 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      />
 
-      {/* Modal */}
-      <div className="relative bg-surface rounded-card w-[90vw] max-w-md mx-4 overflow-hidden animate-fade-in-up">
-        <div className="px-grid-3 py-grid-2 border-b border-border">
-          <h3 className="font-display text-lg">Block Time</h3>
-          <p className="text-xs text-text-muted">Create a time-off block on your calendar</p>
+      <motion.div
+        className="relative rounded-md w-[90vw] max-w-md mx-4 overflow-hidden bg-cream-50 border border-ink-200 shadow-soft"
+        initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+        animate={reduce ? undefined : { opacity: 1, scale: 1 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        <div className="px-6 py-4 border-b border-ink-100">
+          <Heading variant="h4" className="text-xl">Block time</Heading>
+          <p className="text-xs font-sans text-ink-500 mt-0.5">
+            Create a time-off block on your calendar.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-grid-3 py-grid-3 space-y-grid-2">
-          {/* Start */}
-          <div className="grid grid-cols-2 gap-grid-2">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                Start Date
-              </label>
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Start date">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border rounded-input bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className={INPUT_CLASS}
                 required
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                Start Time
-              </label>
+            </Field>
+            <Field label="Start time">
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border rounded-input bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className={INPUT_CLASS}
                 required
               />
-            </div>
+            </Field>
           </div>
 
-          {/* End */}
-          <div className="grid grid-cols-2 gap-grid-2">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                End Date
-              </label>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="End date">
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border rounded-input bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className={INPUT_CLASS}
                 required
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">
-                End Time
-              </label>
+            </Field>
+            <Field label="End time">
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-border rounded-input bg-background text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className={INPUT_CLASS}
                 required
               />
-            </div>
+            </Field>
           </div>
 
-          {/* Reason */}
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
-              Reason (optional)
-            </label>
+          <Field label="Reason (optional)">
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g., Lunch break, Personal"
-              className="w-full px-3 py-2 text-sm border border-border rounded-input bg-background text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="e.g. Lunch break, personal"
+              className={INPUT_CLASS}
             />
-          </div>
+          </Field>
 
-          {errorMsg && (
-            <p className="text-xs text-status-error">{errorMsg}</p>
-          )}
+          {errorMsg && <p className="text-xs font-sans text-error">{errorMsg}</p>}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-grid-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-text-secondary rounded-button border border-border hover:bg-surface-alt transition-colors"
-            >
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-button hover:bg-primary-hover transition-colors disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Block Time"}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : "Block time"}
+            </Button>
           </div>
         </form>
-      </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-sans font-medium text-ink-700">{label}</label>
+      {children}
     </div>
   );
 }

@@ -2,6 +2,11 @@
 
 import React, { useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { Clock } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
+import { cn } from "@/lib/cn";
 
 type AddOn = {
   id: string;
@@ -27,6 +32,10 @@ type ServiceListProps = {
   booksOpen?: boolean;
 };
 
+function formatPrice(cents: number): string {
+  return `$${(cents / 100).toFixed(0)}`;
+}
+
 export default function ServiceList({ services, slug, booksOpen = true }: ServiceListProps) {
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("service");
@@ -44,72 +53,84 @@ export default function ServiceList({ services, slug, booksOpen = true }: Servic
         highlightRef.current = el;
       }
     },
-    [highlightId]
+    [highlightId],
   );
 
   return (
-    <div className="space-y-grid-1">
-      {services.map((service) => (
-        <div
-          key={service.id}
-          ref={cardRef(service.id)}
-          className={`bg-surface rounded-card p-grid-3 border border-border/50 hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200${
-            service.id === highlightId ? " ring-2 ring-primary" : ""
-          }`}
-        >
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-medium">{service.name}</h3>
-              {service.description && (
-                <p className="text-sm text-text-muted mt-0.5">
-                  {service.description}
-                </p>
-              )}
-              <p className="text-sm text-text-muted mt-1">
-                {service.durationMinutes} min
-              </p>
-              {service.addOns.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
+    <div className="space-y-3">
+      {services.map((service) => {
+        const highlighted = service.id === highlightId;
+        return (
+          <Card
+            key={service.id}
+            ref={cardRef(service.id)}
+            padding="lg"
+            hoverLift
+            className={cn(
+              "relative",
+              highlighted && "border-rust-500",
+            )}
+          >
+            <div className="flex justify-between items-start gap-6">
+              <div className="min-w-0 flex-1">
+                <Heading variant="h4" as="h3" className="text-lg">
+                  {service.name}
+                </Heading>
+                {service.description && (
+                  <p className="mt-1 font-sans text-sm text-ink-500 leading-relaxed">
+                    {service.description}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-pill border border-ink-200 bg-cream-50 px-3 py-1 text-xs font-sans text-ink-500">
+                    <Clock size={12} aria-hidden="true" />
+                    {service.durationMinutes} min
+                  </span>
                   {service.addOns.map((addon) => (
                     <span
                       key={addon.id}
-                      className="text-xs bg-primary-light text-text-secondary px-2 py-0.5 rounded-full"
+                      className="rounded-pill border border-ink-200 bg-cream-50 px-3 py-1 text-xs font-sans text-ink-700"
                     >
-                      {addon.name} +${(addon.priceInCents / 100).toFixed(2)}
-                      {addon.durationMinutes > 0 && ` · +${addon.durationMinutes}min`}
+                      {addon.name} +{formatPrice(addon.priceInCents)}
+                      {addon.durationMinutes > 0 && ` · +${addon.durationMinutes} min`}
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-            <div className="text-right">
-              <p className="font-display text-lg">
-                ${(service.priceInCents / 100).toFixed(2)}
-              </p>
-              {service.depositType !== "NONE" && (
-                <p className="text-xs text-text-muted">
-                  Deposit:{" "}
-                  {service.depositType === "FLAT"
-                    ? `$${(service.depositValue / 100).toFixed(2)}`
-                    : `${service.depositValue}%`}
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="font-display text-2xl text-ink-900 leading-none">
+                  {formatPrice(service.priceInCents)}
                 </p>
+                {service.depositType !== "NONE" && (
+                  <p className="mt-1.5 text-xs font-sans text-ink-500">
+                    {service.depositType === "FLAT"
+                      ? `${formatPrice(service.depositValue)} deposit`
+                      : `${service.depositValue}% deposit`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              {booksOpen ? (
+                <a
+                  href={`/${slug}/book?service=${service.id}`}
+                  className="block w-full"
+                >
+                  <Button variant="primary" size="md" className="w-full">
+                    Book now
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="secondary" size="md" disabled className="w-full">
+                  Books closed
+                </Button>
               )}
             </div>
-          </div>
-          {booksOpen ? (
-            <a
-              href={`/${slug}/book?service=${service.id}`}
-              className="mt-grid-2 block w-full text-center bg-primary text-white py-2.5 rounded-button text-sm font-medium tracking-wide hover:bg-primary-hover active:scale-[0.98] transition-all shadow-sm"
-            >
-              Book Now
-            </a>
-          ) : (
-            <span className="mt-grid-2 block w-full text-center bg-border text-text-muted py-2.5 rounded-button text-sm font-medium cursor-not-allowed">
-              Book Now
-            </span>
-          )}
-        </div>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }

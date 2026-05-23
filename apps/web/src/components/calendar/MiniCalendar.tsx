@@ -74,23 +74,25 @@ export default function MiniCalendar({
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => setViewMonth(new Date(year, month - 1, 1))}
-          className="p-1 rounded hover:bg-surface-alt text-text-muted hover:text-text-primary transition-colors"
+          aria-label="Previous month"
+          className="p-1 rounded-md text-ink-500 hover:text-ink-900 hover:bg-cream-100 transition-colors"
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={14} aria-hidden="true" />
         </button>
-        <span className="text-xs font-medium text-text-primary">{monthLabel}</span>
+        <span className="text-xs font-sans font-medium text-ink-900">{monthLabel}</span>
         <button
           onClick={() => setViewMonth(new Date(year, month + 1, 1))}
-          className="p-1 rounded hover:bg-surface-alt text-text-muted hover:text-text-primary transition-colors"
+          aria-label="Next month"
+          className="p-1 rounded-md text-ink-500 hover:text-ink-900 hover:bg-cream-100 transition-colors"
         >
-          <ChevronRight size={14} />
+          <ChevronRight size={14} aria-hidden="true" />
         </button>
       </div>
 
       {/* Day headers */}
       <div className="grid grid-cols-7 mb-1">
         {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-          <div key={i} className="text-center text-[10px] text-text-muted font-medium py-0.5">
+          <div key={i} className="text-center text-[10px] font-sans font-medium py-0.5 text-ink-500">
             {d}
           </div>
         ))}
@@ -99,9 +101,7 @@ export default function MiniCalendar({
       {/* Day cells */}
       <div className="grid grid-cols-7">
         {cells.map((date, i) => {
-          if (!date) {
-            return <div key={i} className="h-7" />;
-          }
+          if (!date) return <div key={i} className="h-7" />;
 
           const isToday = isSameDay(date, today);
           const isSelected = isSameDay(date, currentDate);
@@ -109,23 +109,26 @@ export default function MiniCalendar({
           const dateKey = formatDateKey(date);
           const hasAppt = appointmentDates?.has(dateKey);
 
+          const cellClass = isSelected
+            ? "bg-rust-500 text-cream-50 font-medium"
+            : isToday
+              ? "bg-rust-500/10 text-rust-500 font-medium"
+              : inWeek
+                ? "bg-cream-100 text-ink-900"
+                : "text-ink-700 hover:bg-cream-100";
+
           return (
             <button
               key={i}
               onClick={() => onDateSelect(date)}
-              className={`relative h-7 w-full flex items-center justify-center text-[11px] rounded transition-colors ${
-                isSelected
-                  ? "bg-primary text-white font-medium"
-                  : isToday
-                    ? "bg-primary-light text-primary font-medium"
-                    : inWeek
-                      ? "bg-primary-light/50 text-text-primary"
-                      : "text-text-secondary hover:bg-surface-alt"
-              }`}
+              className={
+                "relative h-7 w-full flex items-center justify-center text-[11px] font-sans rounded-md transition-colors " +
+                cellClass
+              }
             >
               {date.getDate()}
               {hasAppt && !isSelected && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-pill bg-rust-500" />
               )}
             </button>
           );
