@@ -77,7 +77,7 @@ function buildGoogleCalendarUrl(params: {
     action: "TEMPLATE",
     text: `${params.serviceName} — ${params.providerName}`,
     dates: `${toCalendarDate(params.startTime)}/${toCalendarDate(params.endTime)}`,
-    details: `Booked via NailBook\nService: ${params.serviceName}\nDuration: ${params.durationMinutes} min`,
+    details: `Booked via PoroBook\nService: ${params.serviceName}\nDuration: ${params.durationMinutes} min`,
     ...(params.location ? { location: params.location } : {}),
   });
   return `https://calendar.google.com/calendar/render?${qs.toString()}`;

@@ -55,7 +55,13 @@ export async function rateLimit(request: NextRequest): Promise<NextResponse | nu
   if (!limiter) return null;
 
   const ip = getClientIp(request);
-  const { success } = await limiter.limit(ip);
+  let success = true;
+  try {
+    ({ success } = await limiter.limit(ip));
+  } catch (err) {
+    console.warn("[rate-limit] Redis unreachable, failing open:", err);
+    return null;
+  }
 
   if (!success) {
     return NextResponse.json(
@@ -77,7 +83,13 @@ export async function strictRateLimit(request: NextRequest): Promise<NextRespons
   if (!limiter) return null;
 
   const ip = getClientIp(request);
-  const { success } = await limiter.limit(ip);
+  let success = true;
+  try {
+    ({ success } = await limiter.limit(ip));
+  } catch (err) {
+    console.warn("[rate-limit] Redis unreachable, failing open:", err);
+    return null;
+  }
 
   if (!success) {
     return NextResponse.json(

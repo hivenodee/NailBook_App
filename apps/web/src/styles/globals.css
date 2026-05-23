@@ -2,15 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap');
+/* PoroBook Design System — Light-first
+   Research basis: GlossGenius, Fresha, Fenty Beauty, Sephora */
+
+:root {
+  /* Surfaces — light mode defaults */
+  --bg-base:        #FAFAF8;
+  --bg-surface:     #F4F2EE;
+  --bg-card:        #FFFFFF;
+  --bg-elevated:    #F9F7F4;
+  --bg-border:      #E8E4DC;
+  --bg-muted:       #D4D0C8;
+
+  /* Text — light mode */
+  --text-primary:   #1A1A1A;
+  --text-secondary: #666666;
+  --text-tertiary:  #999999;
+  --text-inverse:   #FFFFFF;
+
+  /* Brand — identical in both modes */
+  --ember:          #C8722A;
+  --ember-deep:     #A85A1E;
+  --ember-light:    #E8943A;
+  --ember-subtle:   rgba(200, 114, 42, 0.08);
+  --ember-border:   rgba(200, 114, 42, 0.25);
+  --gold:           #B8862A;
+  --gold-bg:        rgba(184, 134, 42, 0.1);
+
+  /* Status */
+  --success:        #3B7A2A;
+  --success-bg:     rgba(59, 122, 42, 0.08);
+  --success-border: rgba(59, 122, 42, 0.2);
+  --danger:         #C0392B;
+  --danger-bg:      rgba(192, 57, 43, 0.08);
+}
+
+.dark {
+  --bg-base:        #0F0F0F;
+  --bg-surface:     #161616;
+  --bg-card:        #1E1E1E;
+  --bg-elevated:    #242424;
+  --bg-border:      #2A2A2A;
+  --bg-muted:       #3A3A3A;
+
+  --text-primary:   #F5F5F5;
+  --text-secondary: #888888;
+  --text-tertiary:  #555555;
+  --text-inverse:   #1A1A1A;
+
+  --gold:           #D4A84B;
+  --gold-bg:        rgba(212, 168, 75, 0.12);
+
+  --success:        #5AAE3A;
+  --success-bg:     rgba(90, 174, 58, 0.1);
+  --success-border: rgba(90, 174, 58, 0.2);
+}
+
+/* Base styles */
+html {
+  color-scheme: light dark;
+}
 
 @layer base {
   body {
-    @apply bg-background text-text-primary font-sans antialiased;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 250ms ease, color 250ms ease;
   }
+
+  ::selection {
+    background: rgba(200, 114, 42, 0.2);
+    color: var(--text-primary);
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: var(--bg-muted); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ember-deep); }
 }
 
 @layer components {
+  /* Typography utilities */
+  .text-display {
+    font-family: var(--font-display), serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+  .text-heading {
+    font-family: var(--font-display), serif;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .text-label {
+    font-family: var(--font-label), sans-serif;
+    font-weight: 200;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .text-body {
+    font-family: var(--font-sans), sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+  .text-accent {
+    font-family: var(--font-accent), serif;
+    font-style: italic;
+  }
+  .text-ember-gradient {
+    @apply bg-gradient-to-r from-ember to-gold bg-clip-text text-transparent;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -22,9 +130,9 @@
   .skeleton-shimmer {
     background: linear-gradient(
       90deg,
-      theme('colors.border / 40%') 0%,
-      theme('colors.border / 20%') 40%,
-      theme('colors.border / 40%') 80%
+      var(--bg-border) 0%,
+      var(--bg-muted) 40%,
+      var(--bg-border) 80%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s ease-in-out infinite;
@@ -34,12 +142,95 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .gradient-ember-gold {
+    background: linear-gradient(135deg, var(--ember) 0%, var(--gold) 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(160deg, var(--bg-base) 0%, var(--bg-surface) 40%, var(--bg-card) 100%);
+  }
+
+  .section-divider {
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--ember), var(--gold));
+  }
+
+  .btn-press:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-hover:hover {
+    border-color: var(--ember-border);
+    box-shadow: 0 0 24px rgba(200, 114, 42, 0.08);
+  }
+
+  .masonry-grid {
+    columns: 2;
+    column-gap: 8px;
+  }
+  @media (min-width: 1024px) {
+    .masonry-grid {
+      columns: 3;
+    }
+  }
+  .masonry-grid > * {
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  /* Status badge classes */
+  .status-confirmed {
+    color: var(--success);
+    background-color: var(--success-bg);
+    border: 1px solid var(--success-border);
+  }
+  .status-pending {
+    color: var(--ember);
+    background-color: var(--ember-subtle);
+    border: 1px solid var(--ember-border);
+  }
+  .status-completed {
+    color: var(--text-secondary);
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--bg-border);
+  }
+  .status-cancelled {
+    color: var(--danger);
+    background-color: var(--danger-bg);
+    border: 1px solid rgba(192, 57, 43, 0.2);
+  }
+  .status-default {
+    color: var(--text-tertiary);
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--bg-border);
+  }
+
   .leaflet-popup-content-wrapper {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: 1px solid #E5DFD6;
+    border: 1px solid var(--bg-border);
+    background-color: var(--bg-card);
+    color: var(--text-primary);
   }
   .leaflet-popup-tip {
     box-shadow: none;
+    background-color: var(--bg-card);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

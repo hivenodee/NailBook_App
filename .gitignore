@@ -39,3 +39,11 @@ apps/mobile/android/
 
 # misc
 *.tsbuildinfo
+
+# secrets — MCP server credentials, never commit
+.mcp.json
+
+# local-only artifacts
+.firecrawl/
+docs/design/
+packages/db/check-appts.mjs

@@ -7,26 +7,23 @@
  * Lazy-initialized to avoid module-level side-effects that break Next.js builds.
  */
 
-let _DOMPurify: typeof import("isomorphic-dompurify").default | null = null;
-
-function getDOMPurify() {
-  if (!_DOMPurify) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _DOMPurify = require("isomorphic-dompurify") as typeof import("isomorphic-dompurify").default;
-  }
-  return _DOMPurify;
-}
-
 /**
  * Strip all HTML tags from a string and trim whitespace.
  * Returns null/undefined as-is for nullable fields.
+ *
+ * Iterates the strip until stable to defeat nested patterns like `<scr<script>ipt>`.
  */
 export function sanitizeText(input: string): string;
 export function sanitizeText(input: string | null | undefined): string | null | undefined;
 export function sanitizeText(input: string | null | undefined): string | null | undefined {
   if (input == null) return input;
-  const DOMPurify = getDOMPurify();
-  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] }).trim();
+  let result = String(input);
+  let prev: string;
+  do {
+    prev = result;
+    result = result.replace(/<[^>]*>?/g, "");
+  } while (result !== prev);
+  return result.trim();
 }
 
 /**

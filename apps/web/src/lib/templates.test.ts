@@ -33,8 +33,8 @@ describe("renderTemplate", () => {
   });
 
   it("replaces multiple occurrences of the same variable", () => {
-    const result = renderTemplate("{{name}} loves {{name}}.", { name: "NailBook" });
-    expect(result).toBe("NailBook loves NailBook.");
+    const result = renderTemplate("{{name}} loves {{name}}.", { name: "Porobook" });
+    expect(result).toBe("Porobook loves Porobook.");
   });
 
   it("handles variable values with special characters", () => {

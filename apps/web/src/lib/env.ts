@@ -15,7 +15,7 @@ const REQUIRED_VARS = {
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "Clerk publishable key",
   NEXT_PUBLIC_APP_URL: "Public application URL",
   STRIPE_SECRET_KEY: "Stripe secret key",
-  NEXT_PUBLIC_STRIPE_PUBLIC_KEY: "Stripe publishable key",
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "Stripe publishable key",
   STRIPE_WEBHOOK_SECRET: "Stripe webhook signing secret",
 } as const;
 

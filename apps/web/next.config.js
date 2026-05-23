@@ -52,12 +52,15 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.clerk.accounts.dev https://clerk.nailbook.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              // Clerk dev mode uses raw `*.accounts.dev` (e.g. winning-moray-85.accounts.dev)
+              // in addition to `*.clerk.accounts.dev` in prod — both must be whitelisted.
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
               "img-src 'self' data: blob: https://*.r2.dev https://*.r2.cloudflarestorage.com https://img.clerk.com https://*.tile.openstreetmap.org",
-              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev",
-              "frame-src https://js.stripe.com https://*.clerk.accounts.dev",
+              // `*.sentry.io` covers regional subdomains like `*.ingest.us.sentry.io`.
+              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev wss://*.accounts.dev https://*.sentry.io",
+              "frame-src https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev",
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
