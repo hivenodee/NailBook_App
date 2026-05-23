@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { tokens } from "@/lib/design-tokens";
 
 type Bucket = {
   date: string;
@@ -36,19 +37,19 @@ const MODE_CONFIG: Record<
   net: {
     dataKey: "netRevenue",
     label: "Net",
-    color: "#7B8B6A",
+    color: tokens.colors.rust[500],
     gradientId: "gradNet",
   },
   revenue: {
     dataKey: "revenue",
     label: "Revenue",
-    color: "#7B8B6A",
+    color: tokens.colors.rust[500],
     gradientId: "gradRevenue",
   },
   lost: {
     dataKey: "lostRevenue",
     label: "Lost",
-    color: "#BF6B6B",
+    color: tokens.colors.rust[600],
     gradientId: "gradLost",
   },
 };
@@ -66,11 +67,9 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-surface rounded-card p-grid-1 shadow-card border border-border/50 text-xs">
-      <p className="font-medium mb-0.5">{label}</p>
-      <p className="text-text-secondary">
-        ${(payload[0].value / 100).toFixed(2)}
-      </p>
+    <div className="rounded-md bg-cream-50 border border-ink-200 px-3 py-2 text-xs font-sans shadow-soft">
+      <p className="font-medium text-ink-900 mb-0.5">{label}</p>
+      <p className="text-ink-500">${(payload[0].value / 100).toFixed(2)}</p>
     </div>
   );
 }
@@ -84,39 +83,38 @@ export default function RevenueChart({
   const config = MODE_CONFIG[mode];
 
   if (loading) {
-    return (
-      <div className="bg-surface rounded-card p-grid-2 border border-border/50 skeleton-shimmer h-[340px]" />
-    );
+    return <div className="rounded-md skeleton-shimmer h-[340px] bg-cream-50 border border-ink-200" />;
   }
 
   const hasData = buckets.some(
-    (b) => b.revenue > 0 || b.lostRevenue > 0 || b.netRevenue > 0
+    (b) => b.revenue > 0 || b.lostRevenue > 0 || b.netRevenue > 0,
   );
 
   if (!hasData) {
     return (
-      <div className="bg-surface rounded-card p-grid-2 border border-border/50 flex items-center justify-center h-[340px]">
-        <p className="text-text-muted text-sm">
-          Complete your first appointment to see analytics
+      <div className="rounded-md flex items-center justify-center h-[340px] bg-cream-50 border border-ink-200">
+        <p className="text-sm font-sans text-ink-500">
+          Complete your first appointment to see analytics.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-surface rounded-card p-grid-2 border border-border/50">
+    <div className="rounded-md p-4 bg-cream-50 border border-ink-200">
       {/* Mode toggle */}
-      <div className="flex justify-end mb-grid-2">
-        <div className="inline-flex bg-surface-alt rounded-button p-0.5">
+      <div className="flex justify-end mb-4">
+        <div className="inline-flex rounded-pill p-0.5 bg-cream-100 border border-ink-200">
           {MODES.map((m) => (
             <button
               key={m}
               onClick={() => onModeChange(m)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-[10px] transition-all ${
-                mode === m
-                  ? "bg-surface shadow-card text-text-primary"
-                  : "text-text-muted hover:text-text-secondary"
-              }`}
+              className={
+                "px-3 py-1.5 text-xs font-sans font-medium rounded-pill transition-colors " +
+                (mode === m
+                  ? "bg-cream-50 text-ink-900 shadow-sm"
+                  : "text-ink-500 hover:text-ink-900")
+              }
             >
               {MODE_CONFIG[m].label}
             </button>
@@ -126,10 +124,7 @@ export default function RevenueChart({
 
       {/* Chart */}
       <ResponsiveContainer width="100%" height={300}>
-        <AreaChart
-          data={buckets}
-          margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-        >
+        <AreaChart data={buckets} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id={config.gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={config.color} stopOpacity={0.4} />
@@ -138,18 +133,18 @@ export default function RevenueChart({
           </defs>
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#E5DFD6"
+            stroke={tokens.colors.ink[200]}
             vertical={false}
           />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 11, fill: "#9E958C" }}
+            tick={{ fontSize: 11, fill: tokens.colors.ink[500] }}
             tickLine={false}
-            axisLine={{ stroke: "#E5DFD6" }}
+            axisLine={{ stroke: tokens.colors.ink[200] }}
           />
           <YAxis
             tickFormatter={(v: number) => `$${(v / 100).toFixed(0)}`}
-            tick={{ fontSize: 11, fill: "#9E958C" }}
+            tick={{ fontSize: 11, fill: tokens.colors.ink[500] }}
             tickLine={false}
             axisLine={false}
             width={50}

@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/ui/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
   CalendarCheck,
   CalendarDays,
@@ -157,20 +159,21 @@ export default function SidebarNav({
   return (
     <>
       {/* ─── Desktop Sidebar ─── */}
-      <aside className="hidden lg:flex flex-col fixed top-0 left-0 w-60 h-full bg-surface-alt border-r border-border z-20 overflow-y-auto">
-        <div className="px-grid-3 py-grid-3">
-          <Link href="/dashboard" className="font-display text-xl text-text-primary">
-            NailBook
+      <aside className="hidden lg:flex flex-col fixed top-0 left-0 w-[220px] h-full z-20 overflow-y-auto bg-cream-50 border-r border-ink-200">
+        {/* Logo */}
+        <div className="px-5 py-6 mb-1 border-b border-ink-200">
+          <Link href="/dashboard">
+            <Logo size="md" />
           </Link>
         </div>
 
-        <nav className="flex-1 px-2 pb-grid-3 space-y-grid-3">
+        <nav className="flex-1 py-1 space-y-1">
           {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
-              <p className="text-xs font-medium text-text-muted uppercase tracking-wider px-grid-2 mb-1">
+              <p className="px-5 pt-5 pb-1.5 font-sans text-[10px] uppercase tracking-wide text-ink-500">
                 {section.label}
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {section.items.map((item) => {
                   const active = isActive(pathname, item.href);
                   const badgeCount = item.badgeKey ? badges[item.badgeKey] : 0;
@@ -181,18 +184,20 @@ export default function SidebarNav({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-grid-2 px-grid-2 py-2.5 min-h-[44px] text-sm rounded-lg transition-colors ${
+                      className={
                         active
-                          ? "border-l-2 border-l-primary text-primary bg-primary-light/20"
-                          : "border-l-2 border-l-transparent text-text-muted hover:text-text-secondary hover:bg-primary-light/20"
-                      }`}
+                          ? "flex items-center gap-3 mx-2 px-5 py-2 text-sm font-sans font-medium text-ink-900 bg-cream-100 border-l-2 border-rust-500 rounded-r-md transition-colors duration-150"
+                          : "flex items-center gap-3 mx-2 px-5 py-2 text-sm font-sans text-ink-500 rounded-md transition-colors duration-150 hover:bg-cream-100 hover:text-ink-900"
+                      }
                     >
-                      <Icon size={18} />
+                      <Icon
+                        size={16}
+                        strokeWidth={1.5}
+                        className={active ? "text-rust-500" : "text-ink-500"}
+                      />
                       <span className="flex-1">{item.label}</span>
                       {showBadge && (
-                        <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium px-1">
-                          {badgeCount > 9 ? "9+" : `+${badgeCount}`}
-                        </span>
+                        <span className="w-[5px] h-[5px] rounded-full bg-rust-500 mr-2" />
                       )}
                     </Link>
                   );
@@ -201,10 +206,16 @@ export default function SidebarNav({
             </div>
           ))}
         </nav>
+
+        {/* Theme toggle at bottom */}
+        <div className="px-5 py-4 flex items-center justify-between border-t border-ink-200">
+          <span className="font-sans text-xs text-ink-500">Theme</span>
+          <ThemeToggle />
+        </div>
       </aside>
 
       {/* ─── Mobile Bottom Tab Bar ─── */}
-      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-20 safe-bottom">
+      <div className="flex lg:hidden fixed bottom-0 left-0 right-0 z-20 safe-bottom bg-cream-50/90 backdrop-blur-xl border-t border-ink-200">
         <div className="flex w-full">
           {MOBILE_TABS.map((item) => {
             const active = isActive(pathname, item.href);
@@ -216,19 +227,19 @@ export default function SidebarNav({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2 min-h-[52px] transition-colors ${
-                  active ? "text-primary" : "text-text-muted"
-                }`}
+                className={
+                  "flex-1 flex flex-col items-center gap-0.5 py-2 min-h-[52px] transition-colors " +
+                  (active ? "text-rust-500" : "text-ink-500")
+                }
               >
                 <span className="relative">
-                  <Icon size={20} />
+                  <Icon size={20} strokeWidth={1.5} />
                   {showBadge && (
-                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-primary text-white text-[9px] font-medium px-0.5">
-                      {badgeCount > 9 ? "9+" : `+${badgeCount}`}
-                    </span>
+                    <span className="absolute -top-0.5 -right-1 w-[6px] h-[6px] rounded-pill bg-rust-500 animate-scale-pop" />
                   )}
                 </span>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className={`text-[10px] font-sans ${active ? "font-semibold" : "font-medium"}`}>{item.label}</span>
+                {active && <span className="w-4 h-0.5 rounded-pill bg-rust-500 mt-0.5" />}
               </Link>
             );
           })}
@@ -236,12 +247,14 @@ export default function SidebarNav({
           {/* More button */}
           <button
             onClick={() => setMoreOpen(true)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 min-h-[52px] transition-colors ${
-              moreActive ? "text-primary" : "text-text-muted"
-            }`}
+            className={
+              "flex-1 flex flex-col items-center gap-0.5 py-2 min-h-[52px] transition-colors " +
+              (moreActive ? "text-rust-500" : "text-ink-500")
+            }
           >
-            <MoreHorizontal size={20} />
-            <span className="text-[10px] font-medium">More</span>
+            <MoreHorizontal size={20} strokeWidth={1.5} />
+            <span className={`text-[10px] font-sans ${moreActive ? "font-semibold" : "font-medium"}`}>More</span>
+            {moreActive && <span className="w-4 h-0.5 rounded-pill bg-rust-500 mt-0.5" />}
           </button>
         </div>
       </div>
@@ -251,26 +264,27 @@ export default function SidebarNav({
         <div className="fixed inset-0 z-50 lg:hidden">
           {/* Scrim */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-ink-900/40 backdrop-blur-sm animate-fade-in"
             onClick={() => setMoreOpen(false)}
           />
 
           {/* Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-surface rounded-t-[16px] safe-bottom animate-fade-in-up">
-            <div className="flex items-center justify-between px-grid-3 py-grid-2 border-b border-border">
-              <p className="font-display text-lg">More</p>
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-[16px] safe-bottom animate-slide-up bg-cream-50 border-t border-ink-200 shadow-soft">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-ink-100">
+              <p className="font-display text-lg text-ink-900">More</p>
               <button
                 onClick={() => setMoreOpen(false)}
-                className="p-1 text-text-muted hover:text-text-primary"
+                aria-label="Close"
+                className="h-11 w-11 inline-flex items-center justify-center rounded-pill text-ink-700 hover:bg-cream-100 transition-colors"
               >
-                <X size={20} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
-            <nav className="px-grid-2 py-grid-2 space-y-grid-2 max-h-[60vh] overflow-y-auto">
+            <nav className="px-4 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
               {MORE_SECTIONS.map((section) => (
                 <div key={section.label}>
-                  <p className="text-xs font-medium text-text-muted uppercase tracking-wider px-grid-2 mb-1">
+                  <p className="font-sans uppercase px-4 mb-1 text-[10px] tracking-widest font-medium text-ink-500">
                     {section.label}
                   </p>
                   <div className="space-y-0.5">
@@ -285,18 +299,17 @@ export default function SidebarNav({
                           key={item.href}
                           href={item.href}
                           onClick={() => setMoreOpen(false)}
-                          className={`flex items-center gap-grid-2 px-grid-2 py-3 min-h-[44px] text-sm rounded-lg transition-colors ${
-                            active
-                              ? "text-primary bg-primary-light/20"
-                              : "text-text-muted hover:text-text-secondary hover:bg-primary-light/20"
-                          }`}
+                          className={
+                            "flex items-center gap-3 px-4 py-3 min-h-[44px] text-sm font-sans rounded-md transition-colors " +
+                            (active
+                              ? "text-rust-500 bg-cream-100"
+                              : "text-ink-700 hover:bg-cream-100")
+                          }
                         >
-                          <Icon size={18} />
+                          <Icon size={18} strokeWidth={1.5} />
                           <span className="flex-1">{item.label}</span>
                           {showBadge && (
-                            <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-medium px-1">
-                              {badgeCount > 9 ? "9+" : `+${badgeCount}`}
-                            </span>
+                            <span className="w-[6px] h-[6px] rounded-pill bg-rust-500 animate-scale-pop" />
                           )}
                         </Link>
                       );

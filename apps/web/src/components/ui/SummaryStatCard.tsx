@@ -20,27 +20,25 @@ export default function SummaryStatCard({
   animationDelay = 0,
 }: SummaryStatCardProps): React.JSX.Element {
   if (loading) {
-    return (
-      <div className="bg-surface rounded-card p-grid-2 border border-border/50 skeleton-shimmer h-24" />
-    );
+    return <div className="rounded-md skeleton-shimmer h-24 bg-cream-50 border border-ink-200" />;
   }
 
   return (
     <div
-      className="bg-surface rounded-card p-grid-2 border border-border/50 animate-fade-in-up"
+      className="rounded-md animate-fade-in-up bg-cream-50 border border-ink-200 p-4"
       style={animationDelay > 0 ? { animationDelay: `${animationDelay}ms`, animationFillMode: "both" } : undefined}
     >
-      <p className="text-xs font-medium text-text-muted uppercase tracking-wider">
+      <p className="font-sans uppercase text-xs tracking-widest font-medium text-ink-500">
         {label}
       </p>
       <p
-        className="font-display text-2xl mt-1"
+        className="font-display mt-1.5 text-2xl leading-none text-ink-900"
         style={accentColor ? { color: accentColor } : undefined}
       >
         {value}
       </p>
       {subtitle && (
-        <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
+        <p className="text-xs font-sans text-ink-500 mt-1">{subtitle}</p>
       )}
     </div>
   );
