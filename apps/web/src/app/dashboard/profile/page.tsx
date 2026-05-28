@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Camera, Check, Image as ImageIcon, ShieldCheck, ExternalLink, Trash2 } from "lucide-react";
 import AvatarCropModal from "@/components/AvatarCropModal";
+import CoverCropModal from "@/components/CoverCropModal";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -75,6 +76,7 @@ export default function ProfilePage(): React.JSX.Element {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [coverCropSrc, setCoverCropSrc] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -209,30 +211,50 @@ export default function ProfilePage(): React.JSX.Element {
     }
   }
 
-  async function handleCoverPicked(file: File) {
+  // Step 1: when a file is picked, validate size + open the crop modal.
+  // Actual upload doesn't happen until the user confirms the crop.
+  function handleCoverPicked(file: File) {
     if (file.size > 10 * 1024 * 1024) {
       setErrorMsg("Cover image is too large. Max 10MB.");
       return;
     }
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Please choose a JPEG, PNG, or WebP image.");
+      return;
+    }
+    setErrorMsg(null);
+    const reader = new FileReader();
+    reader.onload = () => setCoverCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  // Step 2: cropper returns a JPEG blob (always image/jpeg per CoverCropModal).
+  async function uploadCoverBlob(blob: Blob) {
+    setCoverCropSrc(null);
     setCoverUploading(true);
     setErrorMsg(null);
     try {
-      const contentType = file.type;
+      // Cropper always outputs JPEG.
+      const contentType = "image/jpeg";
       const res = await fetch("/api/providers/me/cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType, fileSize: file.size }),
+        body: JSON.stringify({ contentType, fileSize: blob.size }),
       });
       const json = await res.json();
       if (!res.ok) {
         setErrorMsg(json.error?.message || "Upload failed");
         return;
       }
-      await fetch(json.data.uploadUrl, {
+      const putRes = await fetch(json.data.uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": contentType },
-        body: file,
+        body: blob,
       });
+      if (!putRes.ok) {
+        setErrorMsg("Upload to storage failed. Please try again.");
+        return;
+      }
       setCoverUrl(json.data.coverImageUrl + "?t=" + Date.now());
     } catch (e) {
       console.error("Cover upload failed:", e);
@@ -325,9 +347,9 @@ export default function ProfilePage(): React.JSX.Element {
             description="Your cover, photo, name, story, and where to find you."
           />
 
-          {/* Cover image */}
+          {/* Cover image — preview matches public profile aspect (3:1 desktop, 2:1 mobile). */}
           <Card padding="none" className="overflow-hidden">
-            <div className="relative aspect-[16/9] w-full bg-cream-100">
+            <div className="relative aspect-[2/1] sm:aspect-[3/1] w-full bg-cream-100">
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -435,6 +457,14 @@ export default function ProfilePage(): React.JSX.Element {
               imageSrc={cropImageSrc}
               onCropComplete={handleAvatarUpload}
               onCancel={() => setCropImageSrc(null)}
+            />
+          )}
+
+          {coverCropSrc && (
+            <CoverCropModal
+              imageSrc={coverCropSrc}
+              onCropComplete={uploadCoverBlob}
+              onCancel={() => setCoverCropSrc(null)}
             />
           )}
 

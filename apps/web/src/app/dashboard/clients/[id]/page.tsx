@@ -48,12 +48,13 @@ function statusVariant(status: string): "verified" | "warning" | "error" | "neut
   return "status";
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, tz: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: tz,
   });
 }
 
@@ -167,7 +168,7 @@ export default function ClientDetailPage(): React.JSX.Element {
           </Stat>
           <Stat label="Total spent">{formatPrice(totalSpent)}</Stat>
           <Stat label="Last visit">
-            {client.appointments[0] ? formatDate(client.appointments[0].startTime) : "—"}
+            {client.appointments[0] ? formatDate(client.appointments[0].startTime, client.providerTimezone) : "—"}
           </Stat>
         </div>
       </Card>
@@ -225,7 +226,7 @@ export default function ClientDetailPage(): React.JSX.Element {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-sans font-medium text-ink-900">{appt.service.name}</p>
                       <p className="text-xs font-sans text-ink-500 mt-0.5">
-                        {formatDate(appt.startTime)} at {formatTime(appt.startTime, client.providerTimezone)}
+                        {formatDate(appt.startTime, client.providerTimezone)} at {formatTime(appt.startTime, client.providerTimezone)}
                       </p>
                       {appt.addOns.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-2">

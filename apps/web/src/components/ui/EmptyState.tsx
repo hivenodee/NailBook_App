@@ -214,6 +214,8 @@ function ActionRow({
 }
 
 function IconVariant(props: IconVariantProps): React.JSX.Element {
+  // Pull discriminated-union-only props out so they don't leak to the DOM
+  // via `...rest` spread on motion.div below.
   const {
     title,
     description,
@@ -221,9 +223,15 @@ function IconVariant(props: IconVariantProps): React.JSX.Element {
     secondaryAction,
     size = "md",
     className,
+    icon: _iconProp,
+    customArt: _customArtProp,
     ...rest
-  } = props;
-  // Discriminate by which prop the consumer provided.
+  } = props as IconVariantProps & {
+    icon?: LucideIcon;
+    customArt?: React.ReactNode;
+  };
+  void _iconProp;
+  void _customArtProp;
   const customArt = "customArt" in props ? props.customArt : undefined;
   const Icon = "icon" in props ? props.icon : undefined;
 

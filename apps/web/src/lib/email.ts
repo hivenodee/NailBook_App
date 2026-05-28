@@ -410,6 +410,42 @@ export async function sendBalanceRequest(
   await sendTemplateEmail(data.clientEmail, "BALANCE_REQUEST", vars, providerId);
 }
 
+// ─── Balance receipt (after payment) ───────────────────────
+
+export type BalanceReceiptEmailData = {
+  providerName: string;
+  serviceName: string;
+  startTime: Date;
+  clientEmail?: string | null;
+  clientName?: string | null;
+  amountPaidInCents: number;
+  totalInCents: number;
+  timezone?: string;
+};
+
+/**
+ * Receipt sent after a client pays their remaining balance via Stripe.
+ * Uses an inline template (no DB-backed MessageTemplateType yet for receipts);
+ * this is the same pattern as appointment reminders — short, transactional.
+ */
+export async function sendBalanceReceipt(
+  data: BalanceReceiptEmailData,
+) {
+  if (!data.clientEmail) return;
+
+  const subject = `Payment received — ${data.providerName}`;
+  const textBody = `Hi ${data.clientName || "there"},
+
+We received your payment of ${formatPrice(data.amountPaidInCents)} for your ${data.serviceName} appointment on ${formatDateTime(data.startTime, data.timezone)}.
+
+Your balance is now paid in full. Total: ${formatPrice(data.totalInCents)}.
+
+Thanks for booking with ${data.providerName}.`;
+  const htmlBody = wrapHtml(textBody);
+
+  await sendEmail({ to: data.clientEmail, subject, htmlBody, textBody });
+}
+
 // ─── Reminder email ───────────────────────────────────────
 
 export async function sendAppointmentReminder(

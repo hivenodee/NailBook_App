@@ -108,6 +108,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceConfirmCash, setBalanceConfirmCash] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -151,14 +152,23 @@ export default function AppointmentDetailPage(): React.JSX.Element {
         body: JSON.stringify({ action }),
       });
       if (res.ok) {
+        setToast(
+          action === "send-link"
+            ? "Payment link sent to client"
+            : "Balance marked as paid in cash",
+        );
+        setTimeout(() => setToast(null), 3000);
         await load();
       } else {
         const json = await res.json().catch(() => ({}));
         console.error("Collect balance error:", res.status, json);
-        alert(`Error: ${json.error || res.statusText}`);
+        setToast(`Error: ${json.error || res.statusText}`);
+        setTimeout(() => setToast(null), 4000);
       }
     } catch (e) {
       console.error("Collect balance failed:", e);
+      setToast("Network error — please try again");
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setBalanceLoading(false);
       setBalanceConfirmCash(false);
@@ -516,6 +526,15 @@ export default function AppointmentDetailPage(): React.JSX.Element {
           )}
         </Card>
       </section>
+
+      {/* Toast — payment-link send confirmation, balance status updates, errors */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="rounded-md bg-ink-900 text-cream-50 text-sm font-sans font-medium px-4 py-2.5 shadow-soft">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

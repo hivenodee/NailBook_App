@@ -8,9 +8,10 @@ import {
   sendCancellationEmail,
   sendProviderCancellation,
   sendCompletionThankYou,
+  sendClientConfirmation,
   type CancellationEmailData,
 } from "@/lib/email";
-import { cancelReminders, scheduleFollowup } from "@/lib/schedule-jobs";
+import { cancelReminders, scheduleFollowup, scheduleReminders } from "@/lib/schedule-jobs";
 import { sendCancellationSms } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
@@ -321,6 +322,54 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     cancelReminders(appointment.id).catch((e) =>
       console.error("[jobs] Failed to cancel reminders:", e)
     );
+  }
+
+  if (action === "reschedule" && startTime) {
+    // Re-send the booking confirmation with the new time so the client has
+    // an updated email reference + manage link.
+    try {
+      const newStart = new Date(startTime);
+      const newEnd = new Date(
+        newStart.getTime() + appointment.service.durationMinutes * 60 * 1000,
+      );
+      const paymentType: "CASH" | "DEPOSIT" | "FULL" | "FREE" =
+        appointment.totalInCents === 0
+          ? "FREE"
+          : appointment.depositInCents > 0 &&
+            appointment.depositInCents < appointment.totalInCents
+            ? "DEPOSIT"
+            : appointment.depositInCents >= appointment.totalInCents
+              ? "FULL"
+              : "CASH";
+      await sendClientConfirmation(
+        {
+          providerName: appointment.provider.businessName,
+          serviceName: appointment.service.name,
+          durationMinutes: appointment.service.durationMinutes,
+          startTime: newStart,
+          endTime: newEnd,
+          totalInCents: appointment.totalInCents,
+          depositInCents: appointment.depositInCents,
+          paymentType,
+          locationAddress: appointment.provider.locationAddress,
+          cancellationHours: appointment.provider.cancellationHours,
+          arrivalGraceMinutes: appointment.provider.arrivalGraceMinutes,
+          clientName: appointment.clientName,
+          clientEmail: appointment.clientEmail,
+          timezone: appointment.provider.timezone,
+          slug: appointment.provider.slug,
+          appointmentId: appointment.id,
+          manageToken: appointment.manageToken ?? undefined,
+        },
+        appointment.providerId,
+      );
+    } catch (e) {
+      console.error("[email] Failed to send reschedule confirmation:", e);
+    }
+    // Re-schedule reminders to fire relative to the new time.
+    cancelReminders(appointment.id)
+      .then(() => scheduleReminders(appointment.id, new Date(startTime)))
+      .catch((e) => console.error("[jobs] Failed to reschedule reminders:", e));
   }
 
   return success(updated);

@@ -37,30 +37,9 @@
   --danger-bg:      rgba(192, 57, 43, 0.08);
 }
 
-.dark {
-  --bg-base:        #0F0F0F;
-  --bg-surface:     #161616;
-  --bg-card:        #1E1E1E;
-  --bg-elevated:    #242424;
-  --bg-border:      #2A2A2A;
-  --bg-muted:       #3A3A3A;
-
-  --text-primary:   #F5F5F5;
-  --text-secondary: #888888;
-  --text-tertiary:  #555555;
-  --text-inverse:   #1A1A1A;
-
-  --gold:           #D4A84B;
-  --gold-bg:        rgba(212, 168, 75, 0.12);
-
-  --success:        #5AAE3A;
-  --success-bg:     rgba(90, 174, 58, 0.1);
-  --success-border: rgba(90, 174, 58, 0.2);
-}
-
 /* Base styles */
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 @layer base {
@@ -83,6 +62,23 @@ html {
   ::-webkit-scrollbar-track { background: var(--bg-base); }
   ::-webkit-scrollbar-thumb { background: var(--bg-muted); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--ember-deep); }
+
+  /* Date / time native picker indicator — make the calendar icon visible
+     against cream backgrounds. Without this, the icon defaults to a near-
+     black glyph that disappears on dark UI and to white on light UI
+     unpredictably. Tinted to ink-500 to match other secondary glyphs. */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(38%) sepia(7%) saturate(550%) hue-rotate(346deg) brightness(91%) contrast(85%);
+    cursor: pointer;
+    opacity: 0.8;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
 
 @layer components {

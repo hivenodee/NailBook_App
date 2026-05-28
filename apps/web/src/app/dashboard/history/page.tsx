@@ -138,6 +138,7 @@ type Bucket = {
 
 function getBucket(a: Appointment): Bucket {
   const start = new Date(a.startTime);
+  const tz = a.provider.timezone;
   const todayStart = startOfToday();
   const tomorrowStart = startOfTomorrow();
   const thisWeekEnd = startOfWeekFromTomorrow();
@@ -154,11 +155,9 @@ function getBucket(a: Appointment): Bucket {
     return { key: "this-week", label: "This week", order: 2 };
   }
 
-  // Future or past — bucket per absolute date.
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, "0");
-  const d = String(start.getDate()).padStart(2, "0");
-  const key = `${y}-${m}-${d}`;
+  // Future or past — bucket per absolute date in the provider's timezone
+  // (en-CA gives YYYY-MM-DD which doubles as a stable bucket key).
+  const key = start.toLocaleDateString("en-CA", { timeZone: tz });
 
   // Future = larger order (sorted ascending by date).
   // Past   = order based on negative-time distance from today.
@@ -169,6 +168,7 @@ function getBucket(a: Appointment): Bucket {
       weekday: "long",
       month: "long",
       day: "numeric",
+      timeZone: tz,
     }),
     order:
       start >= todayStart

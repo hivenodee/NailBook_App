@@ -94,7 +94,10 @@ export default function ManagePage(): React.JSX.Element {
 
   // Reschedule state
   const [selectedDate, setSelectedDate] = useState<Date>(getNextDays(1)[0]);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  // `null` = haven't fetched yet for this date; `[]` = fetched, no slots.
+  // The distinction prevents a flash of "No times available" before the
+  // first fetch completes.
+  const [slots, setSlots] = useState<TimeSlot[] | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
@@ -127,6 +130,7 @@ export default function ManagePage(): React.JSX.Element {
 
   const fetchSlots = useCallback(async () => {
     if (!showReschedule || !slug) return;
+    setSlots(null); // reset to "not yet fetched" so the empty-state doesn't flash
     setSlotsLoading(true);
     setSelectedSlot(null);
     try {
@@ -383,7 +387,7 @@ export default function ManagePage(): React.JSX.Element {
 
             {/* Time slots */}
             <Card padding="md">
-              {slotsLoading ? (
+              {slotsLoading || slots === null ? (
                 <p className="text-sm text-center font-sans text-ink-500 py-8">Loading times…</p>
               ) : slots.filter((s) => s.available).length === 0 ? (
                 <p className="text-sm text-center font-sans text-ink-500 py-8">

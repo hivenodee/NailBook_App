@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
-import { sendClientConfirmation, sendProviderNewBooking, formatDateTime, type BookingEmailData } from "@/lib/email";
+import { sendClientConfirmation, sendProviderNewBooking, sendBalanceReceipt, formatDateTime, type BookingEmailData } from "@/lib/email";
 import { sendBookingConfirmationSms } from "@/lib/sms";
 import { invalidateAvailability } from "@/lib/cache";
 import { notifyWaitlistForDate } from "@/lib/waitlist";
@@ -132,6 +132,35 @@ export async function POST(request: NextRequest) {
             },
           });
         });
+
+        // Send payment receipt to the client (best-effort; don't block).
+        try {
+          const apptForReceipt = await prisma.appointment.findUnique({
+            where: { id: appointmentId },
+            select: {
+              startTime: true,
+              clientEmail: true,
+              clientName: true,
+              totalInCents: true,
+              service: { select: { name: true } },
+              provider: { select: { businessName: true, timezone: true } },
+            },
+          });
+          if (apptForReceipt) {
+            await sendBalanceReceipt({
+              providerName: apptForReceipt.provider.businessName,
+              serviceName: apptForReceipt.service.name,
+              startTime: apptForReceipt.startTime,
+              clientEmail: apptForReceipt.clientEmail,
+              clientName: apptForReceipt.clientName,
+              amountPaidInCents: session.amount_total || 0,
+              totalInCents: apptForReceipt.totalInCents,
+              timezone: apptForReceipt.provider.timezone,
+            });
+          }
+        } catch (e) {
+          console.error("[email] Failed to send balance receipt:", e);
+        }
         break;
       }
 

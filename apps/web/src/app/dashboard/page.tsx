@@ -38,14 +38,14 @@ function formatTime(iso: string, tz: string): string {
   });
 }
 
-function isToday(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+function isToday(iso: string, tz: string): boolean {
+  // Compare calendar days in the provider's timezone — otherwise a booking
+  // for 11pm provider-tz could be treated as "tomorrow" by a viewer's
+  // browser-local clock (or vice versa).
+  // en-CA yields "YYYY-MM-DD" which can be string-compared directly.
+  const day = new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+  return day === today;
 }
 
 function getGreeting(): { greeting: string; partOfDay: string } {
@@ -120,7 +120,10 @@ export default function DashboardTodayPage(): React.JSX.Element {
   }, [load]);
 
   const todayAppointments = React.useMemo(
-    () => appointments.filter((a) => isToday(a.startTime)),
+    () =>
+      appointments.filter((a) =>
+        isToday(a.startTime, a.provider.timezone),
+      ),
     [appointments],
   );
 
