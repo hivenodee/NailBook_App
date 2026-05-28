@@ -59,7 +59,9 @@ const nextConfig = {
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.r2.dev https://*.r2.cloudflarestorage.com https://img.clerk.com https://*.tile.openstreetmap.org",
               // `*.sentry.io` covers regional subdomains like `*.ingest.us.sentry.io`.
-              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev wss://*.accounts.dev https://*.sentry.io",
+              // `*.r2.cloudflarestorage.com` for PUT to presigned upload URLs;
+              // `*.r2.dev` for serving public images back to the app.
+              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev wss://*.accounts.dev https://*.sentry.io https://*.r2.cloudflarestorage.com https://*.r2.dev",
               "frame-src https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev",
               "worker-src 'self' blob:",
               "object-src 'none'",

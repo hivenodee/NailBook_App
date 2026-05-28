@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
   CalendarCheck,
   CalendarDays,
@@ -206,12 +205,6 @@ export default function SidebarNav({
             </div>
           ))}
         </nav>
-
-        {/* Theme toggle at bottom */}
-        <div className="px-5 py-4 flex items-center justify-between border-t border-ink-200">
-          <span className="font-sans text-xs text-ink-500">Theme</span>
-          <ThemeToggle />
-        </div>
       </aside>
 
       {/* ─── Mobile Bottom Tab Bar ─── */}

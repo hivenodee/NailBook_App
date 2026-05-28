@@ -89,96 +89,188 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
       ? Math.min(...provider.services.map((s) => s.priceInCents))
       : null;
 
+  const hasCover = Boolean(provider.coverImageUrl);
+
   return (
     <main className="min-h-screen bg-cream-50 text-ink-900 pb-28 lg:pb-0">
       {/* ─── Hero ─── */}
-      <header className="relative w-full overflow-hidden border-b border-ink-200 pt-12 pb-8">
-        {provider.coverImageUrl && (
+      <header className="animate-fade-in-up">
+        {hasCover ? (
+          // X / Twitter pattern: cover as a clean banner constrained to the
+          // content column, avatar overlaps bottom-left of the cover, profile
+          // text sits below in its own block (no text on top of the photo).
           <>
-            <div className="absolute inset-0">
+            {/* Cover banner — full-bleed edge-to-edge with a tight aspect
+                so it reads as an editorial band, not a hero image.
+                2:1 mobile (~190px on a 380px phone) / 6:1 desktop (~317px on
+                a 1900px screen). Body content below stays at max-w-2xl;
+                the avatar overlaps the bottom-left of that body column. */}
+            <div className="relative w-full aspect-[2/1] sm:aspect-[6/1] bg-cream-100 overflow-hidden">
               <Image
-                src={provider.coverImageUrl}
-                alt={provider.businessName}
+                src={provider.coverImageUrl!}
+                alt=""
                 fill
                 priority
                 sizes="100vw"
                 className="object-cover"
               />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cream-50/40 to-cream-50" />
+            <div className="mx-auto max-w-2xl px-6">
+              <div className="relative">
+                {/* Avatar overlaps the bottom-left of the body content column,
+                    with a thick cream ring for separation from the photo. */}
+                <div className="absolute -top-12 sm:-top-16 left-0">
+                  <Avatar
+                    name={provider.businessName}
+                    src={provider.user.avatarUrl}
+                    size="xl"
+                    ring={provider.isVerified}
+                    className="h-24 w-24 sm:h-32 sm:w-32 text-2xl ring-4 ring-cream-50"
+                  />
+                </div>
+                {/* Push the content below the avatar overlap */}
+                <div className="pt-16 sm:pt-20 pb-8 space-y-3">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="space-y-1 min-w-0">
+                      <Heading
+                        variant="h1"
+                        className="text-3xl sm:text-4xl tracking-tight"
+                      >
+                        {provider.businessName}
+                      </Heading>
+                      {provider.isVerified && (
+                        <span className="inline-block font-display italic text-sm text-rust-500 border-b border-rust-500 pb-0.5">
+                          Verified
+                        </span>
+                      )}
+                    </div>
+                    {reviewStats.count > 0 && reviewStats.avgRating !== null && (
+                      <Link
+                        href={`/${slug}/reviews`}
+                        className="shrink-0 flex items-center gap-2 font-sans text-sm hover:opacity-80 transition-opacity"
+                      >
+                        <Stars rating={reviewStats.avgRating} />
+                        <span className="font-display text-ink-900">
+                          {reviewStats.avgRating}
+                        </span>
+                        <span className="text-ink-500">
+                          ({reviewStats.count})
+                        </span>
+                      </Link>
+                    )}
+                  </div>
+
+                  {provider.bio && (
+                    <p className="font-sans text-base text-ink-700 leading-relaxed">
+                      {provider.bio}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-sans text-sm text-ink-500">
+                    {provider.locationAddress && (
+                      <span>{provider.locationAddress}</span>
+                    )}
+                    <span>
+                      {provider.services.length} service
+                      {provider.services.length !== 1 ? "s" : ""}
+                    </span>
+                    <span>
+                      {reviewStats.count} review
+                      {reviewStats.count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {(provider.instagramUrl || provider.tiktokUrl) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      {provider.instagramUrl && (
+                        <SocialGhost
+                          href={provider.instagramUrl}
+                          label="Instagram"
+                        />
+                      )}
+                      {provider.tiktokUrl && (
+                        <SocialGhost href={provider.tiktokUrl} label="TikTok" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="border-b border-ink-200" />
           </>
-        )}
-
-        <div className="relative z-10 mx-auto max-w-2xl px-6 text-center animate-fade-in-up">
-          <Avatar
-            name={provider.businessName}
-            src={provider.user.avatarUrl}
-            size="xl"
-            ring={provider.isVerified}
-            className="mx-auto h-24 w-24 text-3xl"
-          />
-
-          <Heading
-            variant="h1"
-            className="mt-5 text-4xl md:text-5xl tracking-tight"
-          >
-            {provider.businessName}
-          </Heading>
-
-          {provider.isVerified && (
-            <p className="mt-3 inline-block">
-              <span className="font-display italic text-sm text-rust-500 border-b border-rust-500 pb-0.5">
-                Verified
-              </span>
-            </p>
-          )}
-
-          {provider.locationAddress && (
-            <p className="mt-3 font-sans text-sm text-ink-500">
-              {provider.locationAddress}
-            </p>
-          )}
-
-          {(provider.instagramUrl || provider.tiktokUrl) && (
-            <div className="mt-5 flex items-center justify-center gap-2">
-              {provider.instagramUrl && (
-                <SocialGhost href={provider.instagramUrl} label="Instagram" />
-              )}
-              {provider.tiktokUrl && (
-                <SocialGhost href={provider.tiktokUrl} label="TikTok" />
-              )}
-            </div>
-          )}
-
-          {reviewStats.count > 0 && reviewStats.avgRating !== null && (
-            <div className="mt-5 flex items-center justify-center gap-2 font-sans text-sm">
-              <Stars rating={reviewStats.avgRating} />
-              <span className="font-display text-ink-900">
-                {reviewStats.avgRating}
-              </span>
-              <span className="text-ink-300">·</span>
-              <Link
-                href={`/${slug}/reviews`}
-                className="text-rust-500 hover:underline underline-offset-4"
+        ) : (
+          // No-cover variant: keep the original centered editorial layout
+          <div className="border-b border-ink-200 pt-12 pb-10">
+            <div className="mx-auto max-w-2xl px-6 text-center">
+              <Avatar
+                name={provider.businessName}
+                src={provider.user.avatarUrl}
+                size="xl"
+                ring={provider.isVerified}
+                className="mx-auto h-24 w-24 text-3xl"
+              />
+              <Heading
+                variant="h1"
+                className="mt-5 text-4xl md:text-5xl tracking-tight"
               >
-                {reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""}
-              </Link>
+                {provider.businessName}
+              </Heading>
+              {provider.isVerified && (
+                <p className="mt-3 inline-block">
+                  <span className="font-display italic text-sm text-rust-500 border-b border-rust-500 pb-0.5">
+                    Verified
+                  </span>
+                </p>
+              )}
+              {provider.locationAddress && (
+                <p className="mt-3 font-sans text-sm text-ink-500">
+                  {provider.locationAddress}
+                </p>
+              )}
+              {(provider.instagramUrl || provider.tiktokUrl) && (
+                <div className="mt-5 flex items-center justify-center gap-2">
+                  {provider.instagramUrl && (
+                    <SocialGhost
+                      href={provider.instagramUrl}
+                      label="Instagram"
+                    />
+                  )}
+                  {provider.tiktokUrl && (
+                    <SocialGhost href={provider.tiktokUrl} label="TikTok" />
+                  )}
+                </div>
+              )}
+              {reviewStats.count > 0 && reviewStats.avgRating !== null && (
+                <Link
+                  href={`/${slug}/reviews`}
+                  className="mt-5 inline-flex items-center gap-2 font-sans text-sm hover:opacity-80 transition-opacity"
+                >
+                  <Stars rating={reviewStats.avgRating} />
+                  <span className="font-display text-ink-900">
+                    {reviewStats.avgRating}
+                  </span>
+                  <span className="text-ink-300">·</span>
+                  <span className="text-rust-500 hover:underline underline-offset-4">
+                    {reviewStats.count} review
+                    {reviewStats.count !== 1 ? "s" : ""}
+                  </span>
+                </Link>
+              )}
+              {provider.bio && (
+                <p className="mt-5 mx-auto max-w-md font-sans text-base text-ink-500 leading-relaxed">
+                  {provider.bio}
+                </p>
+              )}
+              <p className="mt-5 font-sans text-xs text-ink-500 uppercase tracking-wide">
+                {provider.services.length} service
+                {provider.services.length !== 1 ? "s" : ""}
+                <span className="mx-2 text-ink-300">·</span>
+                {reviewStats.count} review
+                {reviewStats.count !== 1 ? "s" : ""}
+              </p>
             </div>
-          )}
-
-          {provider.bio && (
-            <p className="mt-5 mx-auto max-w-md font-sans text-base text-ink-500 leading-relaxed">
-              {provider.bio}
-            </p>
-          )}
-
-          <p className="mt-5 font-sans text-xs text-ink-500 uppercase tracking-wide">
-            {provider.services.length} service
-            {provider.services.length !== 1 ? "s" : ""}
-            <span className="mx-2 text-ink-300">·</span>
-            {reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""}
-          </p>
-        </div>
+          </div>
+        )}
       </header>
 
       {/* ─── Body ─── */}

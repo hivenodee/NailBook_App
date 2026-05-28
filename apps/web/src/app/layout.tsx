@@ -100,13 +100,6 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${josefin.variable} ${cormorant.variable}`} suppressHydrationWarning>
-        <head>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(){var s=localStorage.getItem('porobook-theme');if(s==='dark'){document.documentElement.classList.add('dark')}})()`,
-            }}
-          />
-        </head>
         <body>
           {children}
           <footer className="border-t border-ink-200 bg-cream-50 py-6 text-center">
