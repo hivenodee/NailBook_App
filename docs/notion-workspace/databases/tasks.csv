@@ -1,0 +1,43 @@
+Task,Phase,Priority,Status,Effort (hrs),Owner,Notes
+Buy porobook.com domain,0,Critical,Not started,0.25,Justice,Namecheap or Porkbun. Set auto-renew + 2FA.
+Buy porobook.app .io .co defensive domains,0,Important,Not started,0.25,Justice,Defensive registrations against squatters
+Register @porobook on Instagram + TikTok + X + Threads + YouTube,0,Critical,Not started,0.25,Justice,Free. Use consistent email + 2FA.
+File USPTO trademark Intent-to-Use classes 042 + 035,0,Critical,Not started,1.5,Justice,$350-800 depending on DIY vs service. Search TESS first to confirm no conflicts.
+File DBA for PoroBook in state,0,Important,Not started,0.5,Justice,After LLC is formed in F1. ~$25-100.
+Form LLC via Stripe Atlas or DIY,F,Critical,Not started,1.5,Justice,~$500. 1 week external clock. Use umbrella name (e.g. AI consulting brand).
+Get EIN from IRS,F,Critical,Not started,0.25,Justice,Free at irs.gov. Instant.
+Open business bank account (Mercury or Brex),F,Critical,Not started,1,Justice,After LLC + EIN. Connect to Stripe for payouts.
+Generate marketplace TOS via Termly,F,Critical,Not started,1,Justice,Verify 7 clauses present: marketplace disclaimer + liability cap + indemnification + dispute resolution + termination + governing law + arbitration
+Generate privacy policy via Termly,F,Critical,Not started,1,Justice,Lists Clerk Stripe Resend Twilio R2 as processors. CCPA section.
+Build provider onboarding wizard (5 steps),C,Critical,Not started,16,Justice,Biggest engineering blocker. Business+slug -> photo+bio -> first service -> hours -> review. Block dashboard until complete.
+Add Sentry to apps/worker,C,Polish,Not started,0.5,Justice,Sentry.init at top of src/index.ts
+Sign up for Upstash Redis,D,Critical,Not started,0.5,Justice,upstash.com - region close to Vercel (us-east-1)
+Deploy web app to Vercel,D,Critical,Not started,2,Justice,Root dir apps/web. Set all env vars from .env.local.
+Deploy worker to Railway,D,Critical,Not started,2,Justice,Worker cant run on Vercel. Set REDIS_URL to Upstash.
+Configure Vercel custom domain (porobook.com),D,Critical,Not started,1,Justice,After Phase 0 domain purchase. DNS propagation 1-2h.
+Create R2 production bucket (porobook-prod-media),D,Critical,Not started,1,Justice,Configure CORS with production domain. Generate new API tokens.
+Verify Resend sending domain (porobook.com),D,Critical,Not started,2,Justice,SPF DKIM DMARC. Wait for verification.
+Buy production Twilio phone number,D,Important,Not started,0.5,Justice,Trial cant message unverified numbers. ~$1/mo.
+Update CSP for production domain in next.config.js,D,Critical,Not started,0.5,Justice,Add production domain + production Clerk subdomain
+Switch Clerk to production tenant,D,Critical,Not started,1,Justice,Requires production domain first. New keys.
+Smoke test production with Stripe test card,D,Critical,Not started,1,Justice,Full booking flow on prod domain before going live
+Apply for Stripe live activation,E,Critical,Not started,1,Justice,Requires LLC + EIN + bank account. Submit application.
+Apply for Stripe Connect platform,E,Critical,Not started,1,Justice,1-3 day approval. Required for provider payouts.
+Update production env with sk_live keys,E,Critical,Not started,0.25,Justice,And new webhook secret for production endpoint
+Re-deploy web + worker with live keys,E,Critical,Not started,0.5,Justice,
+Live smoke test with real $0.50 charge,E,Critical,Not started,0.5,Justice,Real card real money real refund
+Define beta cohort criteria,G,Important,Not started,0.5,Justice,Black female pros in home city. IG/Square/GlossGenius currently. 5-20 appts/wk.
+Recruit 3-5 beta providers from network,G,Critical,Not started,8,Justice,Friends of friends - not cold DMs. Personal pitch.
+Document onboarding call SOP,G,Important,Not started,1,Justice,30 min Zoom + manual verify in Prisma + share link for IG bio
+Run first onboarding call,G,Critical,Not started,1,Justice,Use the Onboarding Call template in Notion
+Run second onboarding call,G,Critical,Not started,1,Justice,
+Run third onboarding call,G,Critical,Not started,1,Justice,
+First-week monitoring per provider,G,Critical,Not started,5,Justice,Daily Sentry + Stripe + Friday DM check-ins
+30-day retro per provider,G,Important,Not started,1.5,Justice,15 min call each. Record with permission.
+Remove invite-only signup gate,H,Important,Not started,0.5,Justice,After 2 weeks of clean beta
+Verify robots.txt and sitemap.xml populated,H,Important,Not started,1,Justice,Submit to Google + Bing Search Console
+Draft launch announcement (IG + TikTok),H,Important,Not started,3,Justice,Editorial photo + clear CTA. Don't post Monday or weekends.
+Set up support email + FAQ,H,Important,Not started,2,Justice,support@porobook.app + 24h response SLA
+Configure Notion AI for project,Setup,Polish,Not started,0.25,Justice,$10/mo. Ask Claude-like questions of own docs.
+Set up Notion mobile app + bookmarks,Setup,Polish,Not started,0.25,Justice,Capture from anywhere
+Refresh BUGS.md with bugs from each test pass,B,Important,Not started,0.5,Justice,Ongoing - update during test cycles
