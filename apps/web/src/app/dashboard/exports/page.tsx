@@ -6,6 +6,7 @@ import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { SectionRule } from "@/components/ui/SectionRule";
 
 type ExportType = "APPOINTMENTS" | "CLIENTS" | "TRANSACTIONS";
 type DatePreset = "7d" | "30d" | "90d" | "custom";
@@ -146,11 +147,11 @@ export default function ImportExportPage(): React.JSX.Element {
   function handleFileSelect(file: File | null) {
     if (!file) return;
     if (!file.name.endsWith(".csv")) {
-      setImportError("Please upload a CSV file");
+      setImportError("That file isn't a CSV. Upload a .csv file.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setImportError("File too large (max 5MB)");
+      setImportError("That file is too large. The limit is 5MB.");
       return;
     }
     setSelectedFile(file);
@@ -182,7 +183,7 @@ export default function ImportExportPage(): React.JSX.Element {
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch {
-      setImportError("Network error");
+      setImportError("We couldn't reach the server. Try again.");
     } finally {
       setImporting(false);
     }
@@ -195,25 +196,13 @@ export default function ImportExportPage(): React.JSX.Element {
     handleFileSelect(file);
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-3xl space-y-8">
-        <div className="space-y-3">
-          <div className="h-12 w-48 skeleton-shimmer rounded-md" />
-          <div className="h-5 w-72 skeleton-shimmer rounded-md" />
-        </div>
-        <div className="h-10 w-48 skeleton-shimmer rounded-md" />
-        <div className="h-64 skeleton-shimmer rounded-md" />
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-3xl space-y-8">
-      <header className="space-y-2">
-        <Heading variant="display" className="text-3xl sm:text-4xl">Import & export</Heading>
-        <p className="text-base font-sans text-ink-500 max-w-xl">
-          Bring in your clients from another platform, or download your data as CSV.
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Data &middot; Yours to keep</p>
+        <Heading variant="display" className="text-3xl md:text-4xl">Import & export</Heading>
+        <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+          Bring clients in from another platform. Take your data out as CSV.
         </p>
       </header>
 
@@ -235,183 +224,193 @@ export default function ImportExportPage(): React.JSX.Element {
 
       {/* ─── Import Tab ─────────────────────────────────── */}
       {activeTab === "import" && (
-        <Card padding="lg" className="space-y-5">
-          <div>
-            <Heading variant="h4" className="text-lg">Import clients</Heading>
-            <p className="text-sm font-sans text-ink-500 mt-1">
-              Upload a CSV file with your client data. We'll match by email to avoid duplicates.
+        <section className="space-y-4">
+          <SectionRule label="Import clients" />
+          <Card padding="lg" className="space-y-5">
+            <p className="text-sm font-sans text-ink-500">
+              Upload a CSV of your client list. We match by email, so nothing duplicates.
             </p>
-          </div>
 
-          {/* Expected format */}
-          <div className="rounded-md border border-ink-200 bg-cream-100 p-4 space-y-2">
-            <p className="text-xs font-sans font-medium tracking-wide uppercase text-ink-500">
-              Expected CSV columns
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              <span className="rounded-pill bg-rust-500 text-cream-50 border border-rust-500 px-2.5 py-0.5 text-xs font-sans font-medium">
-                email *
-              </span>
-              <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
-                name
-              </span>
-              <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
-                phone
-              </span>
-              <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
-                notes
-              </span>
-            </div>
-            <p className="text-xs font-sans text-ink-500">
-              Works with exports from Square, Acuity, Vagaro, GlossGenius, and most booking platforms.
-            </p>
-          </div>
-
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={
-              "border-2 border-dashed rounded-md p-10 text-center cursor-pointer transition-colors " +
-              (dragOver
-                ? "border-rust-500 bg-rust-500/5"
-                : selectedFile
-                  ? "border-rust-500/50 bg-cream-100"
-                  : "border-ink-200 hover:border-ink-500 hover:bg-cream-100")
-            }
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-            />
-            {selectedFile ? (
-              <div className="flex items-center justify-center gap-2">
-                <FileText size={20} className="text-rust-500" aria-hidden="true" />
-                <span className="text-sm font-sans font-medium text-ink-900">
-                  {selectedFile.name}
+            {/* Expected format */}
+            <div className="rounded-md border border-ink-200 bg-cream-100 p-4 space-y-2">
+              <p className="text-xs font-sans font-medium tracking-wide uppercase text-ink-500">
+                Expected CSV columns
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-pill bg-rust-500 text-cream-50 border border-rust-500 px-2.5 py-0.5 text-xs font-sans font-medium">
+                  email *
                 </span>
-                <span className="text-xs font-sans text-ink-500">
-                  ({(selectedFile.size / 1024).toFixed(1)} KB)
+                <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
+                  name
+                </span>
+                <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
+                  phone
+                </span>
+                <span className="rounded-pill bg-cream-50 text-ink-700 border border-ink-200 px-2.5 py-0.5 text-xs font-sans">
+                  notes
                 </span>
               </div>
-            ) : (
-              <div>
-                <Upload size={24} className="mx-auto mb-3 text-ink-500" aria-hidden="true" />
-                <p className="text-sm font-sans text-ink-700">
-                  Drop a CSV file here or click to browse
-                </p>
-                <p className="text-xs font-sans text-ink-500 mt-1">
-                  Max 5MB, up to 5,000 clients
-                </p>
+              <p className="text-xs font-sans text-ink-500">
+                Works with exports from Square, Acuity, Vagaro, GlossGenius, and most booking platforms.
+              </p>
+            </div>
+
+            {/* Drop zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={
+                "border-2 border-dashed rounded-md p-10 text-center cursor-pointer transition-colors " +
+                (dragOver
+                  ? "border-rust-500 bg-rust-500/5"
+                  : selectedFile
+                    ? "border-rust-500/50 bg-cream-100"
+                    : "border-ink-200 hover:border-ink-500 hover:bg-cream-100")
+              }
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+              />
+              {selectedFile ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileText size={20} className="text-rust-500" aria-hidden="true" />
+                  <span className="text-sm font-sans font-medium text-ink-900">
+                    {selectedFile.name}
+                  </span>
+                  <span className="text-xs font-sans text-ink-500">
+                    ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <Upload size={24} className="mx-auto mb-3 text-ink-500" aria-hidden="true" />
+                  <p className="text-sm font-sans text-ink-700">
+                    Drop a CSV file here or click to browse
+                  </p>
+                  <p className="text-xs font-sans text-ink-500 mt-1">
+                    Max 5MB, up to 5,000 clients
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {importError && (
+              <div className="flex items-start gap-2">
+                <AlertCircle size={16} className="text-error mt-0.5 shrink-0" aria-hidden="true" />
+                <p className="text-sm font-sans text-error">{importError}</p>
               </div>
             )}
-          </div>
 
-          {importError && (
-            <div className="flex items-start gap-2">
-              <AlertCircle size={16} className="text-error mt-0.5 shrink-0" aria-hidden="true" />
-              <p className="text-sm font-sans text-error">{importError}</p>
-            </div>
-          )}
-
-          {importResult && (
-            <div className="rounded-md border border-success/30 bg-success/10 p-4 flex items-start gap-2">
-              <CheckCircle2 size={16} className="text-success mt-0.5 shrink-0" aria-hidden="true" />
-              <div className="text-sm font-sans">
-                <p className="font-medium text-success">Import complete</p>
-                <p className="mt-0.5 text-ink-700">
-                  {importResult.total} rows processed: {importResult.created} created,{" "}
-                  {importResult.updated} updated, {importResult.skipped} skipped
-                </p>
+            {importResult && (
+              <div className="rounded-md border border-success/30 bg-success/10 p-4 flex items-start gap-2">
+                <CheckCircle2 size={16} className="text-success mt-0.5 shrink-0" aria-hidden="true" />
+                <div className="text-sm font-sans">
+                  <p className="font-medium text-success">Import complete</p>
+                  <p className="mt-0.5 text-ink-700">
+                    {importResult.total} rows processed: {importResult.created} created,{" "}
+                    {importResult.updated} updated, {importResult.skipped} skipped
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleImport}
-            disabled={!selectedFile || importing}
-          >
-            {importing ? "Importing…" : "Import clients"}
-          </Button>
-        </Card>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleImport}
+              disabled={!selectedFile || importing}
+            >
+              {importing ? "Importing…" : "Import clients"}
+            </Button>
+          </Card>
+        </section>
       )}
 
       {/* ─── Export Tab ─────────────────────────────────── */}
       {activeTab === "export" && (
-        <div className="space-y-6">
-          <Card padding="lg" className="space-y-5">
-            <Heading variant="h4" className="text-lg">Request export</Heading>
-
-            <div className="space-y-2">
-              <p className="text-sm font-sans font-medium text-ink-700">Type</p>
-              <ChipRow
-                options={(Object.keys(TYPE_LABELS) as ExportType[]).map((t) => ({
-                  key: t,
-                  label: TYPE_LABELS[t],
-                }))}
-                selected={exportType}
-                onSelect={(v) => setExportType(v as ExportType)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-sans font-medium text-ink-700">Date range</p>
-              <ChipRow
-                options={(Object.keys(PRESET_LABELS) as DatePreset[]).map((p) => ({
-                  key: p,
-                  label: PRESET_LABELS[p],
-                }))}
-                selected={datePreset}
-                onSelect={(v) => setDatePreset(v as DatePreset)}
-              />
-            </div>
-
-            {datePreset === "custom" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="from" className="block text-sm font-sans font-medium text-ink-700">
-                    From
-                  </label>
-                  <input
-                    id="from"
-                    type="date"
-                    value={customStart}
-                    onChange={(e) => setCustomStart(e.target.value)}
-                    className="w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="to" className="block text-sm font-sans font-medium text-ink-700">
-                    To
-                  </label>
-                  <input
-                    id="to"
-                    type="date"
-                    value={customEnd}
-                    onChange={(e) => setCustomEnd(e.target.value)}
-                    className="w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-                  />
-                </div>
+        <div className="space-y-8">
+          <section className="space-y-4">
+            <SectionRule label="Request export" />
+            <Card padding="lg" className="space-y-5">
+              <div className="space-y-2">
+                <p className="text-sm font-sans font-medium text-ink-700">Type</p>
+                <ChipRow
+                  options={(Object.keys(TYPE_LABELS) as ExportType[]).map((t) => ({
+                    key: t,
+                    label: TYPE_LABELS[t],
+                  }))}
+                  selected={exportType}
+                  onSelect={(v) => setExportType(v as ExportType)}
+                />
               </div>
-            )}
 
-            <Button variant="primary" size="md" onClick={handleGenerate} disabled={generating}>
-              {generating ? "Generating…" : "Generate export"}
-            </Button>
-          </Card>
+              <div className="space-y-2">
+                <p className="text-sm font-sans font-medium text-ink-700">Date range</p>
+                <ChipRow
+                  options={(Object.keys(PRESET_LABELS) as DatePreset[]).map((p) => ({
+                    key: p,
+                    label: PRESET_LABELS[p],
+                  }))}
+                  selected={datePreset}
+                  onSelect={(v) => setDatePreset(v as DatePreset)}
+                />
+              </div>
+
+              {datePreset === "custom" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label htmlFor="from" className="block text-sm font-sans font-medium text-ink-700">
+                      From
+                    </label>
+                    <input
+                      id="from"
+                      type="date"
+                      value={customStart}
+                      onChange={(e) => setCustomStart(e.target.value)}
+                      className="w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="to" className="block text-sm font-sans font-medium text-ink-700">
+                      To
+                    </label>
+                    <input
+                      id="to"
+                      type="date"
+                      value={customEnd}
+                      onChange={(e) => setCustomEnd(e.target.value)}
+                      className="w-full h-11 px-4 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Button variant="primary" size="md" onClick={handleGenerate} disabled={generating}>
+                {generating ? "Generating…" : "Generate export"}
+              </Button>
+            </Card>
+          </section>
 
           {/* Recent Exports list */}
-          <section className="space-y-3">
-            <Heading variant="h4" className="text-lg">Recent exports</Heading>
+          <section className="space-y-4">
+            <SectionRule label="Recent exports" />
 
-            {jobs.length === 0 ? (
+            {loading && jobs.length === 0 ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-20 rounded-md border border-ink-200 bg-cream-50 skeleton-shimmer"
+                  />
+                ))}
+              </div>
+            ) : jobs.length === 0 ? (
               <Card padding="lg" className="border-dashed">
                 <p className="text-center text-sm font-sans text-ink-500">
                   No exports yet. Generate your first export above.
@@ -482,9 +481,11 @@ function TabButton({
 }): React.JSX.Element {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={
-        "flex items-center gap-1.5 px-4 py-2 -mb-px text-sm font-sans font-medium border-b-2 transition-colors " +
+        "flex items-center gap-1.5 px-4 py-3 -mb-px text-sm font-sans font-medium border-b-2 transition-colors " +
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 " +
         (active
           ? "border-rust-500 text-ink-900"
           : "border-transparent text-ink-500 hover:text-ink-700")
@@ -515,10 +516,11 @@ function ChipRow<T extends string>({
             type="button"
             onClick={() => onSelect(o.key)}
             className={
-              "rounded-pill px-4 py-1.5 text-sm font-sans font-medium border transition-colors " +
+              "shrink-0 inline-flex items-center h-9 rounded-pill px-4 text-sm font-sans border transition-all duration-200 " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 " +
               (active
                 ? "bg-rust-500 text-cream-50 border-rust-500"
-                : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+                : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-300")
             }
           >
             {o.label}

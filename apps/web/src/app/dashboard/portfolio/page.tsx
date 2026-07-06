@@ -165,29 +165,42 @@ export default function PortfolioPage(): React.JSX.Element {
   const isEmpty = !loading && media.length === 0;
   const photoCount = media.filter((m) => m.type === "PHOTO").length;
   const videoCount = media.filter((m) => m.type === "VIDEO").length;
-  const subhead =
-    photoCount + videoCount === 0
-      ? "Photos clients see when deciding to book."
-      : `${photoCount} photo${photoCount !== 1 ? "s" : ""}${
-          videoCount > 0
-            ? ` · ${videoCount} video${videoCount !== 1 ? "s" : ""}`
-            : ""
-        }`;
 
   function openFilePicker() {
     fileInputRef.current?.click();
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* ─── Header ─── */}
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <p className="text-label text-ink-500">
+            Portfolio &middot; Your work on display
+          </p>
           <Heading variant="display" className="text-3xl md:text-4xl">
             Portfolio
           </Heading>
           <p className="font-sans text-sm text-ink-500">
-            {loading ? "Loading…" : subhead}
+            {photoCount + videoCount === 0 ? (
+              "Photos clients see when deciding to book."
+            ) : (
+              <>
+                <span className="font-semibold tracking-tight text-ink-900">
+                  {photoCount}
+                </span>
+                {` photo${photoCount !== 1 ? "s" : ""}`}
+                {videoCount > 0 && (
+                  <>
+                    {" · "}
+                    <span className="font-semibold tracking-tight text-ink-900">
+                      {videoCount}
+                    </span>
+                    {` video${videoCount !== 1 ? "s" : ""}`}
+                  </>
+                )}
+              </>
+            )}
           </p>
         </div>
 
@@ -310,12 +323,12 @@ function PhotoTile({
         <GripVertical size={14} strokeWidth={1.5} />
       </span>
 
-      {/* Hover gradient + action row */}
+      {/* Gradient + action row: always available on touch, hover-revealed on desktop */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-ink-900/60 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-ink-900/60 to-transparent opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
       />
-      <div className="absolute right-2 bottom-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <div className="absolute right-2 bottom-2 flex items-center gap-1 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
         <TileButton
           ariaLabel={asset.isHidden ? "Show on profile" : "Hide from profile"}
           onClick={onToggleHidden}
@@ -351,7 +364,8 @@ function TileButton({
       aria-label={ariaLabel}
       onClick={onClick}
       className={cn(
-        "inline-flex h-7 w-7 items-center justify-center rounded-pill border bg-cream-50/95 backdrop-blur-sm transition-colors",
+        // Larger hit area on touch screens, compact on pointer devices
+        "inline-flex h-9 w-9 md:h-7 md:w-7 items-center justify-center rounded-pill border bg-cream-50/95 backdrop-blur-sm transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
         destructive
           ? "border-ink-200 text-ink-700 hover:bg-error/10 hover:border-error/30 hover:text-error"

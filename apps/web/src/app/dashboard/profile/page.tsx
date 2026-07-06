@@ -6,6 +6,7 @@ import { Camera, Check, Image as ImageIcon, ShieldCheck, ExternalLink, Trash2 } 
 import AvatarCropModal from "@/components/AvatarCropModal";
 import CoverCropModal from "@/components/CoverCropModal";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -329,23 +330,30 @@ export default function ProfilePage(): React.JSX.Element {
   return (
     <div className="pb-32">
       <div className="max-w-3xl space-y-12">
-        <header className="flex items-baseline gap-4">
-          <Heading variant="display" className="text-3xl sm:text-4xl">Profile</Heading>
-          {provider.isVerified && (
-            <Badge variant="verified" className="self-center">
-              <ShieldCheck size={12} aria-hidden="true" />
-              Verified
-            </Badge>
-          )}
+        <header className="space-y-3">
+          <p className="text-label text-ink-500">Profile &middot; Public page &amp; settings</p>
+          <div className="flex items-baseline gap-4">
+            <Heading variant="display" className="text-3xl sm:text-4xl">Profile</Heading>
+            {provider.isVerified && (
+              <Badge variant="verified" className="self-center">
+                <ShieldCheck size={12} aria-hidden="true" />
+                Verified
+              </Badge>
+            )}
+          </div>
+          <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+            How you show up to clients, and how your books behave.
+          </p>
         </header>
 
         {/* ─────────────────────────── SECTION 1 ─────────────────────────── */}
         <section className="space-y-8">
-          <SectionHeader
-            eyebrow="01 — Public profile"
-            title="What clients see"
-            description="Your cover, photo, name, story, and where to find you."
-          />
+          <div className="space-y-3">
+            <SectionRule label="Public profile" />
+            <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+              Your cover, photo, name, story, and where to find you.
+            </p>
+          </div>
 
           {/* Cover image — preview matches public profile aspect (3:1 desktop, 2:1 mobile). */}
           <Card padding="none" className="overflow-hidden">
@@ -411,7 +419,7 @@ export default function ProfilePage(): React.JSX.Element {
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={avatarUploading}
                   aria-label="Change profile photo"
-                  className="absolute -bottom-1 -right-1 h-11 w-11 sm:h-9 sm:w-9 rounded-pill bg-rust-500 text-cream-50 inline-flex items-center justify-center shadow-soft hover:bg-rust-600 transition-colors disabled:opacity-50"
+                  className="absolute -bottom-1 -right-1 h-11 w-11 sm:h-9 sm:w-9 rounded-pill bg-rust-500 text-cream-50 inline-flex items-center justify-center ring-2 ring-cream-50 hover:bg-rust-600 transition-colors disabled:opacity-50"
                 >
                   <Camera size={14} aria-hidden="true" />
                 </button>
@@ -529,9 +537,9 @@ export default function ProfilePage(): React.JSX.Element {
           {/* Location */}
           <Card padding="lg" className="space-y-6">
             <div>
-              <Heading variant="h4" className="text-lg">Location</Heading>
+              <h3 className="font-sans text-base font-medium text-ink-900">Location</h3>
               <p className="text-sm font-sans text-ink-500 mt-1">
-                Address shown on your page; lat/lng powers nearby search.
+                Your address is shown on your page. Coordinates power nearby search.
               </p>
             </div>
 
@@ -566,7 +574,7 @@ export default function ProfilePage(): React.JSX.Element {
           {/* Social links */}
           <Card padding="lg" className="space-y-6">
             <div>
-              <Heading variant="h4" className="text-lg">Social links</Heading>
+              <h3 className="font-sans text-base font-medium text-ink-900">Social links</h3>
               <p className="text-sm font-sans text-ink-500 mt-1">
                 Optional. Linked from your public page.
               </p>
@@ -591,7 +599,7 @@ export default function ProfilePage(): React.JSX.Element {
           {/* Booking preferences (preserved from existing) */}
           <Card padding="lg" className="space-y-8">
             <div>
-              <Heading variant="h4" className="text-lg">Booking preferences</Heading>
+              <h3 className="font-sans text-base font-medium text-ink-900">Booking preferences</h3>
               <p className="text-sm font-sans text-ink-500 mt-1">
                 What clients can book and how far ahead.
               </p>
@@ -680,7 +688,7 @@ export default function ProfilePage(): React.JSX.Element {
           {/* Payment methods */}
           <Card padding="lg" className="space-y-5">
             <div>
-              <Heading variant="h4" className="text-lg">Payment methods</Heading>
+              <h3 className="font-sans text-base font-medium text-ink-900">Payment methods</h3>
               <p className="text-sm font-sans text-ink-500 mt-1">
                 Which methods clients can use to pay.
               </p>
@@ -697,7 +705,7 @@ export default function ProfilePage(): React.JSX.Element {
           {/* Policies */}
           <Card padding="lg" className="space-y-6">
             <div>
-              <Heading variant="h4" className="text-lg">Policies</Heading>
+              <h3 className="font-sans text-base font-medium text-ink-900">Policies</h3>
               <p className="text-sm font-sans text-ink-500 mt-1">
                 What clients agree to when they book.
               </p>
@@ -732,11 +740,12 @@ export default function ProfilePage(): React.JSX.Element {
 
         {/* ─────────────────────────── SECTION 2 ─────────────────────────── */}
         <section className="space-y-8">
-          <SectionHeader
-            eyebrow="02 — Account settings"
-            title="Sign in and notifications"
-            description="Email, password, and what we send you."
-          />
+          <div className="space-y-3">
+            <SectionRule label="Account settings" />
+            <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+              Email, password, and what we send you.
+            </p>
+          </div>
 
           <Card padding="lg" className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b border-ink-100">
@@ -758,7 +767,7 @@ export default function ProfilePage(): React.JSX.Element {
             <div className="space-y-1">
               <p className="text-sm font-sans font-medium text-ink-900">Email notifications</p>
               <p className="text-xs font-sans text-ink-500">
-                Stub — preferences here aren't persisted yet.
+                These are not saved yet. Email preferences are coming soon.
               </p>
             </div>
             <div className="space-y-4">
@@ -809,11 +818,12 @@ export default function ProfilePage(): React.JSX.Element {
 
         {/* ─────────────────────────── SECTION 3 ─────────────────────────── */}
         <section className="space-y-8">
-          <SectionHeader
-            eyebrow="03 — Verification"
-            title="Verified badge"
-            description="Confirm your identity to earn the verified mark on your profile."
-          />
+          <div className="space-y-3">
+            <SectionRule label="Verification" />
+            <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+              Confirm your identity to earn the verified mark on your profile.
+            </p>
+          </div>
 
           <Card padding="lg">
             {provider.isVerified ? (
@@ -977,29 +987,6 @@ function snapshot(p: ProviderData) {
     bookingWindowDays: p.bookingWindowDays,
     bufferMinutes: p.bufferMinutes ?? 0,
   };
-}
-
-function SectionHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}): React.JSX.Element {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <span className="h-px w-10 bg-rust-500" aria-hidden="true" />
-        <p className="text-xs font-sans font-medium tracking-widest uppercase text-rust-500">
-          {eyebrow}
-        </p>
-      </div>
-      <Heading variant="h2" className="text-3xl">{title}</Heading>
-      <p className="text-base font-sans text-ink-500 max-w-xl">{description}</p>
-    </div>
-  );
 }
 
 function Toggle({

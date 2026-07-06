@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { CalendarPlus, Plus, Share2, Star } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { BookingsEmptyArt } from "@/components/ui/empty-art/BookingsEmptyArt";
@@ -153,7 +154,7 @@ export default function DashboardTodayPage(): React.JSX.Element {
       .slice(0, 6);
   }, [appointments]);
 
-  const { greeting, partOfDay } = getGreeting();
+  const { greeting } = getGreeting();
   const firstName = user?.firstName ?? "";
   const headlineText = firstName ? `${greeting}, ${firstName}.` : `${greeting}.`;
   const dateLine = new Date().toLocaleDateString("en-US", {
@@ -165,14 +166,13 @@ export default function DashboardTodayPage(): React.JSX.Element {
   return (
     <div className="space-y-10">
       {/* ─── Greeting ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Today &middot; {dateLine}</p>
         <Heading variant="display" className="text-4xl md:text-5xl">
           {headlineText}
         </Heading>
         <p className="font-sans text-sm text-ink-500">
-          {dateLine}
-          <span className="mx-2 text-ink-300">·</span>
-          <span className="uppercase tracking-wide text-xs">{partOfDay}</span>
+          Everything on your books today.
         </p>
       </header>
 
@@ -180,12 +180,17 @@ export default function DashboardTodayPage(): React.JSX.Element {
 
       {loadError && <ErrorBanner message={loadError} onRetry={load} />}
 
-      {loading ? (
+      {loading && appointments.length === 0 ? (
         <LoadingState />
       ) : loadError ? null : todayAppointments.length === 0 ? (
         <EmptyTodayState slug={providerSlug} />
       ) : (
-        <>
+        <div
+          className={cn(
+            "space-y-10 transition-opacity duration-200",
+            loading && "opacity-60 pointer-events-none",
+          )}
+        >
           {/* ─── Stats ─── */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard
@@ -206,40 +211,25 @@ export default function DashboardTodayPage(): React.JSX.Element {
           {/* ─── Schedule + Activity (lg only) ─── */}
           <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-10">
             <section className="space-y-5">
-              <SectionHeading>Today's schedule</SectionHeading>
+              <SectionRule label="Today's schedule" />
               <Timeline appointments={todayAppointments} />
             </section>
 
             <aside className="hidden lg:block space-y-5">
-              <SectionHeading>Recent activity</SectionHeading>
+              <SectionRule label="Recent activity" />
               <ActivityFeed items={recentActivity} />
             </aside>
           </div>
 
           {/* ─── Quick actions ─── */}
           <QuickActions slug={providerSlug} />
-        </>
+        </div>
       )}
     </div>
   );
 }
 
 // ─── Local components ──────────────────────────────────────
-
-function SectionHeading({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-3">
-      <Heading variant="h3" className="text-xl">
-        {children}
-      </Heading>
-      <span className="block h-px w-7 bg-rust-500" />
-    </div>
-  );
-}
 
 function StatCard({
   eyebrow,
@@ -257,7 +247,7 @@ function StatCard({
       </p>
       <p
         className={cn(
-          "mt-3 font-display text-4xl leading-none tracking-tight",
+          "mt-3 font-sans text-4xl font-semibold leading-none tracking-tight",
           accent ? "text-rust-500" : "text-ink-900",
         )}
       >
@@ -304,7 +294,7 @@ function Timeline({
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="font-display text-lg text-ink-900">
+                  <p className="font-sans text-lg font-semibold tracking-tight tabular-nums text-ink-900">
                     ${(appt.totalInCents / 100).toFixed(0)}
                   </p>
                   <p className="font-sans text-xs text-ink-500">
@@ -371,7 +361,7 @@ function ActivityFeed({
 function QuickActions({ slug }: { slug: string }): React.JSX.Element {
   return (
     <section className="space-y-5 pt-4">
-      <SectionHeading>Quick actions</SectionHeading>
+      <SectionRule label="Quick actions" />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <ActionCard
           href={slug ? `/${slug}` : "/dashboard/profile"}
@@ -419,7 +409,7 @@ function ActionCard({
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="font-display text-base text-ink-900">{title}</p>
+        <p className="font-sans text-base font-medium text-ink-900">{title}</p>
         <p className="mt-0.5 font-sans text-xs text-ink-500 leading-relaxed">
           {description}
         </p>

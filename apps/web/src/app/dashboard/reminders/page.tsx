@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionRule } from "@/components/ui/SectionRule";
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
@@ -220,22 +221,23 @@ export default function RemindersPage(): React.JSX.Element {
   return (
     <div className="pb-12">
       <div className="max-w-4xl space-y-14">
-        <header className="space-y-2">
+        <header className="space-y-3">
+          <p className="text-label text-ink-500">Reminders &middot; Automated messages</p>
           <Heading variant="display" className="text-3xl sm:text-4xl">Reminders</Heading>
-          <p className="text-base font-sans text-ink-500 max-w-xl">
+          <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
             Automated messages keep clients on schedule and reduce no-shows.
           </p>
         </header>
 
         {/* ─────────────────────── SECTION 1 ─────────────────────── */}
         <section className="space-y-6">
+          <SectionRule label="Active reminders" />
           <div className="flex items-end justify-between gap-4">
-            <SectionHeader
-              eyebrow="01 — Active reminders"
-              title="Active reminders"
-              description="Turn each reminder on or off, choose how it's delivered, and edit the words clients see."
-            />
-            <p className="hidden sm:block text-xs font-sans text-ink-500 shrink-0 pb-2">
+            <p className="font-sans text-sm text-ink-500 max-w-xl leading-relaxed">
+              Turn each reminder on or off, choose how it&rsquo;s delivered, and
+              edit the words clients see.
+            </p>
+            <p className="hidden sm:block text-xs font-sans text-ink-500 shrink-0">
               {enabledCount} of {SLOTS.length + extras.length} on
             </p>
           </div>
@@ -286,19 +288,14 @@ export default function RemindersPage(): React.JSX.Element {
 
         {/* ─────────────────────── SECTION 2 ─────────────────────── */}
         <section className="space-y-6">
-          <SectionHeader
-            eyebrow="02 — Message templates"
-            title="Message templates"
-            description={
-              <>
-                Customize what clients see. Use{" "}
-                <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{clientName}}"}</code>,{" "}
-                <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{serviceName}}"}</code>,{" "}
-                <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{dateTime}}"}</code>{" "}
-                as placeholders.
-              </>
-            }
-          />
+          <SectionRule label="Message templates" />
+          <p className="font-sans text-sm text-ink-500 max-w-xl leading-relaxed">
+            Customize what clients see. Use{" "}
+            <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{clientName}}"}</code>,{" "}
+            <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{serviceName}}"}</code>,{" "}
+            <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{dateTime}}"}</code>{" "}
+            as placeholders.
+          </p>
 
           <Card padding="lg" className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -330,15 +327,14 @@ export default function RemindersPage(): React.JSX.Element {
 
         {/* ─────────────────────── SECTION 3 ─────────────────────── */}
         <section className="space-y-6">
-          <SectionHeader
-            eyebrow="03 — Delivery stats"
-            title="Delivery stats"
-            description={`This month, since ${new Date(
+          <SectionRule label="Delivery stats" />
+          <p className="font-sans text-sm text-ink-500 leading-relaxed">
+            {`This month, since ${new Date(
               new Date().getFullYear(),
               new Date().getMonth(),
               1,
             ).toLocaleDateString(undefined, { month: "long", day: "numeric" })}.`}
-          />
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Sent this month" value={stats?.sent ?? 0} />
@@ -350,9 +346,8 @@ export default function RemindersPage(): React.JSX.Element {
             />
           </div>
 
-          <p className="text-sm font-sans">
-            <span className="text-ink-300">View detailed history</span>
-            <span className="text-ink-300 ml-2">— coming soon</span>
+          <p className="text-sm font-sans text-ink-300">
+            Detailed history is coming soon.
           </p>
         </section>
       </div>
@@ -409,7 +404,7 @@ function ReminderCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-display text-xl text-ink-900">{slot.name}</h3>
+            <h3 className="font-sans text-base font-semibold text-ink-900">{slot.name}</h3>
             {slot.comingSoon && (
               <Badge variant="status">Coming soon</Badge>
             )}
@@ -461,7 +456,7 @@ function ReminderCard({
 
       {slot.comingSoon && (
         <p className="mt-4 text-xs font-sans text-ink-500">
-          We're shipping this soon. The schema needs an "after appointment" timing field.
+          This reminder is on the way. You will be able to turn it on here.
         </p>
       )}
     </Card>
@@ -484,7 +479,7 @@ function ExtraReminderCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-xl text-ink-900">{label}</h3>
+            <h3 className="font-sans text-base font-semibold text-ink-900">{label}</h3>
             <Badge variant="neutral">Custom</Badge>
           </div>
           <p className="text-sm font-sans text-ink-500">
@@ -581,9 +576,7 @@ function TemplateDrawer({
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-ink-100">
           <div>
-            <p className="text-xs font-sans font-medium tracking-widest uppercase text-rust-500">
-              Edit template
-            </p>
+            <p className="text-label text-ink-500">Edit template</p>
             <Heading variant="h3" className="text-2xl mt-1">{slot.name}</Heading>
           </div>
           <button
@@ -681,9 +674,7 @@ function TemplateDrawer({
 
             {/* Preview side */}
             <div className="lg:sticky lg:top-6 self-start mt-8 lg:mt-0">
-              <p className="text-xs font-sans font-medium tracking-widest uppercase text-rust-500 mb-3">
-                Preview
-              </p>
+              <p className="text-label text-ink-500 mb-3">Preview</p>
               <div className="space-y-4">
                 <Card padding="md">
                   <div className="flex items-center gap-2 mb-2">
@@ -730,29 +721,6 @@ function TemplateDrawer({
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
-function SectionHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-3">
-        <span className="h-px w-10 bg-rust-500" aria-hidden="true" />
-        <p className="text-xs font-sans font-medium tracking-widest uppercase text-rust-500">
-          {eyebrow}
-        </p>
-      </div>
-      <Heading variant="h3" className="text-2xl">{title}</Heading>
-      <p className="text-base font-sans text-ink-500 max-w-xl">{description}</p>
-    </div>
-  );
-}
-
 function StatCard({
   label,
   value,
@@ -765,7 +733,7 @@ function StatCard({
   return (
     <Card padding="lg" className="space-y-1">
       <p className={
-        "font-display text-5xl tabular-nums " +
+        "font-sans text-4xl font-semibold tracking-tight " +
         (tone === "warn" ? "text-warning" : "text-ink-900")
       }>
         {value.toLocaleString()}
@@ -840,10 +808,11 @@ function ChannelChips({
             disabled={disabled}
             onClick={() => toggle(c.value)}
             className={
-              "rounded-pill px-3 py-1 text-xs font-sans font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed " +
+              "h-9 rounded-pill px-4 text-sm font-sans font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 " +
               (active
                 ? "bg-rust-500 text-cream-50 border border-rust-500"
-                : "bg-cream-50 text-ink-700 border border-ink-200 hover:border-ink-500")
+                : "bg-cream-50 text-ink-700 border border-ink-200 hover:border-ink-300")
             }
           >
             {active && <Check size={10} className="inline mr-1" aria-hidden="true" />}

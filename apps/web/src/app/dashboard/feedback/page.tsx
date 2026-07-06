@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { Send, User } from "lucide-react";
-import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { cn } from "@/lib/cn";
 
 // ─── Types ─────────────────────────────────────────────────
@@ -66,6 +66,7 @@ function matchesRating(rating: number | null, filter: RatingFilter): boolean {
 export default function FeedbackPage(): React.JSX.Element {
   const [items, setItems] = React.useState<FeedbackItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [ratingFilter, setRatingFilter] = React.useState<RatingFilter>("ALL");
   const [visibilityFilter, setVisibilityFilter] =
     React.useState<VisibilityFilter>("all");
@@ -87,6 +88,7 @@ export default function FeedbackPage(): React.JSX.Element {
       console.error("Failed to load feedback:", e);
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [visibilityFilter]);
 
@@ -136,153 +138,167 @@ export default function FeedbackPage(): React.JSX.Element {
   }, [items]);
 
   const filtered = items.filter((i) => matchesRating(i.rating, ratingFilter));
-  const isEmpty =
-    !loading && items.length === 0 && visibilityFilter === "all" && ratingFilter === "ALL";
+  const isEmpty = items.length === 0 && visibilityFilter === "all";
+  // Skeleton only before first data. Refetches dim the previous render instead.
+  const showSkeleton = loading && !hasLoaded;
+  const refreshing = loading && hasLoaded;
 
   return (
     <div className="space-y-12">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">
+          Feedback &middot; Client reviews
+        </p>
         <Heading variant="display" className="text-3xl md:text-4xl">
           Feedback
         </Heading>
-        <p className="font-sans text-sm text-ink-500">
-          {loading
-            ? "Loading…"
-            : reviewCount === 0
-              ? "Reviews from clients land here."
-              : `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`}
+        <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+          Read what clients say and choose what shows on your profile.
         </p>
       </header>
 
-      {/* ─── Hero rating ─── */}
-      {!loading && reviewCount > 0 && avgRating !== null && (
-        <section className="rounded-md border border-ink-200 bg-cream-50 px-6 py-8 sm:px-10 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
-            <div className="text-center sm:text-left">
-              <p className="font-display text-6xl md:text-7xl leading-none tracking-tight text-ink-900">
-                {avgRating.toFixed(1)}
-              </p>
-              <Stars
-                rating={avgRating}
-                size="lg"
-                className="mt-3 justify-center sm:justify-start"
-              />
-              <p className="mt-2 font-sans text-sm text-ink-500">
-                {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
-              </p>
-            </div>
-
-            <div className="flex-1 space-y-3 max-w-md">
-              <p className="font-sans text-sm text-ink-700 leading-relaxed">
-                Reach out to clients you've finished with so they can share what
-                they thought.
-              </p>
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  disabled
-                  className="gap-2"
-                >
-                  <Send size={14} strokeWidth={1.75} />
-                  Request reviews
-                </Button>
-                <p className="font-sans text-xs text-ink-500">
-                  Coming soon. We'll launch one-tap review requests via email
-                  shortly.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── Filters (only when reviews exist) ─── */}
-      {!loading && reviewCount > 0 && (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="-mx-1 px-1 flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {RATING_FILTERS.map((f) => {
-              const count = bucketCounts[f.value];
-              return (
-                <FilterChip
-                  key={f.value}
-                  active={ratingFilter === f.value}
-                  onClick={() => setRatingFilter(f.value)}
-                >
-                  {f.label}
-                  {count > 0 && f.value !== "ALL" && (
-                    <span
-                      className={cn(
-                        "ml-1.5 font-sans text-xs",
-                        ratingFilter === f.value ? "text-cream-50/80" : "text-ink-300",
-                      )}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </FilterChip>
-              );
-            })}
-          </div>
-
-          <label className="inline-flex items-center gap-2 shrink-0">
-            <span className="font-sans text-xs uppercase tracking-wide text-ink-500">
-              Show
-            </span>
-            <select
-              value={visibilityFilter}
-              onChange={(e) =>
-                setVisibilityFilter(e.target.value as VisibilityFilter)
-              }
-              className="h-9 rounded-md border border-ink-200 bg-cream-50 pl-3 pr-8 font-sans text-sm text-ink-900 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
-            >
-              {VIS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
-      {/* ─── Body ─── */}
-      {loading ? (
+      {showSkeleton ? (
         <ListSkeleton />
-      ) : isEmpty ? (
-        <div className="rounded-md border border-dashed border-ink-200">
-          <EmptyState
-            variant="typographic"
-            display="00"
-            title="No reviews yet"
-            description="Reviews appear here after clients complete their bookings."
-            action={{
-              label: "Request reviews from past clients",
-              onClick: () => {
-                alert(
-                  "Review requests are coming soon. We'll let you know when this is live.",
-                );
-              },
-            }}
-          />
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="font-sans text-sm text-ink-500">
-          No reviews match the current filters.
-        </p>
       ) : (
-        <ul className="space-y-4">
-          {filtered.map((item) => (
-            <ReviewCard
-              key={item.id}
-              item={item}
-              busyToggle={toggling === item.id}
-              onTogglePublic={() => togglePublic(item.id, !item.isPublic)}
-            />
-          ))}
-        </ul>
+        <div
+          className={cn(
+            "space-y-12 transition-opacity duration-200",
+            refreshing && "opacity-60 pointer-events-none",
+          )}
+        >
+          {/* ─── Hero rating ─── */}
+          {reviewCount > 0 && avgRating !== null && (
+            <section className="rounded-md border border-ink-200 bg-cream-50 px-6 py-8 sm:px-10 sm:py-10">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
+                <div className="text-center sm:text-left">
+                  <p className="font-sans text-6xl md:text-7xl font-semibold tracking-tight leading-none text-ink-900">
+                    {avgRating.toFixed(1)}
+                  </p>
+                  <Stars
+                    rating={avgRating}
+                    size="lg"
+                    className="mt-3 justify-center sm:justify-start"
+                  />
+                  <p className="mt-2 font-sans text-sm text-ink-500">
+                    {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+                  </p>
+                </div>
+
+                <div className="flex-1 space-y-3 max-w-md">
+                  <p className="font-sans text-sm text-ink-700 leading-relaxed">
+                    Ask recent clients to share how their visit went.
+                  </p>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="md"
+                      disabled
+                      className="gap-2"
+                    >
+                      <Send size={14} strokeWidth={1.75} />
+                      Request reviews
+                    </Button>
+                    <p className="font-sans text-xs text-ink-500">
+                      Coming soon. One-tap review requests will go out by
+                      email.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {isEmpty ? (
+            <div className="rounded-md border border-dashed border-ink-200">
+              <EmptyState
+                variant="typographic"
+                display="00"
+                title="No reviews yet"
+                description="Reviews appear here after clients complete their bookings."
+                action={{
+                  label: "Request reviews from past clients",
+                  onClick: () => {
+                    alert(
+                      "Review requests are coming soon. We'll let you know when this is live.",
+                    );
+                  },
+                }}
+              />
+            </div>
+          ) : (
+            <section className="space-y-5">
+              <SectionRule label="Reviews" />
+
+              {/* Filters stay visible even when a filter returns nothing */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="-mx-1 px-1 flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                  {RATING_FILTERS.map((f) => {
+                    const count = bucketCounts[f.value];
+                    return (
+                      <FilterChip
+                        key={f.value}
+                        active={ratingFilter === f.value}
+                        onClick={() => setRatingFilter(f.value)}
+                      >
+                        {f.label}
+                        {count > 0 && f.value !== "ALL" && (
+                          <span
+                            className={cn(
+                              "ml-1.5 font-sans text-xs",
+                              ratingFilter === f.value
+                                ? "text-cream-50/80"
+                                : "text-ink-300",
+                            )}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </FilterChip>
+                    );
+                  })}
+                </div>
+
+                <label className="inline-flex items-center gap-2 shrink-0">
+                  <span className="font-sans text-xs uppercase tracking-wide text-ink-500">
+                    Show
+                  </span>
+                  <select
+                    value={visibilityFilter}
+                    onChange={(e) =>
+                      setVisibilityFilter(e.target.value as VisibilityFilter)
+                    }
+                    className="h-9 rounded-md border border-ink-200 bg-cream-50 pl-3 pr-8 font-sans text-sm text-ink-900 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+                  >
+                    {VIS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {filtered.length === 0 ? (
+                <p className="font-sans text-sm text-ink-500">
+                  No reviews match the current filters.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {filtered.map((item) => (
+                    <ReviewCard
+                      key={item.id}
+                      item={item}
+                      busyToggle={toggling === item.id}
+                      onTogglePublic={() => togglePublic(item.id, !item.isPublic)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

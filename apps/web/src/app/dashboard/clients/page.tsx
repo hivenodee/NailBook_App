@@ -70,9 +70,8 @@ function formatLastVisit(iso: string | null): string {
 }
 
 function formatPrice(cents: number): string {
-  if (cents === 0) return "$0";
-  if (cents >= 100_000) return `$${Math.round(cents / 100_000)}k`;
-  return `$${(cents / 100).toFixed(0)}`;
+  // Never compact a money figure: "$1k" hides real dollars.
+  return `$${Math.round(cents / 100).toLocaleString()}`;
 }
 
 function isNewClient(c: ClientRow): boolean {
@@ -96,6 +95,7 @@ function isInactive(c: ClientRow): boolean {
 export default function ClientsPage(): React.JSX.Element {
   const [clients, setClients] = React.useState<ClientRow[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("ALL");
@@ -119,7 +119,10 @@ export default function ClientsPage(): React.JSX.Element {
         console.error("Failed to load clients:", e);
         setLoadError("We couldn't load your clients. Please try again.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setHasLoaded(true);
+      });
   }, [search]);
 
   React.useEffect(() => {
@@ -165,19 +168,21 @@ export default function ClientsPage(): React.JSX.Element {
     return list;
   }, [filtered, sort]);
 
-  const isEmpty = !loading && sorted.length === 0;
   const totalLabel = `${clients.length} total client${clients.length !== 1 ? "s" : ""}`;
 
   return (
     <div className="space-y-8">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Clients &middot; Your client book</p>
         <Heading variant="display" className="text-3xl md:text-4xl">
           Clients
         </Heading>
-        <p className="font-sans text-sm text-ink-500">
-          {loading ? "Loading…" : totalLabel}
-        </p>
+        {hasLoaded ? (
+          <p className="font-sans text-sm text-ink-500">{totalLabel}</p>
+        ) : (
+          <span className="block h-4 w-28 rounded skeleton-shimmer bg-cream-100" />
+        )}
       </header>
 
       {/* ─── Search ─── */}
@@ -215,21 +220,32 @@ export default function ClientsPage(): React.JSX.Element {
       {/* ─── Body ─── */}
       {loadError ? (
         <ErrorBanner message={loadError} onRetry={load} />
-      ) : loading ? (
+      ) : loading && !hasLoaded ? (
         <Skeleton />
-      ) : isEmpty ? (
-        <div className="rounded-md border border-dashed border-ink-200">
-          <EmptyState
-            icon={Users}
-            title={emptyTitle(search, filter)}
-            description={emptyDescription(search, filter)}
-          />
-        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sorted.map((c) => (
-            <ClientCard key={c.id} client={c} />
-          ))}
+        // Refetch dim-hold: keep the previous render visible while a
+        // search refetch is in flight instead of flashing a skeleton.
+        <div
+          className={cn(
+            "transition-opacity duration-200",
+            loading && "opacity-60 pointer-events-none",
+          )}
+        >
+          {sorted.length === 0 ? (
+            <div className="rounded-md border border-dashed border-ink-200">
+              <EmptyState
+                icon={Users}
+                title={emptyTitle(search, filter)}
+                description={emptyDescription(search, filter)}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sorted.map((c) => (
+                <ClientCard key={c.id} client={c} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -312,10 +328,13 @@ function ClientCard({ client }: { client: ClientRow }): React.JSX.Element {
         </p>
 
         <p className="mt-3 font-sans text-sm text-ink-700">
-          <span className="text-ink-900">{client.appointmentCount}</span>{" "}
+          {/* Data wears sans: counts and money are sans-semibold, not serif */}
+          <span className="font-semibold tracking-tight text-ink-900">
+            {client.appointmentCount}
+          </span>{" "}
           <span className="text-ink-500">{visitsLabel}</span>
           <span className="mx-2 text-ink-300">·</span>
-          <span className="text-ink-900">
+          <span className="font-semibold tracking-tight text-ink-900">
             {formatPrice(client.lifetimeSpendInCents)}
           </span>
           <span className="text-ink-500"> lifetime</span>
@@ -327,7 +346,7 @@ function ClientCard({ client }: { client: ClientRow }): React.JSX.Element {
             href={`mailto:${client.email}`}
             onClick={(e) => e.stopPropagation()}
             aria-label={`Email ${name}`}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-pill text-ink-500 transition-colors hover:bg-cream-100 hover:text-ink-900 focus-visible:outline-none focus-visible:bg-cream-100"
+            className="-my-1.5 -ml-1.5 inline-flex h-11 w-11 items-center justify-center rounded-pill text-ink-500 transition-colors hover:bg-cream-100 hover:text-ink-900 focus-visible:outline-none focus-visible:bg-cream-100"
           >
             <Mail size={16} strokeWidth={1.75} />
           </a>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, AlertCircle, RefreshCcw, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
+import { cn } from "@/lib/cn";
 
 type StatusResponse = {
   connected: boolean;
@@ -65,23 +66,25 @@ export default function StripeReturnPage(): React.JSX.Element {
     <div className="max-w-2xl mx-auto py-6">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2 text-sm font-sans text-ink-500 hover:text-ink-900 transition-colors"
+        className="inline-flex min-h-[44px] items-center gap-2 text-sm font-sans text-ink-500 hover:text-ink-900 transition-colors"
       >
         <ArrowLeft size={14} strokeWidth={1.5} />
         Back to dashboard
       </Link>
 
-      <Heading variant="h1" className="mt-6 text-3xl">
-        Payout setup
-      </Heading>
+      <header className="mt-4 space-y-3">
+        <p className="text-label text-ink-500">Money &middot; Payout setup</p>
+        <Heading variant="h1" className="text-3xl">
+          Payout setup
+        </Heading>
+        <p className="font-sans text-base text-ink-500 max-w-md leading-relaxed">
+          Once Stripe finishes verifying your account, card deposits go on.
+          Until then, you can still accept cash bookings.
+        </p>
+      </header>
 
-      <p className="mt-3 font-sans text-base text-ink-500 leading-relaxed">
-        Once Stripe finishes verifying your account, card deposits go on. Until
-        then, you can still accept cash bookings.
-      </p>
-
-      <div className="mt-8 rounded-md border border-ink-200 bg-cream-50 p-6">
-        {loading ? (
+      <div className="mt-8 rounded-md border border-ink-200 bg-white p-6">
+        {loading && !status ? (
           <div className="flex items-center gap-3 text-ink-500">
             <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
             <span className="font-sans text-sm">Checking with Stripe…</span>
@@ -95,14 +98,19 @@ export default function StripeReturnPage(): React.JSX.Element {
             <button
               type="button"
               onClick={fetchStatus}
-              className="self-start inline-flex items-center gap-2 text-sm font-sans text-ink-700 hover:text-ink-900"
+              className="self-start inline-flex min-h-[44px] items-center gap-2 text-sm font-sans text-ink-700 hover:text-ink-900"
             >
               <RefreshCcw size={14} strokeWidth={1.5} />
               Try again
             </button>
           </div>
         ) : status ? (
-          <div className="flex flex-col gap-4">
+          <div
+            className={cn(
+              "flex flex-col gap-4 transition-opacity duration-200",
+              loading && "opacity-60 pointer-events-none",
+            )}
+          >
             <StatusRow
               label="Account connected"
               ready={status.connected}

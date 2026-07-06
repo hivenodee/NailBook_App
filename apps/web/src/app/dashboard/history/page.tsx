@@ -15,6 +15,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge, type BadgeProps } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { cn } from "@/lib/cn";
 
 // ─── Types ─────────────────────────────────────────────────
@@ -278,14 +279,13 @@ export default function AppointmentsPage(): React.JSX.Element {
   return (
     <div className="space-y-8">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">History &middot; Every appointment</p>
         <Heading variant="display" className="text-3xl md:text-4xl">
           Appointments
         </Heading>
-        <p className="font-sans text-sm text-ink-500">
-          {loading
-            ? "Loading…"
-            : `${filtered.length} ${filtered.length === 1 ? "appointment" : "appointments"}`}
+        <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+          Every booking in one place, past and upcoming.
         </p>
       </header>
 
@@ -313,13 +313,13 @@ export default function AppointmentsPage(): React.JSX.Element {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name or service"
-            className="h-10 w-full rounded-md border border-ink-200 bg-cream-50 pl-10 pr-4 font-sans text-sm text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+            className="h-11 w-full rounded-md border border-ink-200 bg-cream-50 pl-10 pr-4 font-sans text-sm text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
           />
         </div>
       </div>
 
       {/* ─── List body ─── */}
-      {loading ? (
+      {loading && appointments.length === 0 ? (
         <ListSkeleton />
       ) : isEmpty ? (
         <div className="rounded-md border border-dashed border-ink-200">
@@ -331,11 +331,13 @@ export default function AppointmentsPage(): React.JSX.Element {
         </div>
       ) : (
         <div className="space-y-10">
+          <p className="font-sans text-xs text-ink-500">
+            {filtered.length}{" "}
+            {filtered.length === 1 ? "appointment" : "appointments"}
+          </p>
           {groups.map(({ bucket, items }) => (
             <section key={bucket.key} className="space-y-3">
-              <Heading variant="h3" className="text-xl">
-                {bucket.label}
-              </Heading>
+              <SectionRule label={bucket.label} />
               <ul className="space-y-2">
                 {items.map((appt) => (
                   <AppointmentRow
@@ -476,7 +478,7 @@ function AppointmentRow({
 
         <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
           <Badge variant={badge.variant}>{badge.label}</Badge>
-          <p className="font-display text-sm text-ink-900">
+          <p className="font-sans text-sm font-semibold tracking-tight text-ink-900 tabular-nums">
             ${(a.totalInCents / 100).toFixed(0)}
           </p>
         </div>
@@ -486,7 +488,7 @@ function AppointmentRow({
           tight; render an extra inline strip below for narrow viewports. */}
       <div className="sm:hidden mt-2 flex items-center justify-between">
         <Badge variant={badge.variant}>{badge.label}</Badge>
-        <span className="font-display text-sm text-ink-900">
+        <span className="font-sans text-sm font-semibold tracking-tight text-ink-900 tabular-nums">
           ${(a.totalInCents / 100).toFixed(0)}
         </span>
       </div>
@@ -500,7 +502,7 @@ function AppointmentRow({
           e.stopPropagation();
           onToggleMenu();
         }}
-        className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-pill text-ink-500 transition-colors hover:bg-cream-100 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+        className="absolute right-1.5 top-1.5 inline-flex h-11 w-11 items-center justify-center rounded-pill text-ink-500 transition-colors hover:bg-cream-100 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
       >
         <MoreHorizontal size={18} strokeWidth={1.75} />
       </button>

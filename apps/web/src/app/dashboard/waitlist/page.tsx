@@ -132,6 +132,7 @@ export default function WaitlistPage(): React.JSX.Element {
 
   const [entries, setEntries] = React.useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [hasLoaded, setHasLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [page, setPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -150,6 +151,7 @@ export default function WaitlistPage(): React.JSX.Element {
         setEntries(json.data.entries);
         setTotalPages(json.data.totalPages);
         setTotal(json.data.total);
+        setHasLoaded(true);
       }
     } catch (e) {
       console.error("Failed to load waitlist:", e);
@@ -223,8 +225,10 @@ export default function WaitlistPage(): React.JSX.Element {
     });
   }, [entries, serviceFilter, dateRange]);
 
+  // Refetching with data already on screen: dim-hold instead of a skeleton flash.
+  const refetching = loading && hasLoaded;
+
   const isFullEmpty =
-    !loading &&
     total === 0 &&
     activeTab === "ACTIVE" &&
     serviceFilter === "ALL" &&
@@ -232,20 +236,24 @@ export default function WaitlistPage(): React.JSX.Element {
 
   // Subhead count: prefer total from server when possible
   const subhead = React.useMemo(() => {
-    if (loading) return "Loading…";
     if (total === 0) return "No clients on the waitlist.";
     const word = total === 1 ? "client" : "clients";
     return `${total} ${word} waiting`;
-  }, [loading, total]);
+  }, [total]);
 
   return (
     <div className="space-y-8">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Waitlist &middot; Openings &amp; offers</p>
         <Heading variant="display" className="text-3xl md:text-4xl">
           Waitlist
         </Heading>
-        <p className="font-sans text-sm text-ink-500">{subhead}</p>
+        {loading && !hasLoaded ? (
+          <div className="h-4 w-40 rounded skeleton-shimmer bg-cream-100" />
+        ) : (
+          <p className="font-sans text-sm text-ink-500">{subhead}</p>
+        )}
       </header>
 
       {/* ─── Status tabs (existing functionality, restyled) ─── */}
@@ -262,7 +270,7 @@ export default function WaitlistPage(): React.JSX.Element {
       </div>
 
       {/* ─── Service + date filters (new) ─── */}
-      {!loading && entries.length > 0 && (
+      {hasLoaded && entries.length > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {serviceNames.length > 0 && (
             <div className="-mx-1 px-1 flex gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -306,36 +314,45 @@ export default function WaitlistPage(): React.JSX.Element {
       {/* ─── Body ─── */}
       {loadError ? (
         <ErrorBanner message={loadError} onRetry={fetchEntries} />
-      ) : loading ? (
+      ) : loading && !hasLoaded ? (
         <ListSkeleton />
-      ) : isFullEmpty ? (
-        <div className="rounded-md border border-dashed border-ink-200">
-          <EmptyState
-            icon={Users}
-            title="No one on the waitlist"
-            description="When you're fully booked, clients can join your waitlist to be notified of openings."
-          />
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="font-sans text-sm text-ink-500">
-          No entries match the current filters.
-        </p>
       ) : (
-        <ul className="space-y-3">
-          {filtered.map((entry) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              busy={busyId === entry.id}
-              onOfferSlot={() => handleOfferSlot(entry.id)}
-              onRemove={() => handleRemove(entry.id)}
-            />
-          ))}
-        </ul>
+        <div
+          className={cn(
+            "transition-opacity duration-200",
+            refetching && "opacity-60 pointer-events-none",
+          )}
+        >
+          {isFullEmpty ? (
+            <div className="rounded-md border border-dashed border-ink-200">
+              <EmptyState
+                icon={Users}
+                title="No one on the waitlist"
+                description="When you're fully booked, clients can join your waitlist to be notified of openings."
+              />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="font-sans text-sm text-ink-500">
+              No entries match the current filters.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {filtered.map((entry) => (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  busy={busyId === entry.id}
+                  onOfferSlot={() => handleOfferSlot(entry.id)}
+                  onRemove={() => handleRemove(entry.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {/* ─── Pagination ─── */}
-      {totalPages > 1 && !loading && (
+      {totalPages > 1 && hasLoaded && (
         <div className="flex items-center justify-between gap-2">
           <Button
             type="button"

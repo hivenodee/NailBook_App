@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Heading } from "@/components/ui/Heading";
 import { Input } from "@/components/ui/Input";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { cn } from "@/lib/cn";
 
 // ─── Types ─────────────────────────────────────────────────
@@ -222,12 +223,23 @@ export default function HoursPage(): React.JSX.Element {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div>
+      <div className="space-y-12">
+        <header className="space-y-3">
+          <p className="text-label text-ink-500">Hours &middot; Schedule &amp; time off</p>
           <Heading variant="display" className="text-3xl md:text-4xl">
             Hours
           </Heading>
-          <p className="mt-2 font-sans text-sm text-ink-500">Loading…</p>
+          <p className="font-sans text-sm text-ink-500">
+            Set your weekly hours and block off time when you need it.
+          </p>
+        </header>
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <div
+              key={i}
+              className="h-14 rounded-md skeleton-shimmer bg-cream-100"
+            />
+          ))}
         </div>
       </div>
     );
@@ -236,23 +248,19 @@ export default function HoursPage(): React.JSX.Element {
   return (
     <div className="space-y-12">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Hours &middot; Schedule &amp; time off</p>
         <Heading variant="display" className="text-3xl md:text-4xl">
           Hours
         </Heading>
         <p className="font-sans text-sm text-ink-500">
-          Set your weekly availability.
+          Set your weekly hours and block off time when you need it.
         </p>
       </header>
 
       {/* ─── Section 1: Weekly hours ─── */}
       <section className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Heading variant="h3" className="text-xl">
-            Weekly hours
-          </Heading>
-          <span className="block h-px w-7 bg-rust-500" />
-        </div>
+        <SectionRule label="Weekly hours" />
 
         <Card padding="sm" className="divide-y divide-ink-200">
           {rules.map((rule) => (
@@ -274,9 +282,7 @@ export default function HoursPage(): React.JSX.Element {
 
         <div className="flex items-center justify-end gap-3">
           {saved && (
-            <span className="font-display italic text-sm text-rust-500">
-              Saved
-            </span>
+            <span className="font-sans text-sm text-rust-500">Saved</span>
           )}
           <Button
             type="button"
@@ -292,19 +298,13 @@ export default function HoursPage(): React.JSX.Element {
 
       {/* ─── Section 2: Date overrides ─── */}
       <section className="space-y-6">
+        <SectionRule label="Date overrides" />
+
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Heading variant="h3" className="text-xl">
-                Date overrides
-              </Heading>
-              <span className="block h-px w-7 bg-rust-500" />
-            </div>
-            <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
-              Block off dates for a holiday or vacation. Special hours are coming
-              soon — for now, overrides close the date entirely.
-            </p>
-          </div>
+          <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+            Block off dates for a holiday or vacation. Special hours are coming
+            soon. For now, overrides close the date entirely.
+          </p>
 
           {!showOverrideForm && (
             <Button
@@ -389,7 +389,7 @@ export default function HoursPage(): React.JSX.Element {
               <li key={to.id}>
                 <Card padding="sm" className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="font-display text-base text-ink-900">
+                    <p className="font-sans text-base text-ink-900">
                       {formatDateRange(to.startDate, to.endDate)}
                     </p>
                     <p className="mt-0.5 font-sans text-sm text-ink-500">

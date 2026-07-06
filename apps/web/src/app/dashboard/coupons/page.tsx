@@ -152,12 +152,15 @@ export default function CouponsPage(): React.JSX.Element {
     <div className="space-y-8">
       {/* ─── Header ─── */}
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <p className="text-label text-ink-500">Coupons &middot; Codes &amp; discounts</p>
           <Heading variant="display" className="text-3xl md:text-4xl">
             Coupons
           </Heading>
-          <p className="font-sans text-sm text-ink-500">
-            {loading ? "Loading…" : totalLabel}
+          <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+            {!loading && coupons.length > 0
+              ? totalLabel
+              : "Codes that fill slow days and reward regulars."}
           </p>
         </div>
 
@@ -312,8 +315,10 @@ function CouponCard({
         <div className="flex items-start justify-between gap-3">
           <p
             className={cn(
-              "font-display tracking-tight uppercase break-all leading-none",
-              "text-3xl md:text-4xl",
+              // Codes are data, so they wear sans (font-display stays reserved
+              // for the page headline and people's names).
+              "font-sans font-semibold tracking-tight uppercase break-all leading-none",
+              "text-2xl md:text-3xl",
               expired ? "text-ink-300 line-through" : "text-rust-500",
             )}
           >
@@ -329,7 +334,7 @@ function CouponCard({
         </div>
 
         {/* Discount */}
-        <p className="font-sans text-base text-ink-900">
+        <p className="font-sans text-base font-semibold tracking-tight text-ink-900">
           {formatDiscount(coupon)}
         </p>
 

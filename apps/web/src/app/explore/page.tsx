@@ -76,6 +76,7 @@ export default function ExplorePage(): React.JSX.Element {
   const [useLocation, setUseLocation] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
     null,
@@ -108,6 +109,7 @@ export default function ExplorePage(): React.JSX.Element {
       setLoadError("We couldn't load providers. Check your connection and try again.");
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [category, radiusMiles, userLat, userLng]);
 
@@ -162,9 +164,13 @@ export default function ExplorePage(): React.JSX.Element {
               <Link href="/">
                 <Logo />
               </Link>
+              <p className="text-label text-ink-500">Explore &middot; Providers near you</p>
               <Heading variant="display" className="text-4xl md:text-5xl tracking-tight">
-                Discover Beauty Near You
+                Find your next artist.
               </Heading>
+              <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+                Browse portfolios, see who is open, and book direct.
+              </p>
             </div>
           </div>
 
@@ -202,7 +208,7 @@ export default function ExplorePage(): React.JSX.Element {
               type="button"
               onClick={handleToggleLocation}
               className={cn(
-                "inline-flex items-center gap-1.5 px-4 py-1.5 rounded-pill border font-sans text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
+                "inline-flex h-11 items-center gap-1.5 px-4 rounded-pill border font-sans text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
                 useLocation
                   ? "bg-rust-500 text-cream-50 border-rust-500"
                   : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-300",
@@ -216,7 +222,7 @@ export default function ExplorePage(): React.JSX.Element {
               <select
                 value={radiusMiles}
                 onChange={(e) => setRadiusMiles(Number(e.target.value))}
-                className="h-9 rounded-md border border-ink-200 bg-cream-50 px-3 font-sans text-sm text-ink-900 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+                className="h-11 rounded-md border border-ink-200 bg-cream-50 px-3 font-sans text-sm text-ink-900 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
               >
                 {RADIUS_OPTIONS.map((r) => (
                   <option key={r} value={r}>
@@ -269,14 +275,19 @@ export default function ExplorePage(): React.JSX.Element {
 
             {loadError ? (
               <ErrorBanner message={loadError} onRetry={fetchProviders} />
-            ) : loading ? (
+            ) : loading && !hasLoaded ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4].map((i) => (
                   <SkeletonCard key={i} />
                 ))}
               </div>
             ) : filteredProviders.length === 0 ? (
-              <div className="rounded-md border border-dashed border-ink-200">
+              <div
+                className={cn(
+                  "rounded-md border border-dashed border-ink-200 transition-opacity duration-200",
+                  loading && "opacity-60 pointer-events-none",
+                )}
+              >
                 <EmptyState
                   customArt={<DiscoveryEmptyArt className="text-rust-500" />}
                   title="Nothing here yet"
@@ -285,7 +296,10 @@ export default function ExplorePage(): React.JSX.Element {
               </div>
             ) : (
               <motion.div
-                className="space-y-3"
+                className={cn(
+                  "space-y-3 transition-opacity duration-200",
+                  loading && "opacity-60 pointer-events-none",
+                )}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.05 }}
@@ -345,7 +359,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 px-4 py-1.5 rounded-pill border font-sans text-sm whitespace-nowrap transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
+        "shrink-0 inline-flex h-11 items-center px-4 rounded-pill border font-sans text-sm whitespace-nowrap transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
         active
           ? "bg-rust-500 text-cream-50 border-rust-500"
           : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-300",
@@ -372,10 +386,10 @@ function TabButton({
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        "font-display text-2xl py-3 transition-colors focus-visible:outline-none",
+        "font-sans text-sm font-medium py-4 transition-colors focus-visible:outline-none",
         active
           ? "text-ink-900 border-b-2 border-rust-500 -mb-px"
-          : "text-ink-300 border-b-2 border-transparent hover:text-ink-500",
+          : "text-ink-500 border-b-2 border-transparent hover:text-ink-700",
       )}
     >
       {children}
@@ -466,7 +480,7 @@ function ProviderCard({
               {p.businessName}
             </Heading>
             {p.isVerified && (
-              <span className="shrink-0 font-display italic text-xs text-rust-500 border-b border-rust-500 pb-px leading-none mt-1">
+              <span className="shrink-0 font-sans text-xs font-medium text-rust-500 border-b border-rust-500 pb-px leading-none mt-1">
                 Verified
               </span>
             )}
@@ -527,11 +541,11 @@ function ProviderCard({
       </div>
 
       {/* Actions */}
-      <div className="mt-4 pt-3 border-t border-ink-200 flex items-center gap-4">
+      <div className="mt-4 pt-1 border-t border-ink-200 flex items-center gap-4">
         <Link
           href={`/${p.slug}`}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 font-sans text-xs font-medium text-rust-500 hover:text-rust-600 transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1 font-sans text-xs font-medium text-rust-500 hover:text-rust-600 transition-colors"
         >
           View profile
           <ExternalLink size={11} strokeWidth={1.75} />
@@ -542,7 +556,7 @@ function ProviderCard({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 font-sans text-xs text-ink-500 hover:text-ink-900 transition-colors"
+            className="inline-flex min-h-[44px] items-center gap-1 font-sans text-xs text-ink-500 hover:text-ink-900 transition-colors"
           >
             Directions
             <ExternalLink size={11} strokeWidth={1.75} />

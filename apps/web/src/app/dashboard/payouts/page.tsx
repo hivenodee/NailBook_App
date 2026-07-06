@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
+import { cn } from "@/lib/cn";
 
 type StatusResponse = {
   connected: boolean;
@@ -79,25 +81,26 @@ export default function PayoutsPage(): React.JSX.Element {
     <div className="max-w-2xl mx-auto py-6">
       <Link
         href="/dashboard/money"
-        className="inline-flex items-center gap-2 text-sm font-sans text-ink-500 hover:text-ink-900 transition-colors"
+        className="inline-flex min-h-[44px] items-center gap-2 text-sm font-sans text-ink-500 hover:text-ink-900 transition-colors"
       >
         <ArrowLeft size={14} strokeWidth={1.5} />
         Back to money
       </Link>
 
-      <Heading variant="h1" className="mt-6 text-3xl md:text-4xl">
-        Payouts
-      </Heading>
-
-      <p className="mt-3 font-sans text-base text-ink-500 leading-relaxed">
-        Porobook collects card deposits through Stripe and pays them out to your
-        bank. Connect once. After that, funds settle automatically on Stripe&rsquo;s
-        schedule. Cash bookings never need this.
-      </p>
+      <header className="mt-4 space-y-3">
+        <p className="text-label text-ink-500">Money &middot; Payouts</p>
+        <Heading variant="h1" className="text-3xl md:text-4xl">
+          Payouts
+        </Heading>
+        <p className="font-sans text-base text-ink-500 max-w-md leading-relaxed">
+          Card deposits come in through Stripe and settle to your bank
+          automatically. Connect once. Cash bookings never need this.
+        </p>
+      </header>
 
       {/* ─── Status card ─── */}
-      <div className="mt-8 rounded-md border border-ink-200 bg-cream-50 p-6">
-        {loading ? (
+      <div className="mt-8 rounded-md border border-ink-200 bg-white p-6">
+        {loading && !status ? (
           <div className="flex items-center gap-3 text-ink-500">
             <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
             <span className="font-sans text-sm">Checking with Stripe…</span>
@@ -111,14 +114,19 @@ export default function PayoutsPage(): React.JSX.Element {
             <button
               type="button"
               onClick={fetchStatus}
-              className="self-start inline-flex items-center gap-2 text-sm font-sans text-ink-700 hover:text-ink-900"
+              className="self-start inline-flex min-h-[44px] items-center gap-2 text-sm font-sans text-ink-700 hover:text-ink-900"
             >
               <RefreshCcw size={14} strokeWidth={1.5} />
               Try again
             </button>
           </div>
         ) : status ? (
-          <div className="flex flex-col gap-4">
+          <div
+            className={cn(
+              "flex flex-col gap-4 transition-opacity duration-200",
+              loading && "opacity-60 pointer-events-none",
+            )}
+          >
             <StatusRow
               label="Account connected"
               ready={status.connected}
@@ -188,12 +196,7 @@ export default function PayoutsPage(): React.JSX.Element {
 
       {/* ─── How it works ─── */}
       <div className="mt-12">
-        <div className="flex items-center gap-3">
-          <Heading variant="h3" className="text-xl">
-            How payouts work
-          </Heading>
-          <span className="block h-px w-7 bg-rust-500" />
-        </div>
+        <SectionRule label="How payouts work" />
         <ul className="mt-5 flex flex-col gap-4">
           <InfoRow
             icon={<CreditCard size={16} strokeWidth={1.5} />}

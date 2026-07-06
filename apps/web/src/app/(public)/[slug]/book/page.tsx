@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -391,17 +392,48 @@ export default function BookPage(): React.JSX.Element {
 
   // ─── Render ──────────────────────────────────────────────
   if (loading) {
+    // Initial load only: no data on screen yet, so a skeleton is correct.
+    // Mirrors the time step's layout so the real content lands in place.
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cream-50">
-        <p className="font-sans text-sm text-ink-500">Loading…</p>
+      <main className="min-h-screen bg-cream-50" aria-busy="true">
+        <div className="mx-auto max-w-md px-6 pt-10 pb-32">
+          <div className="mb-8 h-4 w-14 rounded skeleton-shimmer bg-cream-100" />
+          <div className="h-9 w-3/4 rounded skeleton-shimmer bg-cream-100" />
+          <div className="mt-8 flex gap-2 overflow-hidden">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="h-16 w-14 shrink-0 rounded-md skeleton-shimmer bg-cream-100"
+              />
+            ))}
+          </div>
+          <div className="mt-6 grid grid-cols-3 gap-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="h-11 rounded-md skeleton-shimmer bg-cream-100"
+              />
+            ))}
+          </div>
+        </div>
       </main>
     );
   }
 
   if (!service) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cream-50">
-        <p className="font-sans text-sm text-ink-500">Service not found.</p>
+      <main className="flex min-h-screen items-center justify-center bg-cream-50 px-6">
+        <div className="text-center">
+          <p className="font-sans text-sm text-ink-500">
+            We couldn&rsquo;t find that service.
+          </p>
+          <Link
+            href={`/${slug}`}
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-pill border border-ink-200 bg-cream-50 px-5 font-sans text-sm text-ink-900 transition-all duration-200 hover:-translate-y-px hover:border-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          >
+            View all services
+          </Link>
+        </div>
       </main>
     );
   }

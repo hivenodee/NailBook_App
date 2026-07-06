@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import SummaryStatCard from "@/components/ui/SummaryStatCard";
 import RevenueChart from "@/components/ui/RevenueChart";
 import { cn } from "@/lib/cn";
@@ -661,14 +662,6 @@ function HeroCell({
   );
 }
 
-function SectionRule({ label }: { label: string }): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-4">
-      <h2 className="text-label text-ink-700 whitespace-nowrap">{label}</h2>
-      <span aria-hidden="true" className="h-px flex-1 bg-ink-200" />
-    </div>
-  );
-}
 
 function FilterChip({
   active,

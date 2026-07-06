@@ -41,8 +41,8 @@ const TYPE_LABELS: Record<TemplateType, string> = {
   COMPLETION: "Completion",
   REMINDER: "Reminder",
   FOLLOWUP: "Follow-up",
-  WAITLIST_AVAILABLE: "Waitlist — spot available",
-  WAITLIST_JOINED: "Waitlist — joined confirmation",
+  WAITLIST_AVAILABLE: "Waitlist spot available",
+  WAITLIST_JOINED: "Waitlist joined",
 };
 
 const TYPE_DESCRIPTIONS: Record<TemplateType, string> = {
@@ -207,12 +207,13 @@ export default function MessageTemplatesPage(): React.JSX.Element {
     return (
       <div className="max-w-4xl space-y-10">
         <div className="space-y-3">
-          <div className="h-12 w-72 skeleton-shimmer rounded-md" />
-          <div className="h-5 w-96 skeleton-shimmer rounded-md" />
+          <div className="h-4 w-40 skeleton-shimmer bg-cream-100 rounded-md" />
+          <div className="h-12 w-72 skeleton-shimmer bg-cream-100 rounded-md" />
+          <div className="h-5 w-full max-w-96 skeleton-shimmer bg-cream-100 rounded-md" />
         </div>
         <div className="space-y-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-20 skeleton-shimmer rounded-md" />
+            <div key={i} className="h-20 skeleton-shimmer bg-cream-100 rounded-md" />
           ))}
         </div>
       </div>
@@ -224,11 +225,12 @@ export default function MessageTemplatesPage(): React.JSX.Element {
       <div className="max-w-4xl space-y-10">
         <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div className="space-y-2">
+            <p className="text-label text-ink-500">Messages &middot; Templates</p>
             <Heading variant="display" className="text-3xl sm:text-4xl">Message templates</Heading>
-            <p className="text-base font-sans text-ink-500 max-w-xl">
-              Customize the emails and SMS messages clients receive. Use{" "}
+            <p className="text-sm font-sans text-ink-500 max-w-xl leading-relaxed">
+              The emails and texts your clients receive, in your words. Use{" "}
               <code className="font-sans text-ink-700 bg-cream-100 px-1.5 py-0.5 rounded-sm">{"{{variableName}}"}</code>{" "}
-              placeholders for dynamic content.
+              placeholders for dynamic details.
             </p>
           </div>
           <Button variant="primary" size="md" onClick={handleSave} disabled={saving}>
@@ -251,11 +253,11 @@ export default function MessageTemplatesPage(): React.JSX.Element {
               <Card key={tpl.type} padding="none" className="overflow-hidden">
                 <button
                   onClick={() => setExpandedType(isExpanded ? null : tpl.type)}
-                  className="w-full flex items-center justify-between p-5 text-left transition-colors hover:bg-cream-100"
+                  className="w-full flex items-center justify-between p-5 text-left transition-colors hover:bg-cream-100 focus-visible:outline-none focus-visible:bg-cream-100"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-display text-xl text-ink-900">{TYPE_LABELS[tpl.type]}</h3>
+                      <h3 className="font-sans text-base font-semibold tracking-tight text-ink-900">{TYPE_LABELS[tpl.type]}</h3>
                       {isCustomized && <Badge variant="verified">Customized</Badge>}
                     </div>
                     <p className="text-sm font-sans text-ink-500 mt-1">
@@ -272,7 +274,7 @@ export default function MessageTemplatesPage(): React.JSX.Element {
                     {/* Variable chips */}
                     <div>
                       <label className="block text-xs font-sans font-medium tracking-wide uppercase text-ink-500 mb-2">
-                        Available variables — click to insert
+                        Available variables. Click to insert
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {tpl.variables.map((v) => (
@@ -280,7 +282,7 @@ export default function MessageTemplatesPage(): React.JSX.Element {
                             key={v}
                             type="button"
                             onClick={() => insertVariable(tpl.type, v)}
-                            className="text-xs font-sans rounded-pill bg-cream-100 text-ink-700 border border-ink-200 hover:border-ink-500 px-2.5 py-1 transition-colors"
+                            className="text-xs font-sans rounded-pill bg-cream-100 text-ink-700 border border-ink-200 hover:border-ink-500 px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
                           >
                             {`{{${v}}}`}
                           </button>
