@@ -90,8 +90,19 @@ model Provider {
   cancellationHours Int @default(24)
   noShowFeePercent  Int @default(100)
 
-  // Stripe
-  stripeAccountId String?
+  // Stripe Connect (Standard accounts)
+  // stripeAccountId is set when the provider first hits the Connect onboarding
+  // flow. The *Enabled flags are kept in sync via the `account.updated` webhook
+  // and the return-from-onboarding callback.
+  stripeAccountId        String?
+  stripeChargesEnabled   Boolean   @default(false)
+  stripePayoutsEnabled   Boolean   @default(false)
+  stripeOnboardedAt      DateTime?
+
+  // Onboarding wizard state. Null until the provider completes the 6-step
+  // wizard and goes live. Doubles as a boolean (`onboardedAt != null`) and a
+  // timestamp for cohort analytics.
+  onboardedAt            DateTime?
 
   services        Service[]
   coupons         Coupon[]
