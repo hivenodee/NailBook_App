@@ -43,7 +43,7 @@ export default function PayoutsPage(): React.JSX.Element {
       }
       setStatus(json.data);
     } catch {
-      setErrorMsg("Network error — try again");
+      setErrorMsg("Network error. Try again.");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function PayoutsPage(): React.JSX.Element {
       }
       window.location.href = json.data.url;
     } catch {
-      setErrorMsg("Network error — try again");
+      setErrorMsg("Network error. Try again.");
       setOpening(false);
     }
   }
@@ -91,7 +91,7 @@ export default function PayoutsPage(): React.JSX.Element {
 
       <p className="mt-3 font-sans text-base text-ink-500 leading-relaxed">
         Porobook collects card deposits through Stripe and pays them out to your
-        bank. Connect once — after that, funds settle automatically on Stripe&rsquo;s
+        bank. Connect once. After that, funds settle automatically on Stripe&rsquo;s
         schedule. Cash bookings never need this.
       </p>
 
@@ -129,7 +129,7 @@ export default function PayoutsPage(): React.JSX.Element {
               ready={status.chargesEnabled}
               detail={
                 status.chargesEnabled
-                  ? "Live — clients can pay deposits with card"
+                  ? "Live. Clients can pay deposits with card."
                   : status.connected
                     ? "Pending Stripe verification"
                     : "Connect to turn on"
@@ -140,7 +140,7 @@ export default function PayoutsPage(): React.JSX.Element {
               ready={status.payoutsEnabled}
               detail={
                 status.payoutsEnabled
-                  ? "Live — funds settle on Stripe's schedule"
+                  ? "Live. Funds settle on Stripe's schedule."
                   : status.connected
                     ? "Pending Stripe verification"
                     : "Connect to turn on"
@@ -203,7 +203,7 @@ export default function PayoutsPage(): React.JSX.Element {
           <InfoRow
             icon={<Banknote size={16} strokeWidth={1.5} />}
             title="Stripe pays out to your bank"
-            body="Payouts run automatically on Stripe's rolling schedule — typically every couple of business days once your account is verified."
+            body="Payouts run automatically on Stripe's rolling schedule, typically every couple of business days once your account is verified."
           />
           <InfoRow
             icon={<ShieldCheck size={16} strokeWidth={1.5} />}

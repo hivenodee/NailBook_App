@@ -31,6 +31,13 @@ export const tokens = {
     success: "#4A7C59",
     warning: "#C4732A",
     error: "#A8423A",
+    // Money surfaces only: positive-money data color (chart line, credit
+    // amounts, the hero booked figure). Not a status color and not the
+    // brand accent. Validated 5.06:1 on white, passes chart chroma floor.
+    money: {
+      DEFAULT: "#2E7D4A",
+      deep: "#1F5A34",
+    },
   },
 
   typography: {

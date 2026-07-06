@@ -110,13 +110,23 @@ function formatPrice(cents: number, opts?: { showSign?: boolean }): string {
   return `${sign}$${dollars}`;
 }
 
-function formatBigPrice(cents: number): string {
-  // No cents at the stat-card scale — keep the figure clean.
-  if (cents === 0) return "$0";
-  if (Math.abs(cents) >= 1_000_000) {
-    return `$${(cents / 100_000).toFixed(0)}k`;
-  }
-  return `$${(cents / 100).toFixed(0)}`;
+function formatStatPrice(cents: number): string {
+  // Whole dollars with commas at the stat scale. Never compact a money
+  // figure: a provider reading "$12k" when they earned $12,450 is ambiguity.
+  return `$${Math.round(cents / 100).toLocaleString()}`;
+}
+
+const METHOD_LABELS: Record<string, string> = {
+  CARD: "Card",
+  APPLE_PAY: "Apple Pay",
+  GOOGLE_PAY: "Google Pay",
+  CASH_APP_PAY: "Cash App",
+  CASH: "Cash",
+};
+
+function typeMethodLine(payment: Payment): string {
+  const method = METHOD_LABELS[payment.method];
+  return method ? `${typeLabel(payment.type)} · ${method}` : typeLabel(payment.type);
 }
 
 function getClientName(p: Payment): string {
@@ -302,34 +312,42 @@ export default function MoneyPage(): React.JSX.Element {
   return (
     <div className="space-y-12">
       {/* ─── Header ─── */}
-      <header className="space-y-2">
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Money &middot; Payments &amp; payouts</p>
         <Heading variant="display" className="text-3xl md:text-4xl">
-          Money
+          Your money, at a glance.
         </Heading>
-        <p className="font-sans text-sm text-ink-500">
-          Track earnings, pending payments, and lifetime revenue.
+        <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+          Deposits in, payouts out. Nothing ambiguous.
         </p>
       </header>
 
-      {/* ─── Stat row ─── */}
+      {/* ─── Hero: the three numbers that matter ─── */}
       <section className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            value={formatBigPrice(earnedRecent)}
-            label="Earned (last 30 days)"
-            loading={statRowLoading}
-          />
-          <StatCard
-            value={formatBigPrice(pendingTotal)}
-            label="Processing"
-            loading={statRowLoading}
-          />
-          <StatCard
-            value={formatBigPrice(totalEarned)}
-            label="Total earned"
-            loading={statRowLoading}
-          />
+        <div className="rounded-md border border-ink-200 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-ink-100">
+            <HeroCell
+              label="Booked · last 30 days"
+              value={formatStatPrice(earnedRecent)}
+              tone="money"
+              loading={statRowLoading}
+            />
+            <HeroCell
+              label="Processing"
+              value={formatStatPrice(pendingTotal)}
+              loading={statRowLoading}
+            />
+            <HeroCell
+              label="Booked · all time"
+              value={formatStatPrice(totalEarned)}
+              loading={statRowLoading}
+            />
+          </div>
         </div>
+        <p className="font-sans text-xs text-ink-500 leading-relaxed">
+          Booked includes upcoming confirmed appointments. Processing counts
+          payments that haven&rsquo;t completed yet.
+        </p>
 
         <PayoutStatus
           loading={connectLoading}
@@ -341,27 +359,26 @@ export default function MoneyPage(): React.JSX.Element {
 
       {/* ─── Performance ─── */}
       <section className="space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Heading variant="h3" className="text-xl">
-              Performance
-            </Heading>
-            <span className="block h-px w-7 bg-rust-500" />
-          </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-            {RANGES.map((r) => (
-              <FilterChip
-                key={r.value}
-                active={range === r.value}
-                onClick={() => handleRangeChange(r.value)}
-              >
-                {r.label}
-              </FilterChip>
-            ))}
-          </div>
+        <SectionRule label="Performance" />
+
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+          {RANGES.map((r) => (
+            <FilterChip
+              key={r.value}
+              active={range === r.value}
+              onClick={() => handleRangeChange(r.value)}
+            >
+              {r.label}
+            </FilterChip>
+          ))}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div
+          className={cn(
+            "grid grid-cols-2 lg:grid-cols-4 gap-3 transition-opacity duration-200",
+            rangeLoading && rangeAnalytics && "opacity-60",
+          )}
+        >
           <SummaryStatCard
             label="Revenue"
             value={formatPrice(rangeAnalytics?.summary.revenue ?? 0)}
@@ -371,34 +388,35 @@ export default function MoneyPage(): React.JSX.Element {
                 ? ` (${rangeAnalytics.summary.confirmedCount} upcoming)`
                 : "")
             }
-            loading={rangeLoading}
+            loading={rangeLoading && !rangeAnalytics}
             animationDelay={0}
           />
           <SummaryStatCard
             label="Net"
             value={formatPrice(rangeAnalytics?.summary.netRevenue ?? 0)}
-            loading={rangeLoading}
+            loading={rangeLoading && !rangeAnalytics}
             animationDelay={50}
           />
           <SummaryStatCard
             label="Lost"
             value={formatPrice(rangeAnalytics?.summary.lostRevenue ?? 0)}
             subtitle={`${rangeAnalytics?.summary.cancelledCount ?? 0} cancelled, ${rangeAnalytics?.summary.noShowCount ?? 0} no-shows`}
-            loading={rangeLoading}
+            loading={rangeLoading && !rangeAnalytics}
             animationDelay={100}
           />
           <SummaryStatCard
             label="Recovered"
             value={formatPrice(rangeAnalytics?.summary.recoveredRevenue ?? 0)}
             subtitle={`${rangeAnalytics?.summary.waitlistRecoveryCount ?? 0} from waitlist`}
-            loading={rangeLoading}
+            loading={rangeLoading && !rangeAnalytics}
             animationDelay={150}
           />
         </div>
 
         <RevenueChart
           buckets={rangeAnalytics?.buckets ?? []}
-          loading={rangeLoading}
+          loading={rangeLoading && !rangeAnalytics}
+          refreshing={rangeLoading && !!rangeAnalytics}
           mode={chartMode}
           onModeChange={setChartMode}
         />
@@ -406,27 +424,21 @@ export default function MoneyPage(): React.JSX.Element {
 
       {/* ─── Recent transactions ─── */}
       <section className="space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Heading variant="h3" className="text-xl">
-              Recent transactions
-            </Heading>
-            <span className="block h-px w-7 bg-rust-500" />
-          </div>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-            {STATUS_FILTERS.map((s) => (
-              <FilterChip
-                key={s.value}
-                active={statusFilter === s.value}
-                onClick={() => {
-                  setStatusFilter(s.value);
-                  setOffset(0);
-                }}
-              >
-                {s.label}
-              </FilterChip>
-            ))}
-          </div>
+        <SectionRule label="Recent transactions" />
+
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+          {STATUS_FILTERS.map((s) => (
+            <FilterChip
+              key={s.value}
+              active={statusFilter === s.value}
+              onClick={() => {
+                setStatusFilter(s.value);
+                setOffset(0);
+              }}
+            >
+              {s.label}
+            </FilterChip>
+          ))}
         </div>
 
         {txLoading ? (
@@ -445,7 +457,7 @@ export default function MoneyPage(): React.JSX.Element {
             No matching transactions.
           </p>
         ) : (
-          <ul className="divide-y divide-ink-200 rounded-md border border-ink-200 bg-cream-50">
+          <ul className="divide-y divide-ink-100 rounded-md border border-ink-200 bg-white">
             {payments.map((p) => (
               <TransactionRow key={p.id} payment={p} />
             ))}
@@ -559,7 +571,7 @@ function PayoutStatus({
         </span>
         <p className="font-sans text-xs text-ink-500 max-w-md leading-relaxed">
           Card deposits are on. Funds settle to your bank on Stripe&rsquo;s
-          schedule — no action needed.
+          schedule. No action needed.
         </p>
         <Link href="/dashboard/payouts" className="shrink-0">
           <Button type="button" variant="secondary" size="sm" className="gap-1.5">
@@ -615,39 +627,45 @@ function PayoutStatus({
   );
 }
 
-function StatCard({
-  value,
+function HeroCell({
   label,
+  value,
+  tone = "ink",
   loading,
-  accent = false,
 }: {
-  value: string;
   label: string;
+  value: string;
+  tone?: "money" | "ink";
   loading: boolean;
-  accent?: boolean;
 }): React.JSX.Element {
-  if (loading) {
-    return (
-      <div className="rounded-md border border-ink-200 bg-cream-50 px-6 py-5 space-y-3">
-        <div className="h-9 w-24 skeleton-shimmer bg-cream-100 rounded" />
-        <div className="h-3 w-32 skeleton-shimmer bg-cream-100 rounded" />
-      </div>
-    );
-  }
   return (
-    <div className="rounded-md border border-ink-200 bg-cream-50 px-6 py-5">
-      <p
-        className={cn(
-          "font-display leading-none tracking-tight",
-          "text-4xl md:text-5xl",
-          accent ? "text-rust-500" : "text-ink-900",
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-3 font-sans text-xs uppercase tracking-wide text-ink-500">
+    <div className="px-6 py-5">
+      <p className="font-sans uppercase text-xs tracking-widest font-medium text-ink-500">
         {label}
       </p>
+      {loading ? (
+        <div className="mt-3 h-10 w-28 skeleton-shimmer bg-cream-100 rounded" />
+      ) : (
+        <p
+          className={cn(
+            // Data wears sans (brand rule); proportional figures at display
+            // size, so no tabular-nums here.
+            "mt-2 font-sans text-4xl md:text-5xl font-semibold tracking-tight leading-none",
+            tone === "money" ? "text-money" : "text-ink-900",
+          )}
+        >
+          {value}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SectionRule({ label }: { label: string }): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-4">
+      <h2 className="text-label text-ink-700 whitespace-nowrap">{label}</h2>
+      <span aria-hidden="true" className="h-px flex-1 bg-ink-200" />
     </div>
   );
 }
@@ -709,10 +727,10 @@ function TransactionRow({ payment }: { payment: Payment }): React.JSX.Element {
             timeZone: "UTC",
           })}
           <span className="mx-1.5 text-ink-300">·</span>
-          {typeLabel(payment.type)}
+          {typeMethodLine(payment)}
         </p>
         <p className="mt-0.5 font-sans text-xs text-ink-500 hidden sm:block">
-          {typeLabel(payment.type)}
+          {typeMethodLine(payment)}
         </p>
       </div>
 
@@ -720,8 +738,9 @@ function TransactionRow({ payment }: { payment: Payment }): React.JSX.Element {
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <p
           className={cn(
-            "font-display text-lg leading-none",
-            credit ? "text-rust-500" : "text-ink-500",
+            // Ledger column: sans + tabular figures so amounts align down the list.
+            "font-sans text-sm font-semibold leading-none tabular-nums",
+            credit ? "text-money" : "text-ink-500",
           )}
         >
           {credit
@@ -759,12 +778,7 @@ function SettingsSection({
 }): React.JSX.Element {
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Heading variant="h3" className="text-xl">
-          {title}
-        </Heading>
-        <span className="block h-px w-7 bg-rust-500" />
-      </div>
+      <SectionRule label={title} />
       <Card padding="md">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <span
@@ -819,7 +833,7 @@ function SettingsSection({
 
 function RowSkeleton(): React.JSX.Element {
   return (
-    <ul className="divide-y divide-ink-200 rounded-md border border-ink-200 bg-cream-50">
+    <ul className="divide-y divide-ink-100 rounded-md border border-ink-200 bg-white">
       {[1, 2, 3, 4, 5].map((i) => (
         <li key={i} className="flex items-center gap-4 px-5 py-4">
           <div className="hidden sm:block w-24 h-4 rounded skeleton-shimmer bg-cream-100" />

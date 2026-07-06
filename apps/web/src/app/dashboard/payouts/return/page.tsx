@@ -32,7 +32,7 @@ export default function StripeReturnPage(): React.JSX.Element {
       }
       setStatus(json.data);
     } catch {
-      setErrorMsg("Network error — try again");
+      setErrorMsg("Network error. Try again.");
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function StripeReturnPage(): React.JSX.Element {
       }
       window.location.href = json.data.url;
     } catch {
-      setErrorMsg("Network error — try again");
+      setErrorMsg("Network error. Try again.");
       setReopening(false);
     }
   }
@@ -113,7 +113,7 @@ export default function StripeReturnPage(): React.JSX.Element {
               ready={status.chargesEnabled}
               detail={
                 status.chargesEnabled
-                  ? "Live — clients can pay deposits with card"
+                  ? "Live. Clients can pay deposits with card."
                   : "Pending Stripe verification"
               }
             />
@@ -122,7 +122,7 @@ export default function StripeReturnPage(): React.JSX.Element {
               ready={status.payoutsEnabled}
               detail={
                 status.payoutsEnabled
-                  ? "Live — funds settle on Stripe's schedule"
+                  ? "Live. Funds settle on Stripe's schedule."
                   : "Pending Stripe verification"
               }
             />

@@ -45,6 +45,7 @@ const config: Config = {
         success: tokens.colors.success,
         warning: tokens.colors.warning,
         error:   tokens.colors.error,
+        money:   tokens.colors.money,   // positive-money data color (money surfaces only)
         danger:  "#C0392B", // backward-compat
         // Defaults
         transparent: "transparent",
