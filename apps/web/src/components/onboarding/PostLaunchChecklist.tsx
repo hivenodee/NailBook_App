@@ -12,6 +12,18 @@ type ChecklistData = {
   portfolioCount: number;
 };
 
+type ChecklistItem = {
+  key: string;
+  done: boolean;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  /** Navigates when set. Mutually exclusive with `onClick`. */
+  href?: string;
+  /** In-place action (e.g. copy link) when set. Renders a button instead of a link. */
+  onClick?: () => void;
+};
+
 /**
  * Lightweight checklist surfaced at the top of the dashboard after a provider
  * first goes live. Items disappear as they're completed; once everything is
@@ -21,12 +33,29 @@ type ChecklistData = {
 export function PostLaunchChecklist(): React.JSX.Element | null {
   const [data, setData] = React.useState<ChecklistData | null>(null);
   const [dismissed, setDismissed] = React.useState(false);
+  const [shared, setShared] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       setDismissed(localStorage.getItem("porobook.checklist.dismissed") === "1");
+      setShared(localStorage.getItem("porobook.checklist.shared") === "1");
     }
   }, []);
+
+  async function handleShare() {
+    if (!data) return;
+    const link = `${window.location.origin}/${data.slug}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked — still count it as shared so the item can complete.
+    }
+    localStorage.setItem("porobook.checklist.shared", "1");
+    setShared(true);
+  }
 
   React.useEffect(() => {
     if (dismissed) return;
@@ -58,7 +87,7 @@ export function PostLaunchChecklist(): React.JSX.Element | null {
 
   if (dismissed || !data) return null;
 
-  const items = [
+  const items: ChecklistItem[] = [
     {
       key: "stripe",
       done: data.stripeChargesEnabled,
@@ -79,12 +108,13 @@ export function PostLaunchChecklist(): React.JSX.Element | null {
     },
     {
       key: "share",
-      done: false,
+      done: shared,
       label: "Share your booking link",
-      description: `porobook.com/${data.slug} — paste in your IG bio.`,
-      href: "/dashboard/profile",
-      icon: Share2,
-      copyLink: typeof window !== "undefined" ? `${window.location.origin}/${data.slug}` : "",
+      description: copied
+        ? "Link copied — paste it in your IG bio."
+        : `porobook.com/${data.slug} — tap to copy for your IG bio.`,
+      onClick: handleShare,
+      icon: copied ? Check : Share2,
     },
   ];
 
@@ -120,56 +150,65 @@ export function PostLaunchChecklist(): React.JSX.Element | null {
       <ul className="flex flex-col gap-2">
         {items.map((item) => {
           const Icon = item.icon;
-          return (
-            <li key={item.key}>
-              <Link
-                href={item.href}
+          const rowClass = cn(
+            "group flex w-full items-center gap-4 rounded-md border p-4 text-left transition-all duration-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
+            item.done
+              ? "border-ink-100 bg-cream-100/60"
+              : "border-ink-200 bg-cream-50 hover:border-ink-400 hover:-translate-y-px",
+          );
+          const inner = (
+            <>
+              <span
                 className={cn(
-                  "group flex items-center gap-4 rounded-md border p-4 transition-all duration-200",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
+                  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-pill border",
                   item.done
-                    ? "border-ink-100 bg-cream-100/60"
-                    : "border-ink-200 bg-cream-50 hover:border-ink-400 hover:-translate-y-px",
+                    ? "border-success bg-success/10 text-success"
+                    : "border-ink-200 bg-cream-50 text-ink-700",
                 )}
+                aria-hidden="true"
               >
+                {item.done ? (
+                  <Check size={16} strokeWidth={1.5} />
+                ) : (
+                  <Icon size={16} strokeWidth={1.5} />
+                )}
+              </span>
+              <span className="flex-1">
                 <span
                   className={cn(
-                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-pill border",
-                    item.done
-                      ? "border-success bg-success/10 text-success"
-                      : "border-ink-200 bg-cream-50 text-ink-700",
+                    "block font-sans text-sm font-medium",
+                    item.done ? "text-ink-500 line-through" : "text-ink-900",
                   )}
-                  aria-hidden="true"
                 >
-                  {item.done ? (
-                    <Check size={16} strokeWidth={1.5} />
-                  ) : (
-                    <Icon size={16} strokeWidth={1.5} />
-                  )}
-                </span>
-                <span className="flex-1">
-                  <span
-                    className={cn(
-                      "block font-sans text-sm font-medium",
-                      item.done ? "text-ink-500 line-through" : "text-ink-900",
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                  {!item.done && (
-                    <span className="block font-sans text-xs text-ink-500 mt-0.5">
-                      {item.description}
-                    </span>
-                  )}
+                  {item.label}
                 </span>
                 {!item.done && (
-                  <ChevronRight
-                    size={16}
-                    strokeWidth={1.5}
-                    className="text-ink-400 transition-transform group-hover:translate-x-0.5"
-                  />
+                  <span className="block font-sans text-xs text-ink-500 mt-0.5">
+                    {item.description}
+                  </span>
                 )}
-              </Link>
+              </span>
+              {!item.done && (
+                <ChevronRight
+                  size={16}
+                  strokeWidth={1.5}
+                  className="text-ink-400 transition-transform group-hover:translate-x-0.5"
+                />
+              )}
+            </>
+          );
+          return (
+            <li key={item.key}>
+              {item.onClick ? (
+                <button type="button" onClick={item.onClick} className={rowClass}>
+                  {inner}
+                </button>
+              ) : (
+                <Link href={item.href ?? "#"} className={rowClass}>
+                  {inner}
+                </Link>
+              )}
             </li>
           );
         })}
