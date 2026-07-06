@@ -16,6 +16,14 @@ async function getProvider(clerkId: string) {
   return user?.provider ?? null;
 }
 
+// Fallback gate when the Clerk session token template isn't configured to
+// include publicMetadata. The Edge middleware handles the common case; this
+// catches users who reached /dashboard before the session refreshed (or who
+// are signed in but never finished the wizard).
+function shouldOnboard(provider: { onboardedAt: Date | null } | null) {
+  return !provider || provider.onboardedAt === null;
+}
+
 async function getBadgeCounts(providerId: string) {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -83,7 +91,7 @@ export default async function DashboardLayout({
     console.error("[dashboard/layout] getProvider failed:", e);
     redirect("/");
   }
-  if (!provider) redirect("/");
+  if (shouldOnboard(provider) || !provider) redirect("/onboarding");
 
   let badges = { today: 0, appointments: 0, money: 0, waitlist: 0, feedback: 0 };
   try {

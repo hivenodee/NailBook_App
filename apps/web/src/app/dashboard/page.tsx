@@ -9,6 +9,7 @@ import { Heading } from "@/components/ui/Heading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { BookingsEmptyArt } from "@/components/ui/empty-art/BookingsEmptyArt";
+import { PostLaunchChecklist } from "@/components/onboarding/PostLaunchChecklist";
 import { cn } from "@/lib/cn";
 
 // ─── Types ─────────────────────────────────────────────────
@@ -174,6 +175,8 @@ export default function DashboardTodayPage(): React.JSX.Element {
           <span className="uppercase tracking-wide text-xs">{partOfDay}</span>
         </p>
       </header>
+
+      <PostLaunchChecklist />
 
       {loadError && <ErrorBanner message={loadError} onRetry={load} />}
 
