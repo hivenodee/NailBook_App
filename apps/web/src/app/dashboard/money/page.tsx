@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { ExternalLink, FileText, Landmark } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Check,
+  CreditCard,
+  ExternalLink,
+  FileText,
+  Landmark,
+  Loader2,
+} from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -72,6 +81,14 @@ type Payment = {
     service: { name: string };
     client: { firstName: string | null; lastName: string | null };
   };
+};
+
+type ConnectStatus = {
+  connected: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted?: boolean;
+  requirementsDue?: boolean;
 };
 
 type StatusFilter = "ALL" | "COMPLETED" | "PENDING" | "REFUNDED";
@@ -245,6 +262,39 @@ export default function MoneyPage(): React.JSX.Element {
       .catch(() => {});
   }, []);
 
+  // Stripe Connect payout status. The status endpoint reconciles with Stripe
+  // and writes the capability flags back, so a page visit doubles as a sync.
+  const [connect, setConnect] = React.useState<ConnectStatus | null>(null);
+  const [connectLoading, setConnectLoading] = React.useState(true);
+  const [connectOpening, setConnectOpening] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch(`/api/providers/me/stripe/status`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) => setConnect(json.data ?? null))
+      .catch(() => {})
+      .finally(() => setConnectLoading(false));
+  }, []);
+
+  const openConnect = React.useCallback(async () => {
+    setConnectOpening(true);
+    try {
+      const res = await fetch(`/api/providers/me/stripe/connect`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.url) {
+        window.location.href = json.data.url;
+        return;
+      }
+    } catch {
+      // fall through to re-enable the button
+    }
+    setConnectOpening(false);
+  }, []);
+
+  const payoutsActive = !!connect?.chargesEnabled && !!connect?.payoutsEnabled;
+
   const hasMore = offset + PAGE_SIZE < total;
   const hasPrev = offset > 0;
   const isEmpty = !txLoading && payments.length === 0 && statusFilter === "ALL";
@@ -281,22 +331,12 @@ export default function MoneyPage(): React.JSX.Element {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled
-            className="gap-2"
-          >
-            Pay out now
-          </Button>
-          <p className="font-sans text-xs text-ink-500 max-w-md leading-relaxed">
-            Direct payouts via Stripe Connect are coming soon. Each booking's
-            payment goes to the card the client used; we'll route it to your
-            account once Connect is wired up.
-          </p>
-        </div>
+        <PayoutStatus
+          loading={connectLoading}
+          status={connect}
+          opening={connectOpening}
+          onConnect={openConnect}
+        />
       </section>
 
       {/* ─── Performance ─── */}
@@ -443,26 +483,137 @@ export default function MoneyPage(): React.JSX.Element {
       <SettingsSection
         icon={<Landmark size={18} strokeWidth={1.5} />}
         title="Payout settings"
-        description="Connect a bank account to receive payouts from your bookings."
-        ctaLabel="Get notified"
-        ctaDisabled
-        helperText="Coming soon — we'll launch payouts through Stripe Connect."
+        description={
+          payoutsActive
+            ? "Your bank is connected. Manage payout details in Stripe."
+            : "Connect a bank account through Stripe to receive payouts from your bookings."
+        }
+        ctaLabel={
+          connectLoading
+            ? "Payouts"
+            : payoutsActive
+              ? "Manage payouts"
+              : connect?.connected
+                ? "Finish setup"
+                : "Set up payouts"
+        }
+        ctaTo="/dashboard/payouts"
+        helperText={
+          payoutsActive
+            ? "Funds settle to your bank on Stripe's schedule."
+            : connect?.connected
+              ? "Stripe is still verifying your account."
+              : "Deposits are collected on Stripe and paid out to your bank."
+        }
       />
 
       {/* ─── Tax documents ─── */}
       <SettingsSection
         icon={<FileText size={18} strokeWidth={1.5} />}
         title="Tax documents"
-        description="Year-end 1099 forms will appear here once payouts are set up."
-        ctaLabel="Download"
-        ctaDisabled
-        helperText="Available after your first calendar year of payouts."
+        description="Stripe generates your year-end 1099 tax forms."
+        ctaLabel="Open Stripe"
+        ctaHref={payoutsActive ? "https://dashboard.stripe.com/tax/reports" : undefined}
+        ctaDisabled={!payoutsActive}
+        helperText={
+          payoutsActive
+            ? "View and download tax forms anytime in your Stripe dashboard."
+            : "Available once payouts are active and you've completed a calendar year."
+        }
       />
     </div>
   );
 }
 
 // ─── Sub-components ───────────────────────────────────────
+
+function PayoutStatus({
+  loading,
+  status,
+  opening,
+  onConnect,
+}: {
+  loading: boolean;
+  status: ConnectStatus | null;
+  opening: boolean;
+  onConnect: () => void;
+}): React.JSX.Element {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="h-11 w-40 rounded-md skeleton-shimmer bg-cream-100" />
+        <div className="h-4 w-56 rounded skeleton-shimmer bg-cream-100" />
+      </div>
+    );
+  }
+
+  const active = !!status?.chargesEnabled && !!status?.payoutsEnabled;
+
+  // Fully verified — payouts run automatically on Stripe's schedule.
+  if (active) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <span className="inline-flex items-center gap-1.5 rounded-pill border border-success bg-success/10 px-3 py-1.5 font-sans text-xs font-medium text-success">
+          <Check size={13} strokeWidth={2} />
+          Payouts active
+        </span>
+        <p className="font-sans text-xs text-ink-500 max-w-md leading-relaxed">
+          Card deposits are on. Funds settle to your bank on Stripe&rsquo;s
+          schedule — no action needed.
+        </p>
+        <Link href="/dashboard/payouts" className="shrink-0">
+          <Button type="button" variant="secondary" size="sm" className="gap-1.5">
+            Manage payouts
+            <ArrowRight size={13} strokeWidth={1.75} />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Account created but Stripe is still verifying charges/payouts.
+  if (status?.connected) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <span className="inline-flex items-center gap-1.5 rounded-pill border border-warning bg-warning/10 px-3 py-1.5 font-sans text-xs font-medium text-warning">
+          <Loader2 size={13} strokeWidth={2} />
+          Verifying
+        </span>
+        <p className="font-sans text-xs text-ink-500 max-w-md leading-relaxed">
+          Stripe is finishing verification. You can still take cash bookings in
+          the meantime.
+        </p>
+        <Link href="/dashboard/payouts" className="shrink-0">
+          <Button type="button" variant="primary" size="sm" className="gap-1.5">
+            Finish setup
+            <ArrowRight size={13} strokeWidth={1.75} />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Not connected yet.
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        className="gap-2"
+        onClick={onConnect}
+        disabled={opening}
+      >
+        <CreditCard size={16} strokeWidth={1.5} />
+        {opening ? "Opening Stripe…" : "Set up payouts"}
+      </Button>
+      <p className="font-sans text-xs text-ink-500 max-w-md leading-relaxed">
+        Connect your bank through Stripe to accept card deposits and receive
+        payouts. Prefer cash? You can still take cash bookings without this.
+      </p>
+    </div>
+  );
+}
 
 function StatCard({
   value,
@@ -595,6 +746,7 @@ function SettingsSection({
   ctaDisabled,
   helperText,
   ctaHref,
+  ctaTo,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -603,6 +755,7 @@ function SettingsSection({
   ctaDisabled?: boolean;
   helperText?: string;
   ctaHref?: string;
+  ctaTo?: string;
 }): React.JSX.Element {
   return (
     <section className="space-y-4">
@@ -628,7 +781,14 @@ function SettingsSection({
               </p>
             )}
           </div>
-          {ctaHref ? (
+          {ctaTo ? (
+            <Link href={ctaTo} className="shrink-0">
+              <Button type="button" variant="secondary" size="sm">
+                {ctaLabel}
+                <ArrowRight size={12} strokeWidth={1.75} className="ml-1" />
+              </Button>
+            </Link>
+          ) : ctaHref ? (
             <a
               href={ctaHref}
               target="_blank"

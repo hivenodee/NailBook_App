@@ -355,6 +355,32 @@ export async function POST(request: NextRequest) {
       break;
     }
 
+    case "account.updated": {
+      // Stripe Connect Standard — keep our denormalized capability flags in
+      // sync with the provider's account. We don't gate idempotency here
+      // because Stripe sends many of these (one per requirement change) and
+      // each is a simple field-level update.
+      const account = event.data.object as Stripe.Account;
+      const providerRow = await prisma.provider.findFirst({
+        where: { stripeAccountId: account.id },
+        select: { id: true, stripeOnboardedAt: true },
+      });
+      if (providerRow) {
+        const detailsSubmitted = account.details_submitted ?? false;
+        await prisma.provider.update({
+          where: { id: providerRow.id },
+          data: {
+            stripeChargesEnabled: account.charges_enabled ?? false,
+            stripePayoutsEnabled: account.payouts_enabled ?? false,
+            ...(detailsSubmitted && !providerRow.stripeOnboardedAt
+              ? { stripeOnboardedAt: new Date() }
+              : {}),
+          },
+        });
+      }
+      break;
+    }
+
     case "charge.refunded": {
       const charge = event.data.object as Stripe.Charge;
       const paymentIntentId = charge.payment_intent as string;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-utils";
 import { stripe } from "@/lib/stripe";
 import { strictRateLimit } from "@/lib/rate-limit";
+import { canChargeCard, checkoutConnectArgs } from "@/lib/connect";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,14 @@ export async function POST(
     where: { id },
     include: {
       service: true,
-      provider: { select: { businessName: true, slug: true, stripeAccountId: true } },
+      provider: {
+        select: {
+          businessName: true,
+          slug: true,
+          stripeAccountId: true,
+          stripeChargesEnabled: true,
+        },
+      },
     },
   });
 
@@ -57,30 +65,35 @@ export async function POST(
     },
   });
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `Tip for ${appointment.provider.businessName}`,
-            description: `Thank you for your ${appointment.service.name}`,
+  const connect = checkoutConnectArgs(appointment.provider, amountInCents);
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `Tip for ${appointment.provider.businessName}`,
+              description: `Thank you for your ${appointment.service.name}`,
+            },
+            unit_amount: amountInCents,
           },
-          unit_amount: amountInCents,
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      metadata: {
+        appointmentId: id,
+        providerId: appointment.providerId,
+        paymentType: "TIP",
+        paymentId: tipPayment.id,
       },
-    ],
-    metadata: {
-      appointmentId: id,
-      providerId: appointment.providerId,
-      paymentType: "TIP",
-      paymentId: tipPayment.id,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}`,
+      ...connect.params,
     },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${appointment.provider.slug}/tip/${id}`,
-  });
+    canChargeCard(appointment.provider) ? connect.options : undefined,
+  );
 
   return success({ checkoutUrl: session.url });
 }
