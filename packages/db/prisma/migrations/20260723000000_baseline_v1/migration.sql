@@ -5,6 +5,9 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "UserRole" AS ENUM ('CLIENT', 'PROVIDER', 'ADMIN');
 
 -- CreateEnum
+CREATE TYPE "ProviderCategory" AS ENUM ('NAILS', 'HAIR', 'ESTHETICS', 'BROWS_LASHES', 'MASSAGE', 'OTHER');
+
+-- CreateEnum
 CREATE TYPE "DepositType" AS ENUM ('NONE', 'FLAT', 'PERCENT');
 
 -- CreateEnum
@@ -14,7 +17,7 @@ CREATE TYPE "GroupSelectionRule" AS ENUM ('OPTIONAL', 'EXACTLY_ONE', 'AT_LEAST_O
 CREATE TYPE "AppointmentStatus" AS ENUM ('DRAFT', 'PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateEnum
-CREATE TYPE "PaymentType" AS ENUM ('DEPOSIT', 'FULL', 'BALANCE', 'REFUND');
+CREATE TYPE "PaymentType" AS ENUM ('DEPOSIT', 'FULL', 'BALANCE', 'REFUND', 'TIP');
 
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED');
@@ -38,13 +41,22 @@ CREATE TYPE "ExportType" AS ENUM ('CLIENTS', 'APPOINTMENTS', 'TRANSACTIONS');
 CREATE TYPE "ExportStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
 
 -- CreateEnum
-CREATE TYPE "MessageTemplateType" AS ENUM ('BOOKING_CONFIRMATION', 'BOOKING_NOTIFICATION', 'CANCELLATION', 'COMPLETION', 'REMINDER', 'FOLLOWUP', 'WAITLIST_AVAILABLE', 'WAITLIST_JOINED', 'BALANCE_REQUEST');
+CREATE TYPE "MessageTemplateType" AS ENUM ('BOOKING_CONFIRMATION', 'BOOKING_NOTIFICATION', 'CANCELLATION', 'COMPLETION', 'REMINDER', 'FOLLOWUP', 'WAITLIST_AVAILABLE', 'WAITLIST_JOINED', 'BALANCE_REQUEST', 'TIP_REQUEST');
 
 -- CreateEnum
 CREATE TYPE "WaitlistEntryStatus" AS ENUM ('ACTIVE', 'AVAILABLE', 'NOTIFIED', 'BOOKED', 'EXPIRED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "WaitlistTimePreference" AS ENUM ('ANY', 'MORNING', 'AFTERNOON', 'EVENING');
+
+-- CreateEnum
+CREATE TYPE "Platform" AS ENUM ('IOS', 'ANDROID', 'WEB');
+
+-- CreateEnum
+CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'SMS', 'PUSH');
+
+-- CreateEnum
+CREATE TYPE "NotificationStatus" AS ENUM ('PENDING', 'SENT', 'DELIVERED', 'FAILED', 'SKIPPED');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -69,6 +81,7 @@ CREATE TABLE "Provider" (
     "slug" TEXT NOT NULL,
     "businessName" TEXT NOT NULL,
     "bio" TEXT,
+    "category" "ProviderCategory" NOT NULL DEFAULT 'NAILS',
     "locationAddress" TEXT,
     "locationLat" DOUBLE PRECISION,
     "locationLng" DOUBLE PRECISION,
@@ -88,9 +101,14 @@ CREATE TABLE "Provider" (
     "booksOpen" BOOLEAN NOT NULL DEFAULT true,
     "booksOpenAt" TIMESTAMP(3),
     "bookingWindowDays" INTEGER NOT NULL DEFAULT 30,
+    "bufferMinutes" INTEGER NOT NULL DEFAULT 0,
     "cancellationHours" INTEGER NOT NULL DEFAULT 24,
     "noShowFeePercent" INTEGER NOT NULL DEFAULT 100,
     "stripeAccountId" TEXT,
+    "stripeChargesEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "stripePayoutsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "stripeOnboardedAt" TIMESTAMP(3),
+    "onboardedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -217,6 +235,9 @@ CREATE TABLE "Appointment" (
     "isNewClient" BOOLEAN NOT NULL DEFAULT false,
     "bookedFromWaitlist" BOOLEAN NOT NULL DEFAULT false,
     "inspirationUrl" TEXT,
+    "manageToken" TEXT,
+    "recurrenceGroupId" TEXT,
+    "recurrenceIndex" INTEGER,
     "stripeSessionId" TEXT,
     "stripePaymentIntentId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -292,6 +313,32 @@ CREATE TABLE "Message" (
 );
 
 -- CreateTable
+CREATE TABLE "IntakeQuestion" (
+    "id" TEXT NOT NULL,
+    "serviceId" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "options" JSONB,
+    "isRequired" BOOLEAN NOT NULL DEFAULT false,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "IntakeQuestion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "IntakeResponse" (
+    "id" TEXT NOT NULL,
+    "appointmentId" TEXT NOT NULL,
+    "questionId" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "IntakeResponse_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Feedback" (
     "id" TEXT NOT NULL,
     "appointmentId" TEXT NOT NULL,
@@ -357,7 +404,10 @@ CREATE TABLE "ExportJob" (
     "type" "ExportType" NOT NULL,
     "status" "ExportStatus" NOT NULL DEFAULT 'PENDING',
     "fileUrl" TEXT,
+    "content" TEXT,
     "error" TEXT,
+    "startDate" TIMESTAMP(3),
+    "endDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "completedAt" TIMESTAMP(3),
 
@@ -397,6 +447,52 @@ CREATE TABLE "WaitlistEntry" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "WaitlistEntry_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PushToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "platform" "Platform" NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PushToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NotificationLog" (
+    "id" TEXT NOT NULL,
+    "recipientId" TEXT NOT NULL,
+    "appointmentId" TEXT,
+    "templateType" "MessageTemplateType" NOT NULL,
+    "channel" "NotificationChannel" NOT NULL,
+    "status" "NotificationStatus" NOT NULL DEFAULT 'PENDING',
+    "title" TEXT,
+    "body" TEXT NOT NULL,
+    "metadata" JSONB,
+    "sentAt" TIMESTAMP(3),
+    "deliveredAt" TIMESTAMP(3),
+    "failedAt" TIMESTAMP(3),
+    "retryCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "NotificationLog_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReminderSetting" (
+    "id" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "hoursBefore" INTEGER NOT NULL,
+    "channels" "NotificationChannel"[],
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ReminderSetting_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -464,6 +560,9 @@ CREATE INDEX "TimeOff_providerId_idx" ON "TimeOff"("providerId");
 CREATE INDEX "TimeOff_startDate_endDate_idx" ON "TimeOff"("startDate", "endDate");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Appointment_manageToken_key" ON "Appointment"("manageToken");
+
+-- CreateIndex
 CREATE INDEX "Appointment_providerId_idx" ON "Appointment"("providerId");
 
 -- CreateIndex
@@ -488,6 +587,9 @@ CREATE INDEX "Payment_providerId_idx" ON "Payment"("providerId");
 CREATE INDEX "Payment_appointmentId_idx" ON "Payment"("appointmentId");
 
 -- CreateIndex
+CREATE INDEX "Payment_appointmentId_type_idx" ON "Payment"("appointmentId", "type");
+
+-- CreateIndex
 CREATE INDEX "Payout_providerId_idx" ON "Payout"("providerId");
 
 -- CreateIndex
@@ -498,6 +600,15 @@ CREATE INDEX "Thread_providerId_idx" ON "Thread"("providerId");
 
 -- CreateIndex
 CREATE INDEX "Message_threadId_idx" ON "Message"("threadId");
+
+-- CreateIndex
+CREATE INDEX "IntakeQuestion_serviceId_idx" ON "IntakeQuestion"("serviceId");
+
+-- CreateIndex
+CREATE INDEX "IntakeResponse_appointmentId_idx" ON "IntakeResponse"("appointmentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "IntakeResponse_appointmentId_questionId_key" ON "IntakeResponse"("appointmentId", "questionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Feedback_appointmentId_key" ON "Feedback"("appointmentId");
@@ -537,6 +648,33 @@ CREATE INDEX "WaitlistEntry_providerId_idx" ON "WaitlistEntry"("providerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "WaitlistEntry_providerId_clientEmail_targetDate_targetTime_key" ON "WaitlistEntry"("providerId", "clientEmail", "targetDate", "targetTime");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PushToken_token_key" ON "PushToken"("token");
+
+-- CreateIndex
+CREATE INDEX "PushToken_userId_idx" ON "PushToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "PushToken_token_idx" ON "PushToken"("token");
+
+-- CreateIndex
+CREATE INDEX "NotificationLog_recipientId_idx" ON "NotificationLog"("recipientId");
+
+-- CreateIndex
+CREATE INDEX "NotificationLog_appointmentId_idx" ON "NotificationLog"("appointmentId");
+
+-- CreateIndex
+CREATE INDEX "NotificationLog_status_idx" ON "NotificationLog"("status");
+
+-- CreateIndex
+CREATE INDEX "NotificationLog_createdAt_idx" ON "NotificationLog"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "ReminderSetting_providerId_idx" ON "ReminderSetting"("providerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ReminderSetting_providerId_hoursBefore_key" ON "ReminderSetting"("providerId", "hoursBefore");
 
 -- CreateIndex
 CREATE INDEX "_AddOnToAppointment_B_index" ON "_AddOnToAppointment"("B");
@@ -614,6 +752,15 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threa
 ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "IntakeQuestion" ADD CONSTRAINT "IntakeQuestion_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "IntakeResponse" ADD CONSTRAINT "IntakeResponse_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "IntakeResponse" ADD CONSTRAINT "IntakeResponse_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "IntakeQuestion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Feedback" ADD CONSTRAINT "Feedback_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -639,6 +786,18 @@ ALTER TABLE "WaitlistEntry" ADD CONSTRAINT "WaitlistEntry_providerId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "WaitlistEntry" ADD CONSTRAINT "WaitlistEntry_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PushToken" ADD CONSTRAINT "PushToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationLog" ADD CONSTRAINT "NotificationLog_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationLog" ADD CONSTRAINT "NotificationLog_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReminderSetting" ADD CONSTRAINT "ReminderSetting_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "Provider"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_AddOnToAppointment" ADD CONSTRAINT "_AddOnToAppointment_A_fkey" FOREIGN KEY ("A") REFERENCES "AddOn"("id") ON DELETE CASCADE ON UPDATE CASCADE;

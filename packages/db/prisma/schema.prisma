@@ -5,6 +5,9 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Non-pooled connection for `prisma migrate` — Neon's PgBouncer pooler
+  // can't hold the advisory locks migrations need. Same URL minus `-pooler`.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Users & Tenancy ───────────────────────────────────────
