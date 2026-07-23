@@ -10,12 +10,72 @@ How to use this doc:
 
 ---
 
+## 📍 Current status (updated 2026-05-27)
+
+- **Phase A — Code hygiene**: ✅ done (12 commits pushed to GitHub)
+- **Phase B — Test paths**: ✅ done (24 tasks, 8 bugs found + all fixed, see `BUGS.md`)
+- **Phase 0 — Name protection**: 🟢 **start here** (the 4 quick wins below, ~$700 total)
+- **Phase F1/F2 — LLC + EIN**: 🔴 **start in parallel today** (external clock, ~1 week)
+- **Phase C — Engineering gaps**: 🟢 begin once Phase 0 paperwork is submitted
+- **Phase D–H**: not started
+
+**The order of operations for this week:**
+
+| Day | Task | Hours | Why now |
+|---|---|---|---|
+| Today | Phase 0 — buy domains, register social handles, file trademark | ~2.5 | Name squatting is the biggest risk; trademark protection starts on filing date |
+| Today | Phase F1 — submit LLC paperwork (Stripe Atlas or DIY) | ~1.5 | 1-week external clock; engineering can run while it processes |
+| Today | Phase F2 — EIN at irs.gov | 0.25 | Free, instant, required for the bank account in F3 |
+| Day 2–4 | Phase C1 — Provider onboarding wizard | 16 | The single biggest engineering blocker for beta |
+| Day 5–6 | Phase D — Deploy to Vercel + Railway + custom domain | 6 | Production environment ready |
+| Day 7 | LLC arrives → Phase E — Stripe live activation | 2 | Switch from test to live |
+| Day 8+ | Phase G — Recruit first 3 beta providers | varies | Real users on real money flow |
+
+---
+
+## Phase 0 — Name protection (do this week, $700 total)
+
+These four things lock down the PoroBook name **independent of the LLC**. Costs ~$700 total, takes about 2.5 hours of paperwork. Do them before someone else grabs the handles.
+
+- [ ] **0.1. 🟢 Buy the domains** (~$60–100 total, ~10 min)
+  - `porobook.com` — primary
+  - `porobook.app` — already in mind
+  - `porobook.io` and `porobook.co` — defensive registrations against impersonators
+  - Use **Namecheap**, **Porkbun**, or **Cloudflare Registrar** (cheapest renewals)
+  - Set auto-renew immediately, add 2FA to the registrar account
+
+- [ ] **0.2. 🟢 Register social handles** (free, ~15 min)
+  - `@porobook` on Instagram, TikTok, X (Twitter), Threads, YouTube
+  - At minimum: Instagram + TikTok (your client demographic lives there)
+  - Use a consistent email + 2FA across all accounts
+  - Don't post anything yet — just claim the handle
+
+- [ ] **0.3. 🔴 File USPTO trademark application** ($350 DIY, or ~$500 via service)
+  - Go to https://www.uspto.gov/trademarks
+  - File an "Intent to Use" application (you don't have to have launched yet — protection starts on filing date)
+  - Filing classes:
+    - **Class 042** — software services (the platform itself)
+    - **Class 035** — business services (the marketplace function)
+  - DIY filing: $350 per class via TEAS Plus
+  - Service-assisted: **LegalZoom**, **Trademark Engine**, or **Bobby's Trademarks** (~$500–800 all-in, less risk of clerical rejection)
+  - Registration takes 6–9 months but **legal protection begins the moment you file**
+
+- [ ] **0.4. 🟡 File DBA for "PoroBook" in your state** ($25–100, ~20 min) — *only after Phase F1 (LLC) is formed*
+  - Tells your state that you operate the trade name "PoroBook" under your umbrella LLC
+  - Lets you accept payments addressed to "PoroBook" into your LLC bank account
+  - Cheap state-level registration; doesn't replace the trademark (which is federal)
+  - Defer until LLC arrives (~day 7)
+
+**Why these in this order:** the trademark protects the name nationally; the domains and social handles prevent squatters; the DBA is the local legal tie between your LLC and the PoroBook brand.
+
+---
+
 ## Phase A — Code hygiene (1 evening)
 
 You have ~70 modified files + 30 new files sitting uncommitted. Get them into GitHub before doing anything else.
 
-- [ ] **A1. 🟢 Rotate the leaked Firecrawl API key.** Go to https://www.firecrawl.dev/, dashboard → API Keys → revoke `fc-51008528189c4bd69ddb570300d1904f`, generate a new one. Save the new key in your password manager. **Do not commit it.**
-- [ ] **A2. 🟢 Add a `.gitignore` block** at the repo root for:
+- [x] **A1. 🟢 Rotate the leaked Firecrawl API key.** Go to https://www.firecrawl.dev/, dashboard → API Keys → revoke `fc-51008528189c4bd69ddb570300d1904f`, generate a new one. Save the new key in your password manager. **Do not commit it.**
+- [x] **A2. 🟢 Add a `.gitignore` block** at the repo root for:
   ```
   .mcp.json
   .firecrawl/
@@ -25,13 +85,13 @@ You have ~70 modified files + 30 new files sitting uncommitted. Get them into Gi
   .env
   .env.local
   ```
-- [ ] **A3. 🟡 Decide what to do with `apps/web/public/brand/` (102MB of 4K JPEGs).** Three options:
+- [x] **A3. 🟡 Decide what to do with `apps/web/public/brand/` (102MB of 4K JPEGs).** Three options:
   - (a) Commit them as-is — bloats the repo permanently but everything just works
   - (b) Use git-lfs — proper but adds setup overhead (`brew install git-lfs && git lfs install && git lfs track "*.jpeg"`)
   - (c) Move them to R2 or Cloudinary and reference via absolute URLs — cleanest long-term, requires updating MANIFEST + image refs
   - **Recommendation:** (a) for now, revisit at 1k commits.
-- [ ] **A4. 🟡 Decide what to do with `docs/design/` (56MB screenshots).** Either gitignore it (above) or commit it as design history. **Recommendation:** gitignore. The current designs are the source of truth in code.
-- [ ] **A5. 🟢 Stage and commit in logical chunks.** Suggested sequence:
+- [x] **A4. 🟡 Decide what to do with `docs/design/` (56MB screenshots).** Either gitignore it (above) or commit it as design history. **Recommendation:** gitignore. The current designs are the source of truth in code.
+- [x] **A5. 🟢 Stage and commit in logical chunks.** Suggested sequence:
   ```bash
   git add docs/ .claude/
   git commit -m "docs: design system + audit reports"
@@ -57,8 +117,8 @@ You have ~70 modified files + 30 new files sitting uncommitted. Get them into Gi
   git add apps/web/src/app/api/
   git commit -m "api: cover upload, reminder stats, threads endpoint, status fixes"
   ```
-- [ ] **A6. 🟢 Push to GitHub:** `git push origin main`
-- [ ] **A7. 🟢 Verify GitHub** — open the repo in browser, confirm `.mcp.json` and `.env.local` are absent.
+- [x] **A6. 🟢 Push to GitHub:** `git push origin main`
+- [x] **A7. 🟢 Verify GitHub** — open the repo in browser, confirm `.mcp.json` and `.env.local` are absent.
 
 **Done with Phase A when:** Your work is on GitHub and you can clone fresh to a new machine.
 
@@ -69,26 +129,26 @@ You have ~70 modified files + 30 new files sitting uncommitted. Get them into Gi
 Find bugs while infra is still under your control. Use the URLs in `docs/launch-playbook.md` → Phase B references in your memory, or copy from below.
 
 Setup before testing:
-- [ ] **B1. 🟢** All dev servers up: web (3000), worker, Prisma Studio (5555), local Redis. (`stripe listen` after you re-auth — see B6.)
-- [ ] **B2. 🟢** Open Prisma Studio at http://localhost:5555 and clear any stale `PENDING_PAYMENT` appointments from prior testing.
+- [x] **B1. 🟢** All dev servers up: web (3000), worker, Prisma Studio (5555), local Redis. (`stripe listen` after you re-auth — see B6.)
+- [x] **B2. 🟢** Open Prisma Studio at http://localhost:5555 and clear any stale `PENDING_PAYMENT` appointments from prior testing.
 
 ### Client flows (test as a brand-new user — incognito window)
-- [ ] **B3. 🟢** Discover → http://localhost:3000/explore — filters work, map loads, mobile feed/map toggle works
-- [ ] **B4. 🟢** Provider profile → http://localhost:3000/injusstice-nails — cover, avatar, portfolio fade-in, sticky book bar on mobile (380px viewport)
-- [ ] **B5. 🟢** Reviews → http://localhost:3000/injusstice-nails/reviews — aggregate, individual reviews, stars
-- [ ] **B6. 🟡** Re-auth Stripe CLI: `! stripe login` in your terminal. Then start the forwarder: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`. Note the new `whsec_…` and confirm it matches `STRIPE_WEBHOOK_SECRET` in `apps/web/.env.local`.
-- [ ] **B7. 🟢** Book a service end-to-end. Card: `4242 4242 4242 4242`, any future expiry, any CVC. Watch:
+- [x] **B3. 🟢** Discover → http://localhost:3000/explore — filters work, map loads, mobile feed/map toggle works
+- [x] **B4. 🟢** Provider profile → http://localhost:3000/injusstice-nails — cover, avatar, portfolio fade-in, sticky book bar on mobile (380px viewport)
+- [x] **B5. 🟢** Reviews → http://localhost:3000/injusstice-nails/reviews — aggregate, individual reviews, stars
+- [x] **B6. 🟡** Re-auth Stripe CLI: `! stripe login` in your terminal. Then start the forwarder: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`. Note the new `whsec_…` and confirm it matches `STRIPE_WEBHOOK_SECRET` in `apps/web/.env.local`.
+- [x] **B7. 🟢** Book a service end-to-end. Card: `4242 4242 4242 4242`, any future expiry, any CVC. Watch:
   - horizontal slide between steps
   - deposit calc correct
   - Stripe redirect → success → webhook fires → confirmation page shows the booking
   - confirmation email arrives in Resend dashboard logs
-- [ ] **B8. 🟢** Open the `manage` link from the email, reschedule, cancel.
-- [ ] **B9. 🟢** Mark the appointment as completed via the dashboard. Then test pay-remaining-balance, feedback, and tip flows from the completion email.
-- [ ] **B10. 🟢** Try edge cases: cash payment, free service (100% coupon), recurring booking, waitlist when no slots available.
+- [x] **B8. 🟢** Open the `manage` link from the email, reschedule, cancel.
+- [x] **B9. 🟢** Mark the appointment as completed via the dashboard. Then test pay-remaining-balance, feedback, and tip flows from the completion email.
+- [x] **B10. 🟢** Try edge cases: cash payment, free service (100% coupon), recurring booking, waitlist when no slots available.
 
 ### Provider flows (signed in as your test account)
-- [ ] **B11. 🟢** http://localhost:3000/dashboard — Today view, KPIs, recent activity
-- [ ] **B12. 🟢** Walk every dashboard page in `docs/launch-playbook.md` Phase B list. Specifically test:
+- [x] **B11. 🟢** http://localhost:3000/dashboard — Today view, KPIs, recent activity
+- [x] **B12. 🟢** Walk every dashboard page in `docs/launch-playbook.md` Phase B list. Specifically test:
   - **services/[id]**: create new service, add add-on group, add intake question
   - **availability**: change hours, add a block, verify booking flow respects it
   - **portfolio**: drag-drop a photo (will fail until R2 is wired — see D5)
@@ -98,11 +158,11 @@ Setup before testing:
   - **coupons**: create PERCENT, apply to a test booking, verify discount math
   - **messages/templates**: edit a template, preview with sample vars
   - **exports**: generate appointments export, verify CSV downloads
-- [ ] **B13. 🟢** Test on your phone via http://10.0.0.70:3000 — confirm sticky bars don't overlap the home indicator, touch targets feel right, no horizontal scroll.
+- [x] **B13. 🟢** Test on your phone via http://10.0.0.70:3000 — confirm sticky bars don't overlap the home indicator, touch targets feel right, no horizontal scroll.
 
 ### Background jobs
-- [ ] **B14. 🟢** Watch the worker terminal output for ~5 minutes — confirm no errors on each scheduled tick.
-- [ ] **B15. 🟢** In Prisma Studio, check `NotificationLog` for new SENT/DELIVERED rows after the worker runs.
+- [x] **B14. 🟢** Watch the worker terminal output for ~5 minutes — confirm no errors on each scheduled tick.
+- [x] **B15. 🟢** In Prisma Studio, check `NotificationLog` for new SENT/DELIVERED rows after the worker runs.
 
 **Done with Phase B when:** You've completed at least one full booking-to-feedback loop end-to-end and noted every bug in a list. Triage that list before Phase C.
 
@@ -184,6 +244,18 @@ Only do this after Phase D is verified. Mistakes here move real money.
 ## Phase F — Legal + business (1 week, parallel with D + E)
 
 Don't put this off — it can take longer than the code.
+
+### About entity structure — umbrella LLC pattern
+
+If you already plan to run other ventures (e.g., AI consulting), you have three options for how PoroBook fits in:
+
+| Pattern | Cost | When it fits |
+|---|---|---|
+| **(A) Single umbrella LLC + DBA** ← **recommended for pre-revenue** | $50–500 once + $25–100 DBA | One LLC, PoroBook is a product line, "PoroBook" filed as a DBA. All revenue flows into the same books. When PoroBook gets traction, spin it out into its own LLC and assign the IP. This is the standard solo-founder pattern. |
+| (B) Holding company + subsidiary LLCs | $500 × N + extra annual fees | Better liability isolation between ventures, but overkill until each subsidiary has real revenue. |
+| (C) Two separate LLCs day one | $500 × 2 + 2× bank accounts + 2× tax filings | Only if both ventures are venture-scale from the start. |
+
+For PoroBook specifically: pick **(A)**. Form one LLC under your umbrella name (e.g. "[Your Name] Ventures LLC" or your AI consulting brand), then file a DBA for "PoroBook" once the LLC exists (covered in Phase 0.4 above).
 
 - [ ] **F1. 🔴 Business entity.** LLC is usually the right answer for a solo founder. Cost: $50–$500 depending on state. Stripe Atlas can do this in ~1 week if you don't already have one. https://stripe.com/atlas
 - [ ] **F2. 🔴 EIN from the IRS.** Free, takes 15 minutes online. Required for Stripe.
@@ -287,12 +359,17 @@ Or just print this markdown directly from your editor.
 
 ## TL;DR for impatient days
 
-If you only do 5 things this week:
+**Where you are right now (2026-05-27):** Phase A ✅ Phase B ✅. Pick up at **Phase 0** for name protection, then Phase C1.
 
-1. Push code to GitHub (Phase A)
-2. Walk one complete booking-to-feedback loop locally (Phase B)
-3. Build the **provider onboarding wizard** (Phase C1) — the only true engineering blocker for beta
-4. Deploy to Vercel + Railway with Upstash + verified Resend domain (Phase D)
-5. Recruit 3 beta providers from your network — don't wait for the product to be perfect (Phase G)
+The 5 things that matter this week:
 
-Everything else can wait.
+1. **TODAY (~4 hours of paperwork)**
+   - Phase 0.1–0.3 — buy domains, register social handles, file USPTO trademark (~$700, 2.5h)
+   - Phase F1 — submit Stripe Atlas LLC paperwork ($500, ~1h)
+   - Phase F2 — EIN at irs.gov (free, ~15 min)
+2. **Days 2–4** — Phase C1: provider onboarding wizard (the single biggest engineering blocker for beta)
+3. **Days 5–6** — Phase D: deploy to Vercel + Railway with Upstash + verified Resend domain
+4. **Day 7+** — LLC arrives → Phase E (Stripe live activation) + Phase 0.4 (file DBA)
+5. **Day 8+** — Phase G: recruit 3 beta providers from your network and run onboarding calls
+
+Everything else (Phase C2–C6, F4 attorney review, F6 insurance, H public launch) can wait.

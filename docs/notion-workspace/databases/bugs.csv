@@ -1,0 +1,16 @@
+Bug,Severity,Status,Reported,Page / area,Notes
+EmptyState customArt prop leaks to DOM (React warning),Bug,Closed,2026-05-27,components/ui/EmptyState.tsx,Fixed by destructuring icon + customArt out of ...rest spread before motion.div
+Dates display as previous day in dashboard,Blocker,Closed,2026-05-27,dashboard/page.tsx + history/page.tsx,Fixed isToday + history getBucket to use provider timezone via en-CA date strings. Also fixed clients/[id] formatDate signature.
+New bookings missing from upcoming / Today view,Blocker,Closed,2026-05-27,dashboard/page.tsx,Same root cause as date display bug - tz filtering. Closed by the same fix.
+Reschedule confirmation appointment doesnt show in dashboard,Blocker,Closed,2026-05-27,dashboard/page.tsx,Same root cause as above - tz filtering. Closed by the same fix.
+No email sent after rescheduling appointment,Blocker,Closed,2026-05-27,api/appointments/[id]/route.ts,Added reschedule branch to PATCH handler - re-sends booking confirmation + reschedules reminders
+No email sent after paying remaining balance,Blocker,Closed,2026-05-27,api/webhooks/stripe/route.ts,Added sendBalanceReceipt to lib/email.ts and wired into BALANCE branch of webhook
+Reschedule slot picker flashes 'no times available' before fetch,Bug,Closed,2026-05-27,(public)/[slug]/manage/[id]/page.tsx,Made slots state nullable. Loading state covers the race window.
+'Send payment link' has no UI confirmation on dashboard,Bug,Closed,2026-05-27,dashboard/appointments/[id]/page.tsx,Added toast: 'Payment link sent to client'
+Calendar icon invisible on date inputs (same color as bg),Bug,Closed,2026-05-27,styles/globals.css,Added webkit-calendar-picker-indicator filter tinted to ink-500
+Dark mode toggle was broken (added class but nothing changed visually),Bug,Closed,2026-05-27,components/ui/ThemeToggle.tsx,Removed entirely - brand is light-only like Aesop/PMG/Resy
+R2 portfolio + cover uploads failed silently,Blocker,Closed,2026-05-27,next.config.js,Two fixes: (1) CSP connect-src missing *.r2.cloudflarestorage.com (2) Bucket CORS policy not set
+Cover image too prominent on wide screens,Bug,Closed,2026-05-27,(public)/[slug]/page.tsx,Switched to X/Twitter pattern - full-bleed 2:1 mobile / 6:1 desktop banner with avatar overlap
+Cover crop modal needed for upload,Bug,Closed,2026-05-27,components/CoverCropModal.tsx,Built new modal mirroring AvatarCropModal but with 3:1 rectangular crop + grid guides
+Worker dies on Neon idle disconnect,Bug,Open,2026-05-27,apps/worker,Symptom: 'Server has closed the connection' in worker logs after extended idle. Workaround: restart pnpm dev. Real fix: Prisma retry wrapper.
+Stripe CLI test_mode_api_key expires after long inactivity,Nit,Closed,2026-05-27,operational,Workaround: stripe config --set test_mode_api_key sk_test_... directly. Avoids the browser-based stripe login flow.

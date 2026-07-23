@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, RefreshCw, Check } from "lucide-react";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -86,11 +87,13 @@ function statusVariant(status: string): "verified" | "warning" | "error" | "neut
   return "status";
 }
 
+function sentenceCase(value: string): string {
+  const s = value.replace(/_/g, " ").toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function statusLabel(status: string): string {
-  return status
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return sentenceCase(status);
 }
 
 function paymentVariant(status: string): "verified" | "warning" | "error" | "neutral" {
@@ -167,7 +170,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
       }
     } catch (e) {
       console.error("Collect balance failed:", e);
-      setToast("Network error — please try again");
+      setToast("Network error. Please try again.");
       setTimeout(() => setToast(null), 4000);
     } finally {
       setBalanceLoading(false);
@@ -178,9 +181,9 @@ export default function AppointmentDetailPage(): React.JSX.Element {
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6">
-        <div className="h-5 w-20 skeleton-shimmer rounded-md" />
-        <div className="h-48 skeleton-shimmer rounded-md" />
-        <div className="h-32 skeleton-shimmer rounded-md" />
+        <div className="h-5 w-20 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-48 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-32 skeleton-shimmer bg-cream-100 rounded-md" />
       </div>
     );
   }
@@ -189,7 +192,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
     return (
       <div className="space-y-3">
         <p className="font-sans text-base text-ink-500">Appointment not found.</p>
-        <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-sans font-medium text-rust-500 hover:text-rust-600">
+        <Link href="/dashboard" className="inline-flex items-center gap-1.5 py-3 -my-3 text-sm font-sans font-medium text-rust-500 hover:text-rust-600">
           <ArrowLeft size={14} aria-hidden="true" />
           Back to dashboard
         </Link>
@@ -207,7 +210,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
     <div className="max-w-2xl space-y-6">
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
+        className="inline-flex items-center gap-1.5 py-3 -my-3 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
       >
         <ArrowLeft size={14} aria-hidden="true" />
         Back
@@ -216,7 +219,10 @@ export default function AppointmentDetailPage(): React.JSX.Element {
       {/* Header */}
       <Card padding="lg" className="space-y-5">
         <div className="flex justify-between items-start gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
+            <p className="text-label text-ink-500">
+              Appointment &middot; {appointment.service.name}
+            </p>
             <Heading variant="display" className="text-3xl">{clientDisplay}</Heading>
             {appointment.isNewClient && <Badge variant="verified">New client</Badge>}
           </div>
@@ -281,7 +287,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
             </Row>
           )}
           <Row label="Total">
-            <span className="font-display text-base">
+            <span className="font-sans text-base font-semibold tracking-tight text-ink-900">
               ${(appointment.totalInCents / 100).toFixed(2)}
             </span>
           </Row>
@@ -309,7 +315,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
       {/* Intake Responses */}
       {appointment.intakeResponses && appointment.intakeResponses.length > 0 && (
         <section className="space-y-3">
-          <Heading variant="h4" className="text-lg">Intake responses</Heading>
+          <SectionRule label="Intake responses" />
           <Card padding="lg" className="space-y-3">
             {appointment.intakeResponses.map((r) => {
               let displayAnswer = r.answer;
@@ -369,7 +375,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
                 <p className="text-xs font-sans font-medium tracking-wide uppercase text-ink-500">
                   Remaining balance
                 </p>
-                <p className="font-display text-2xl text-ink-900 mt-1">
+                <p className="font-sans text-2xl font-semibold tracking-tight text-ink-900 mt-1">
                   ${(remaining / 100).toFixed(2)} remaining
                 </p>
               </div>
@@ -474,19 +480,19 @@ export default function AppointmentDetailPage(): React.JSX.Element {
       {/* Payments */}
       {appointment.payments.length > 0 && (
         <section className="space-y-3">
-          <Heading variant="h4" className="text-lg">Payments</Heading>
+          <SectionRule label="Payments" />
           <div className="space-y-2">
             {appointment.payments.map((p) => (
               <Card key={p.id} padding="md">
                 <div className="flex justify-between items-center text-sm font-sans">
                   <div>
-                    <span className="font-medium text-ink-900">
+                    <span className="font-semibold tracking-tight tabular-nums text-ink-900">
                       ${(p.amountInCents / 100).toFixed(2)}
                     </span>
-                    <span className="ml-2 text-ink-500">{p.type}</span>
-                    <span className="ml-2 text-ink-500">{p.method.replace(/_/g, " ")}</span>
+                    <span className="ml-2 text-ink-500">{sentenceCase(p.type)}</span>
+                    <span className="ml-2 text-ink-500">{sentenceCase(p.method)}</span>
                   </div>
-                  <Badge variant={paymentVariant(p.status)}>{p.status}</Badge>
+                  <Badge variant={paymentVariant(p.status)}>{sentenceCase(p.status)}</Badge>
                 </div>
               </Card>
             ))}
@@ -496,7 +502,7 @@ export default function AppointmentDetailPage(): React.JSX.Element {
 
       {/* Activity log */}
       <section className="space-y-3">
-        <Heading variant="h4" className="text-lg">Activity</Heading>
+        <SectionRule label="Activity" />
         <Card padding="lg">
           {appointment.events.length === 0 ? (
             <p className="text-sm font-sans text-ink-500">No activity yet.</p>

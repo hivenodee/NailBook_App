@@ -12,6 +12,7 @@ import { scheduleReminders } from "@/lib/schedule-jobs";
 import { strictRateLimit } from "@/lib/rate-limit";
 import { calculateDiscount, calculateDeposit } from "@/lib/pricing";
 import { sanitizeText } from "@/lib/sanitize";
+import { canChargeCard, checkoutConnectArgs } from "@/lib/connect";
 
 export const dynamic = "force-dynamic";
 
@@ -514,32 +515,44 @@ export async function POST(request: NextRequest) {
     return success(appointment, 201);
   }
 
-  // Create Stripe checkout session for deposit or full payment
+  // Create Stripe checkout session for deposit or full payment.
+  //
+  // Routed through Connect Standard as a direct charge on the connected
+  // account when the provider has finished payout setup. Falls back to a
+  // platform-side charge (no Connect routing) when they haven't — that
+  // path is intended for the seed test provider and early development; in
+  // production this branch shouldn't fire since the booking flow won't
+  // surface a card option until charges are enabled (see booking page UI).
   const amountToCharge = depositInCents > 0 ? depositInCents : totalPriceCents;
+  const connect = checkoutConnectArgs(service.provider, amountToCharge);
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `${service.name}${depositInCents > 0 ? " (Deposit)" : ""}`,
-            description: `Booking with ${service.provider.businessName}`,
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${service.name}${depositInCents > 0 ? " (Deposit)" : ""}`,
+              description: `Booking with ${service.provider.businessName}`,
+            },
+            unit_amount: amountToCharge,
           },
-          unit_amount: amountToCharge,
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      metadata: {
+        appointmentId: appointment.id,
+        providerId: service.providerId,
+        paymentType: depositInCents > 0 ? "DEPOSIT" : "FULL",
       },
-    ],
-    metadata: {
-      appointmentId: appointment.id,
-      providerId: service.providerId,
-      paymentType: depositInCents > 0 ? "DEPOSIT" : "FULL",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${service.provider.slug}/confirmation?appointment=${appointment.id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${service.provider.slug}/book?service=${serviceId}`,
+      ...connect.params,
     },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${service.provider.slug}/confirmation?appointment=${appointment.id}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${service.provider.slug}/book?service=${serviceId}`,
-  });
+    canChargeCard(service.provider) ? connect.options : undefined,
+  );
 
   // Store session ID on appointment
   await prisma.appointment.update({

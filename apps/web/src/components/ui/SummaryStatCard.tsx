@@ -25,14 +25,15 @@ export default function SummaryStatCard({
 
   return (
     <div
-      className="rounded-md animate-fade-in-up bg-cream-50 border border-ink-200 p-4"
+      className="rounded-md animate-fade-in-up bg-white border border-ink-200 p-4"
       style={animationDelay > 0 ? { animationDelay: `${animationDelay}ms`, animationFillMode: "both" } : undefined}
     >
       <p className="font-sans uppercase text-xs tracking-widest font-medium text-ink-500">
         {label}
       </p>
+      {/* Data wears sans, not the display serif (brand: sans for data). */}
       <p
-        className="font-display mt-1.5 text-2xl leading-none text-ink-900"
+        className="font-sans mt-1.5 text-2xl font-semibold tracking-tight leading-none text-ink-900"
         style={accentColor ? { color: accentColor } : undefined}
       >
         {value}

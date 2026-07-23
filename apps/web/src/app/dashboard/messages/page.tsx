@@ -236,16 +236,21 @@ export default function MessagesPage(): React.JSX.Element {
       >
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-1">
+            <p className="text-label text-ink-500">
+              Messages &middot; Client conversations
+            </p>
             <Heading variant="display" className="text-3xl md:text-4xl">
               Messages
             </Heading>
-            <p className="font-sans text-sm text-ink-500">
-              {threadsLoading
-                ? "Loading…"
-                : threads.length === 0
+            {threadsLoading ? (
+              <span className="inline-block h-4 w-44 rounded skeleton-shimmer bg-cream-100" />
+            ) : (
+              <p className="font-sans text-sm text-ink-500">
+                {threads.length === 0
                   ? "Conversations land here when bookings come in."
                   : `${threads.length} ${threads.length === 1 ? "conversation" : "conversations"}`}
-            </p>
+              </p>
+            )}
           </div>
           <Link
             href="/dashboard/messages/templates"
@@ -278,7 +283,7 @@ export default function MessagesPage(): React.JSX.Element {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search conversations"
-                className="h-10 w-full rounded-md border border-ink-200 bg-cream-50 pl-10 pr-3 font-sans text-sm text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+                className="h-11 w-full rounded-md border border-ink-200 bg-cream-50 pl-10 pr-3 font-sans text-sm text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
               />
             </div>
           </div>
@@ -344,7 +349,7 @@ export default function MessagesPage(): React.JSX.Element {
             />
           ) : (
             <div className="flex-1 flex items-center justify-center px-6">
-              <p className="font-display italic text-lg text-ink-500">
+              <p className="font-sans text-sm text-ink-500">
                 Select a conversation
               </p>
             </div>
@@ -479,7 +484,7 @@ function ThreadPane({
           type="button"
           onClick={onBack}
           aria-label="Back to conversations"
-          className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-pill text-ink-700 hover:bg-cream-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          className="lg:hidden inline-flex h-11 w-11 items-center justify-center rounded-pill text-ink-700 hover:bg-cream-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
         >
           <ArrowLeft size={18} strokeWidth={1.75} />
         </button>
@@ -502,7 +507,7 @@ function ThreadPane({
         <Link
           href={`/dashboard/appointments/${thread.appointment.id}`}
           aria-label="View appointment"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-pill text-ink-500 hover:bg-cream-100 hover:text-ink-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-pill text-ink-500 hover:bg-cream-100 hover:text-ink-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
         >
           <MoreHorizontal size={18} strokeWidth={1.75} />
         </Link>
@@ -511,7 +516,12 @@ function ThreadPane({
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-5 space-y-2"
+        className={cn(
+          "flex-1 overflow-y-auto px-4 py-5 space-y-2 transition-opacity duration-200",
+          // Refetch dim-hold: keep the previous messages visible while a new
+          // thread loads instead of flashing a skeleton over real content.
+          messagesLoading && messages.length > 0 && "opacity-60 pointer-events-none",
+        )}
       >
         {messagesLoading && messages.length === 0 ? (
           <div className="space-y-3">
@@ -562,7 +572,7 @@ function ThreadPane({
                   setComposer(composer ? `${composer} ${r}` : r);
                   setShowQuickReplies(false);
                 }}
-                className="shrink-0 inline-flex items-center h-8 rounded-pill border border-ink-200 bg-cream-50 px-3 font-sans text-xs text-ink-700 hover:border-ink-300 transition-colors"
+                className="shrink-0 inline-flex items-center h-9 rounded-pill border border-ink-200 bg-cream-50 px-3 font-sans text-xs text-ink-700 hover:border-ink-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
               >
                 {r}
               </button>
@@ -576,7 +586,7 @@ function ThreadPane({
             type="button"
             disabled
             aria-label="Attach file (coming soon)"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-ink-300 cursor-not-allowed"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-ink-300 cursor-not-allowed"
             title="Attachments coming soon"
           >
             <Paperclip size={16} strokeWidth={1.75} />
@@ -588,7 +598,7 @@ function ThreadPane({
             onClick={() => setShowQuickReplies((v) => !v)}
             aria-label="Quick replies"
             className={cn(
-              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-pill transition-colors",
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-pill transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
               showQuickReplies
                 ? "bg-cream-100 text-rust-500"
@@ -605,7 +615,7 @@ function ThreadPane({
             onKeyDown={onComposerKeyDown}
             placeholder="Write a message"
             rows={1}
-            className="flex-1 min-h-[40px] max-h-32 resize-none rounded-md border border-ink-200 bg-cream-50 px-4 py-2.5 font-sans text-base text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+            className="flex-1 min-h-[44px] max-h-32 resize-none rounded-md border border-ink-200 bg-cream-50 px-4 py-2.5 font-sans text-base text-ink-900 placeholder:text-ink-300 transition-colors hover:border-ink-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
           />
 
           <Button
@@ -668,7 +678,7 @@ function DateSeparator({ iso }: { iso: string }): React.JSX.Element {
   return (
     <div className="flex items-center gap-3 py-3">
       <span className="flex-1 h-px bg-ink-200" />
-      <span className="font-display italic text-sm text-ink-500 px-1">
+      <span className="font-sans text-xs text-ink-500 px-1">
         {dateSeparatorLabel(iso)}
       </span>
       <span className="flex-1 h-px bg-ink-200" />

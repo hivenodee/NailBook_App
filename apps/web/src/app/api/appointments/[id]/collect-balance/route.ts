@@ -5,6 +5,7 @@ import { stripe } from "@/lib/stripe";
 import { getBalanceInfo } from "@/lib/balance";
 import { sendBalanceRequest, formatDateTime } from "@/lib/email";
 import { sendBalanceRequestSms } from "@/lib/sms";
+import { canChargeCard, checkoutConnectArgs } from "@/lib/connect";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,15 @@ export async function POST(request: NextRequest, { params }: Params) {
     where: { id },
     include: {
       service: { select: { name: true } },
-      provider: { select: { slug: true, businessName: true, stripeAccountId: true, timezone: true } },
+      provider: {
+        select: {
+          slug: true,
+          businessName: true,
+          stripeAccountId: true,
+          stripeChargesEnabled: true,
+          timezone: true,
+        },
+      },
     },
   });
 
@@ -90,37 +99,33 @@ export async function POST(request: NextRequest, { params }: Params) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const slug = appointment.provider.slug;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `${appointment.service.name} (Remaining Balance)`,
-          },
-          unit_amount: balance.remainingInCents,
-        },
-        quantity: 1,
-      },
-    ],
-    metadata: {
-      appointmentId: id,
-      providerId: appointment.providerId,
-      paymentType: "BALANCE",
-    },
-    success_url: `${baseUrl}/${slug}/pay/${id}?status=success`,
-    cancel_url: `${baseUrl}/${slug}/pay/${id}`,
-    ...(appointment.provider.stripeAccountId
-      ? {
-          payment_intent_data: {
-            transfer_data: {
-              destination: appointment.provider.stripeAccountId,
+  const connect = checkoutConnectArgs(appointment.provider, balance.remainingInCents);
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${appointment.service.name} (Remaining Balance)`,
             },
+            unit_amount: balance.remainingInCents,
           },
-        }
-      : {}),
-  });
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        appointmentId: id,
+        providerId: appointment.providerId,
+        paymentType: "BALANCE",
+      },
+      success_url: `${baseUrl}/${slug}/pay/${id}?status=success`,
+      cancel_url: `${baseUrl}/${slug}/pay/${id}`,
+      ...connect.params,
+    },
+    canChargeCard(appointment.provider) ? connect.options : undefined,
+  );
 
   // Log event
   await prisma.appointmentEvent.create({

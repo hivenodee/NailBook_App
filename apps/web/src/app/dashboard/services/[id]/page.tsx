@@ -8,6 +8,7 @@ import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { SectionRule } from "@/components/ui/SectionRule";
 
 type AddOnGroup = {
   id: string;
@@ -362,9 +363,9 @@ export default function EditServicePage(): React.JSX.Element {
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6">
-        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
-        <div className="h-12 w-48 skeleton-shimmer rounded-md" />
-        <div className="h-64 skeleton-shimmer rounded-md" />
+        <div className="h-5 w-32 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-12 w-48 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-64 skeleton-shimmer bg-cream-100 rounded-md" />
       </div>
     );
   }
@@ -461,9 +462,14 @@ export default function EditServicePage(): React.JSX.Element {
               {addon.isMandatory && <Badge variant="verified">Mandatory</Badge>}
               {!addon.isActive && <Badge variant="status">Inactive</Badge>}
             </div>
-            <div className="flex gap-3 text-xs font-sans text-ink-500 mt-0.5">
-              <span>+${(addon.priceInCents / 100).toFixed(2)}</span>
-              {addon.durationMinutes > 0 && <span>+{addon.durationMinutes} min</span>}
+            <div className="flex gap-3 text-xs font-sans mt-0.5">
+              {/* Prices align down the add-on list, so tabular figures. */}
+              <span className="font-semibold tracking-tight text-ink-900 tabular-nums">
+                +${(addon.priceInCents / 100).toFixed(2)}
+              </span>
+              {addon.durationMinutes > 0 && (
+                <span className="text-ink-500">+{addon.durationMinutes} min</span>
+              )}
             </div>
           </div>
           <div className="flex gap-1.5 shrink-0">
@@ -487,15 +493,23 @@ export default function EditServicePage(): React.JSX.Element {
     <div className="max-w-2xl space-y-8">
       <Link
         href="/dashboard/services"
-        className="inline-flex items-center gap-1.5 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
+        className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-sans text-ink-500 hover:text-ink-700 transition-colors"
       >
         <ArrowLeft size={14} aria-hidden="true" />
         Back to services
       </Link>
 
-      <Heading variant="display" className="text-3xl sm:text-4xl">Edit service</Heading>
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Services &middot; {service.name}</p>
+        <Heading variant="display" className="text-3xl sm:text-4xl">Edit service</Heading>
+        <p className="font-sans text-sm text-ink-500 max-w-md leading-relaxed">
+          Pricing, add-ons, and the questions clients answer at booking.
+        </p>
+      </header>
 
       {/* Service fields */}
+      <section className="space-y-4">
+      <SectionRule label="Details" />
       <Card padding="lg" className="space-y-5">
         <FieldText label="Name" value={name} onChange={setName} maxLength={100} />
         <FieldText
@@ -570,23 +584,22 @@ export default function EditServicePage(): React.JSX.Element {
           {errorMsg && <span className="text-sm font-sans text-error">{errorMsg}</span>}
         </div>
       </Card>
+      </section>
 
       {/* Add-on Groups + Add-ons */}
       <section className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Heading variant="h3" className="text-2xl">Add-ons</Heading>
-          <div className="flex gap-2">
-            {!showGroupForm && (
-              <Button variant="ghost" size="sm" onClick={() => openGroupForm()}>
-                Add group
-              </Button>
-            )}
-            {!showAddOn && (
-              <Button variant="secondary" size="sm" onClick={() => setShowAddOn(true)}>
-                Add add-on
-              </Button>
-            )}
-          </div>
+        <SectionRule label="Add-ons" />
+        <div className="flex flex-wrap gap-2">
+          {!showGroupForm && (
+            <Button variant="ghost" size="sm" onClick={() => openGroupForm()}>
+              Add group
+            </Button>
+          )}
+          {!showAddOn && (
+            <Button variant="secondary" size="sm" onClick={() => setShowAddOn(true)}>
+              Add add-on
+            </Button>
+          )}
         </div>
 
         {/* Group form */}
@@ -744,17 +757,17 @@ export default function EditServicePage(): React.JSX.Element {
 
       {/* Intake Form */}
       <section className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Heading variant="h3" className="text-2xl">Intake form</Heading>
+        <SectionRule label="Intake form" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-sans text-ink-500">
+            Questions clients answer when booking this service.
+          </p>
           {!showIntakeForm && (
             <Button variant="secondary" size="sm" onClick={() => setShowIntakeForm(true)}>
               Add question
             </Button>
           )}
         </div>
-        <p className="text-sm font-sans text-ink-500">
-          Questions clients answer when booking this service.
-        </p>
 
         {showIntakeForm && (
           <Card padding="lg" className="space-y-4">
@@ -821,9 +834,10 @@ export default function EditServicePage(): React.JSX.Element {
                 )}
               </div>
               <button
+                type="button"
                 onClick={() => handleDeleteIntakeQuestion(q.id)}
                 aria-label="Delete question"
-                className="h-9 w-9 inline-flex items-center justify-center rounded-pill text-ink-500 hover:text-error hover:bg-cream-100 transition-colors"
+                className="h-11 w-11 shrink-0 inline-flex items-center justify-center rounded-pill text-ink-500 hover:text-error hover:bg-cream-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
               >
                 <Trash2 size={14} aria-hidden="true" />
               </button>
@@ -937,10 +951,11 @@ function ChipRow<T extends string>({
             type="button"
             onClick={() => onSelect(o.key)}
             className={
-              "rounded-pill px-4 py-1.5 text-sm font-sans font-medium border transition-colors " +
+              "shrink-0 h-9 rounded-pill px-4 text-sm font-sans font-medium border transition-colors " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 " +
               (active
                 ? "bg-rust-500 text-cream-50 border-rust-500"
-                : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-500")
+                : "bg-cream-50 text-ink-700 border-ink-200 hover:border-ink-300")
             }
           >
             {o.label}

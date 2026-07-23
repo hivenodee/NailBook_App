@@ -9,6 +9,7 @@ import { PortfolioGrid } from "@/components/PortfolioGrid";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
+import { SectionRule } from "@/components/ui/SectionRule";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -132,6 +133,9 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                 <div className="pt-16 sm:pt-20 pb-8 space-y-3">
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="space-y-1 min-w-0">
+                      <p className="text-label text-ink-500">
+                        PoroBook &middot; Book online
+                      </p>
                       <Heading
                         variant="h1"
                         className="text-3xl sm:text-4xl tracking-tight"
@@ -150,7 +154,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                         className="shrink-0 flex items-center gap-2 font-sans text-sm hover:opacity-80 transition-opacity"
                       >
                         <Stars rating={reviewStats.avgRating} />
-                        <span className="font-display text-ink-900">
+                        <span className="font-sans font-semibold tracking-tight text-ink-900">
                           {reviewStats.avgRating}
                         </span>
                         <span className="text-ink-500">
@@ -209,9 +213,12 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                 ring={provider.isVerified}
                 className="mx-auto h-24 w-24 text-3xl"
               />
+              <p className="mt-5 text-label text-ink-500">
+                PoroBook &middot; Book online
+              </p>
               <Heading
                 variant="h1"
-                className="mt-5 text-4xl md:text-5xl tracking-tight"
+                className="mt-2 text-4xl md:text-5xl tracking-tight"
               >
                 {provider.businessName}
               </Heading>
@@ -246,7 +253,7 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
                   className="mt-5 inline-flex items-center gap-2 font-sans text-sm hover:opacity-80 transition-opacity"
                 >
                   <Stars rating={reviewStats.avgRating} />
-                  <span className="font-display text-ink-900">
+                  <span className="font-sans font-semibold tracking-tight text-ink-900">
                     {reviewStats.avgRating}
                   </span>
                   <span className="text-ink-300">·</span>
@@ -276,8 +283,8 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
       {/* ─── Body ─── */}
       <div className="mx-auto max-w-2xl px-6 pt-8 space-y-12">
         {/* Portfolio */}
-        <section>
-          <SectionHeading>Portfolio</SectionHeading>
+        <section className="space-y-5">
+          <SectionRule label="Portfolio" />
           {provider.mediaAssets.length > 0 ? (
             <PortfolioGrid assets={provider.mediaAssets} />
           ) : (
@@ -314,8 +321,8 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         )}
 
         {/* Services */}
-        <section>
-          <SectionHeading>Services</SectionHeading>
+        <section className="space-y-5">
+          <SectionRule label="Services" />
           <Suspense
             fallback={
               <div className="space-y-3">
@@ -337,28 +344,30 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
         </section>
 
         {/* Policies */}
-        <section className="rounded-md border border-ink-200 bg-cream-50 p-6 space-y-5">
-          <p className="font-sans text-xs uppercase tracking-wide text-ink-500">
-            Policies
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <PolicyTile
-              value={`${provider.cancellationHours}h`}
-              label="Cancellation window"
-            />
-            <PolicyTile
-              value={`${provider.arrivalGraceMinutes}m`}
-              label="Grace period"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {provider.acceptsCard && <PaymentChip>Card</PaymentChip>}
-            {provider.acceptsApplePay && <PaymentChip>Apple Pay</PaymentChip>}
-            {provider.acceptsGooglePay && <PaymentChip>Google Pay</PaymentChip>}
-            {provider.acceptsCashAppPay && (
-              <PaymentChip>Cash App Pay</PaymentChip>
-            )}
-            {provider.acceptsCash && <PaymentChip>Cash</PaymentChip>}
+        <section className="space-y-5">
+          <SectionRule label="Policies" />
+          <div className="rounded-md border border-ink-200 bg-cream-50 p-6 space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <PolicyTile
+                value={`${provider.cancellationHours}h`}
+                label="Cancellation window"
+              />
+              <PolicyTile
+                value={`${provider.arrivalGraceMinutes}m`}
+                label="Grace period"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {provider.acceptsCard && <PaymentChip>Card</PaymentChip>}
+              {provider.acceptsApplePay && <PaymentChip>Apple Pay</PaymentChip>}
+              {provider.acceptsGooglePay && (
+                <PaymentChip>Google Pay</PaymentChip>
+              )}
+              {provider.acceptsCashAppPay && (
+                <PaymentChip>Cash App Pay</PaymentChip>
+              )}
+              {provider.acceptsCash && <PaymentChip>Cash</PaymentChip>}
+            </div>
           </div>
         </section>
       </div>
@@ -373,19 +382,6 @@ export default async function ProviderPage({ params }: Props): Promise<React.JSX
 
 // ─── Local components ──────────────────────────────────────────
 
-function SectionHeading({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <Heading variant="h3">{children}</Heading>
-      <span className="block h-px w-7 bg-rust-500" />
-    </div>
-  );
-}
-
 function SocialGhost({
   href,
   label,
@@ -398,7 +394,7 @@ function SocialGhost({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex h-9 items-center justify-center rounded-md border border-transparent bg-transparent px-4 font-sans text-sm font-medium text-ink-900 transition-all duration-200 hover:bg-cream-100 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
+      className="inline-flex h-11 items-center justify-center rounded-md border border-transparent bg-transparent px-4 font-sans text-sm font-medium text-ink-900 transition-all duration-200 hover:bg-cream-100 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50"
     >
       {label}
     </a>
@@ -430,7 +426,9 @@ function PolicyTile({
 }): React.JSX.Element {
   return (
     <div className="rounded-md border border-ink-200 bg-cream-100 p-3 text-center">
-      <p className="font-display text-2xl text-ink-900">{value}</p>
+      <p className="font-sans text-2xl font-semibold tracking-tight text-ink-900">
+        {value}
+      </p>
       <p className="mt-0.5 font-sans text-xs text-ink-500">{label}</p>
     </div>
   );
@@ -465,7 +463,7 @@ function StickyBookBar({
             <span className="font-sans text-[10px] uppercase tracking-wide text-ink-500">
               Starts at
             </span>
-            <span className="font-display text-2xl text-ink-900">
+            <span className="font-sans text-2xl font-semibold tracking-tight text-ink-900">
               ${(minPriceCents / 100).toFixed(0)}
             </span>
           </div>

@@ -113,18 +113,27 @@ export default function ServicesPage(): React.JSX.Element {
   }
 
   const isEmpty = !loading && services.length === 0;
-  const totalLabel = `${services.length} service${services.length !== 1 ? "s" : ""}`;
 
   return (
     <div className="space-y-8">
       {/* ─── Header ─── */}
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <p className="text-label text-ink-500">Services &middot; Booking menu</p>
           <Heading variant="display" className="text-3xl md:text-4xl">
             Services
           </Heading>
           <p className="font-sans text-sm text-ink-500">
-            {loading ? "Loading…" : totalLabel}
+            {loading ? (
+              "Loading your menu"
+            ) : (
+              <>
+                <span className="font-sans font-semibold tracking-tight text-ink-900">
+                  {services.length}
+                </span>{" "}
+                {services.length === 1 ? "service" : "services"} on your menu
+              </>
+            )}
           </p>
         </div>
 
@@ -234,13 +243,15 @@ function ServiceCard({
             />
 
             <div className="min-w-0 flex-1 pr-12">
-              <Heading variant="h4" as="h3" className="text-base truncate">
+              <h3 className="font-sans text-base font-medium text-ink-900 truncate">
                 {service.name}
-              </Heading>
+              </h3>
               <p className="mt-0.5 font-sans text-sm text-ink-500">
                 {service.durationMinutes} min
                 <span className="mx-1.5 text-ink-300">·</span>
-                {formatPrice(service.priceInCents)}
+                <span className="font-semibold tracking-tight text-ink-900">
+                  {formatPrice(service.priceInCents)}
+                </span>
                 {service.depositType !== "NONE" && (
                   <>
                     <span className="mx-1.5 text-ink-300">·</span>
@@ -266,7 +277,7 @@ function ServiceCard({
                   e.stopPropagation();
                   onCopyLink();
                 }}
-                className="mt-3 inline-flex items-center gap-1.5 font-sans text-xs uppercase tracking-wide text-ink-500 hover:text-rust-500 transition-colors focus-visible:outline-none focus-visible:text-rust-500"
+                className="mt-1 -ml-2 -mb-1 inline-flex min-h-[44px] items-center gap-1.5 rounded-sm px-2 font-sans text-xs uppercase tracking-wide text-ink-500 hover:text-rust-500 transition-colors focus-visible:outline-none focus-visible:text-rust-500"
               >
                 {copied ? (
                   <>
@@ -322,6 +333,8 @@ function ToggleSwitch({
       onClick={onClick}
       className={cn(
         "relative inline-flex h-6 w-11 items-center rounded-pill transition-colors duration-200",
+        // Invisible padding so the touch target reaches 44px without changing the visual.
+        "after:absolute after:-inset-2.5 after:content-['']",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50",
         checked ? "bg-rust-500" : "bg-cream-100 border border-ink-300",
         className,
@@ -449,9 +462,9 @@ function ServiceDrawer({
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-ink-200">
-          <Heading variant="h2" className="text-2xl">
+          <h2 className="font-sans text-lg font-medium text-ink-900">
             New service
-          </Heading>
+          </h2>
           <button
             type="button"
             onClick={onClose}

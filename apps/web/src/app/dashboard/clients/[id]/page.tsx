@@ -8,6 +8,7 @@ import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { SectionRule } from "@/components/ui/SectionRule";
 
 type AppointmentRow = {
   id: string;
@@ -119,9 +120,9 @@ export default function ClientDetailPage(): React.JSX.Element {
   if (loading) {
     return (
       <div className="max-w-2xl space-y-6">
-        <div className="h-5 w-32 skeleton-shimmer rounded-md" />
-        <div className="h-32 skeleton-shimmer rounded-md" />
-        <div className="h-48 skeleton-shimmer rounded-md" />
+        <div className="h-5 w-32 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-32 skeleton-shimmer bg-cream-100 rounded-md" />
+        <div className="h-48 skeleton-shimmer bg-cream-100 rounded-md" />
       </div>
     );
   }
@@ -154,61 +155,73 @@ export default function ClientDetailPage(): React.JSX.Element {
       </Link>
 
       {/* Client header */}
-      <Card padding="lg" className="space-y-5">
-        <div className="space-y-1">
-          <Heading variant="display" className="text-3xl">{client.name || "No name"}</Heading>
-          <p className="text-sm font-sans text-ink-500">{client.email}</p>
+      <header className="space-y-3">
+        <p className="text-label text-ink-500">Clients &middot; Client profile</p>
+        <Heading variant="display" className="text-3xl md:text-4xl">
+          {client.name || "No name"}
+        </Heading>
+        <p className="font-sans text-sm text-ink-500">
+          {client.email}
           {client.phone && (
-            <p className="text-sm font-sans text-ink-500">{client.phone}</p>
+            <>
+              <span className="mx-1.5 text-ink-300">&middot;</span>
+              {client.phone}
+            </>
           )}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-ink-100">
+        </p>
+      </header>
+
+      {/* Stat strip */}
+      <div className="rounded-md border border-ink-200 bg-cream-50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-ink-100">
           <Stat label={client.appointments.length === 1 ? "Visit" : "Visits"}>
             {client.appointments.length}
           </Stat>
           <Stat label="Total spent">{formatPrice(totalSpent)}</Stat>
           <Stat label="Last visit">
-            {client.appointments[0] ? formatDate(client.appointments[0].startTime, client.providerTimezone) : "—"}
+            {client.appointments[0]
+              ? formatDate(client.appointments[0].startTime, client.providerTimezone)
+              : "No visits yet"}
           </Stat>
         </div>
-      </Card>
+      </div>
 
       {/* Internal notes */}
-      <Card padding="lg" className="space-y-3">
-        <div>
-          <p className="text-sm font-sans font-medium text-ink-900">Internal notes</p>
-          <p className="text-xs font-sans text-ink-500 mt-0.5">
+      <section className="space-y-4">
+        <SectionRule label="Internal notes" />
+        <Card padding="lg" className="space-y-3">
+          <p className="text-xs font-sans text-ink-500">
             Only visible to you. Never shown to the client.
           </p>
-        </div>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Prefers gel over acrylic, allergic to acetone…"
-          rows={4}
-          className="w-full px-4 py-3 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 resize-none"
-        />
-        <div className="flex items-center gap-3">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSaveNotes}
-            disabled={savingNotes}
-          >
-            {savingNotes ? "Saving…" : "Save notes"}
-          </Button>
-          {notesSaved && (
-            <span className="inline-flex items-center gap-1.5 text-sm font-sans text-success">
-              <Check size={14} aria-hidden="true" />
-              Saved
-            </span>
-          )}
-        </div>
-      </Card>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Prefers gel over acrylic, allergic to acetone…"
+            rows={4}
+            className="w-full px-4 py-3 text-base font-sans text-ink-900 bg-cream-50 border border-ink-300 rounded-md placeholder:text-ink-300 hover:border-ink-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rust-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cream-50 resize-none"
+          />
+          <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+            >
+              {savingNotes ? "Saving…" : "Save notes"}
+            </Button>
+            {notesSaved && (
+              <span className="inline-flex items-center gap-1.5 text-sm font-sans text-success">
+                <Check size={14} aria-hidden="true" />
+                Saved
+              </span>
+            )}
+          </div>
+        </Card>
+      </section>
 
       {/* Appointment history */}
       <section className="space-y-4">
-        <Heading variant="h3" className="text-2xl">Appointment history</Heading>
+        <SectionRule label="Appointment history" />
         {client.appointments.length === 0 ? (
           <Card padding="lg" className="border-dashed">
             <p className="text-center text-sm font-sans text-ink-500">No appointments yet.</p>
@@ -245,7 +258,7 @@ export default function ClientDetailPage(): React.JSX.Element {
                       <Badge variant={statusVariant(appt.status)}>
                         {STATUS_LABELS[appt.status] || appt.status}
                       </Badge>
-                      <p className="text-sm font-sans font-medium text-ink-900">
+                      <p className="text-sm font-sans font-semibold tracking-tight tabular-nums text-ink-900">
                         {formatPrice(appt.totalInCents)}
                       </p>
                     </div>
@@ -268,9 +281,14 @@ function Stat({
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <div>
-      <p className="font-display text-2xl text-ink-900 leading-none">{children}</p>
-      <p className="text-xs font-sans text-ink-500 mt-1">{label}</p>
+    <div className="px-5 py-4">
+      <p className="font-sans uppercase text-xs tracking-widest font-medium text-ink-500">
+        {label}
+      </p>
+      {/* Data wears sans: stat values are sans-semibold, never serif */}
+      <p className="mt-1.5 font-sans text-2xl font-semibold tracking-tight text-ink-900 leading-none">
+        {children}
+      </p>
     </div>
   );
 }
