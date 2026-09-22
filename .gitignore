@@ -47,3 +47,4 @@ apps/mobile/android/
 .firecrawl/
 docs/design/
 packages/db/check-appts.mjs
+.vercel
