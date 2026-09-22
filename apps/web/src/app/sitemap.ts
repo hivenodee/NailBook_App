@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
+import { isLandingOnly } from "@/lib/launch-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     },
   ];
+
+  // Landing-only mode: no explore or provider pages are reachable yet.
+  if (isLandingOnly) {
+    return staticPages.filter((page) => !page.url.endsWith("/explore"));
+  }
 
   const providers = await prisma.provider.findMany({
     where: {

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { isAllowedInLandingMode, isLandingOnly } from "@/lib/launch-mode";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -44,6 +45,15 @@ const isOnboardingRoute = createRouteMatcher([
 const isDashboardRoute = createRouteMatcher(["/dashboard", "/dashboard/(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
+  // Landing-only launch mode: everything except the marketing page, legal
+  // pages and health check bounces back to `/`. See lib/launch-mode.ts.
+  if (isLandingOnly && !isAllowedInLandingMode(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   if (isPublicRoute(request)) return;
 
   const { userId, sessionClaims } = await auth();

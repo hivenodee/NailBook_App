@@ -9,6 +9,7 @@ import {
 import "@/styles/globals.css";
 import { Logo } from "@/components/ui/Logo";
 import { validateEnv } from "@/lib/env";
+import { isLandingOnly } from "@/lib/launch-mode";
 
 // Self-hosted fonts via next/font — no render-blocking external requests
 const playfair = Playfair_Display({
@@ -110,8 +111,12 @@ export default function RootLayout({
               <a href="/privacy" className="hover:text-rust-500 transition-colors">Privacy policy</a>
               <span className="w-1 h-1 rounded-pill bg-ink-200" />
               <a href="/terms" className="hover:text-rust-500 transition-colors">Terms of service</a>
-              <span className="w-1 h-1 rounded-pill bg-ink-200" />
-              <a href="/explore" className="hover:text-rust-500 transition-colors">Explore</a>
+              {!isLandingOnly && (
+                <>
+                  <span className="w-1 h-1 rounded-pill bg-ink-200" />
+                  <a href="/explore" className="hover:text-rust-500 transition-colors">Explore</a>
+                </>
+              )}
             </div>
           </footer>
         </body>

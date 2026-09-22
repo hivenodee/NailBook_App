@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 import { Instagram, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { isLandingOnly } from "@/lib/launch-mode";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Logo } from "@/components/ui/Logo";
@@ -113,24 +114,72 @@ export default function HomePage(): React.JSX.Element {
 
 // ─── Sections ──────────────────────────────────────────────────
 
+/** Provider card wrapper: a link normally, a plain block in landing-only mode. */
+function CardLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  if (isLandingOnly) return <div className="block">{children}</div>;
+  return (
+    <Link href={href} className="block">
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * Main call to action. In landing-only launch mode there is nothing to
+ * navigate to yet, so it renders as a static "launching soon" pill instead
+ * of a link into the (gated) explore page.
+ */
+function PrimaryCta(): React.JSX.Element {
+  if (isLandingOnly) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-2 rounded-pill border border-ink-200",
+          "px-5 py-3 font-sans text-sm text-ink-700",
+        )}
+      >
+        <span className="h-2 w-2 rounded-pill bg-rust-500" aria-hidden />
+        Launching soon
+      </span>
+    );
+  }
+  return (
+    <Link href="/explore">
+      <Button variant="primary" size="lg">
+        Find a provider
+      </Button>
+    </Link>
+  );
+}
+
 function SiteNav(): React.JSX.Element {
   return (
     <nav className="mx-auto max-w-7xl px-6 py-8 flex items-center justify-between">
       <Logo />
-      <div className="flex items-center gap-6 text-sm font-sans">
-        <Link
-          href="/explore"
-          className="text-ink-700 hover:text-ink-900 transition-colors"
-        >
-          Explore
-        </Link>
-        <Link
-          href="/dashboard"
-          className="text-ink-700 hover:text-ink-900 transition-colors"
-        >
-          Sign in
-        </Link>
-      </div>
+      {isLandingOnly ? (
+        <span className="text-label text-ink-500">Launching soon</span>
+      ) : (
+        <div className="flex items-center gap-6 text-sm font-sans">
+          <Link
+            href="/explore"
+            className="text-ink-700 hover:text-ink-900 transition-colors"
+          >
+            Explore
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-ink-700 hover:text-ink-900 transition-colors"
+          >
+            Sign in
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }
@@ -169,11 +218,7 @@ function Hero(): React.JSX.Element {
           </motion.p>
 
           <motion.div variants={fadeUp}>
-            <Link href="/explore">
-              <Button variant="primary" size="lg">
-                Find a provider
-              </Button>
-            </Link>
+            <PrimaryCta />
           </motion.div>
         </motion.div>
 
@@ -275,7 +320,7 @@ function FeaturedProviders(): React.JSX.Element {
               variants={fadeUp}
               className="group bg-cream-50 border border-ink-200 rounded-md overflow-hidden transition-all duration-200 hover:-translate-y-px hover:border-ink-300"
             >
-              <Link href={`/${p.slug}`} className="block">
+              <CardLink href={`/${p.slug}`}>
                 <div className="relative aspect-[4/5]">
                   <Image
                     src={p.photo}
@@ -304,7 +349,7 @@ function FeaturedProviders(): React.JSX.Element {
                     <span className="text-ink-500">{p.location}</span>
                   </div>
                 </div>
-              </Link>
+              </CardLink>
             </motion.article>
           ))}
         </div>
@@ -378,14 +423,12 @@ function FinalCta(): React.JSX.Element {
           variants={fadeUp}
           className="font-sans text-base md:text-lg text-ink-500 leading-relaxed"
         >
-          Browse the full directory. New artists added weekly.
+          {isLandingOnly
+            ? "We are onboarding our first providers now. Check back soon."
+            : "Browse the full directory. New artists added weekly."}
         </motion.p>
         <motion.div variants={fadeUp} className="pt-2">
-          <Link href="/explore">
-            <Button variant="primary" size="lg">
-              Find a provider
-            </Button>
-          </Link>
+          <PrimaryCta />
         </motion.div>
       </motion.div>
     </section>
@@ -396,19 +439,23 @@ function SiteFooter(): React.JSX.Element {
   const cols = [
     {
       heading: "For clients",
-      links: [
-        { label: "Find a provider", href: "/explore" },
-        { label: "How it works", href: "/#how-it-works" },
-        { label: "Reviews", href: "/explore" },
-      ],
+      links: isLandingOnly
+        ? [{ label: "How it works", href: "/#how-it-works" }]
+        : [
+            { label: "Find a provider", href: "/explore" },
+            { label: "How it works", href: "/#how-it-works" },
+            { label: "Reviews", href: "/explore" },
+          ],
     },
     {
       heading: "For providers",
-      links: [
-        { label: "Become a provider", href: "/dashboard" },
-        { label: "Provider sign in", href: "/dashboard" },
-        { label: "Resources", href: "/dashboard" },
-      ],
+      links: isLandingOnly
+        ? [{ label: "Early access", href: "mailto:hello@porobook.com?subject=Porobook%20early%20access" }]
+        : [
+            { label: "Become a provider", href: "/dashboard" },
+            { label: "Provider sign in", href: "/dashboard" },
+            { label: "Resources", href: "/dashboard" },
+          ],
     },
     {
       heading: "Company",
