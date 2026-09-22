@@ -114,22 +114,6 @@ export default function HomePage(): React.JSX.Element {
 
 // ─── Sections ──────────────────────────────────────────────────
 
-/** Provider card wrapper: a link normally, a plain block in landing-only mode. */
-function CardLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  if (isLandingOnly) return <div className="block">{children}</div>;
-  return (
-    <Link href={href} className="block">
-      {children}
-    </Link>
-  );
-}
-
 /**
  * Main call to action. In landing-only launch mode there is nothing to
  * navigate to yet, so it renders as a static "launching soon" pill instead
@@ -320,41 +304,59 @@ function FeaturedProviders(): React.JSX.Element {
               variants={fadeUp}
               className="group bg-cream-50 border border-ink-200 rounded-md overflow-hidden transition-all duration-200 hover:-translate-y-px hover:border-ink-300"
             >
-              <CardLink href={`/${p.slug}`}>
-                <div className="relative aspect-[4/5]">
-                  <Image
-                    src={p.photo}
-                    alt={`${p.name}, ${p.specialty}, ${p.location}`}
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                  />
+              {isLandingOnly ? (
+                <div className="block">
+                  <ProviderCardBody p={p} />
                 </div>
-                <div className="p-5">
-                  <Heading variant="h4" as="h3">
-                    {p.name}
-                  </Heading>
-                  <p className="mt-1 font-sans text-sm text-ink-500">
-                    {p.specialty}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between font-sans text-sm">
-                    <span className="inline-flex items-center gap-1 text-ink-900">
-                      <Star
-                        className="h-3.5 w-3.5 text-rust-500"
-                        fill="currentColor"
-                        strokeWidth={0}
-                      />
-                      {p.rating.toFixed(1)}
-                    </span>
-                    <span className="text-ink-500">{p.location}</span>
-                  </div>
-                </div>
-              </CardLink>
+              ) : (
+                <Link href={`/${p.slug}`} className="block">
+                  <ProviderCardBody p={p} />
+                </Link>
+              )}
             </motion.article>
           ))}
         </div>
       </motion.div>
     </section>
+  );
+}
+
+function ProviderCardBody({
+  p,
+}: {
+  p: (typeof FEATURED_PROVIDERS)[number];
+}): React.JSX.Element {
+  return (
+    <>
+      <div className="relative aspect-[4/5]">
+        <Image
+          src={p.photo}
+          alt={`${p.name}, ${p.specialty}, ${p.location}`}
+          fill
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+      </div>
+      <div className="p-5">
+        <Heading variant="h4" as="h3">
+          {p.name}
+        </Heading>
+        <p className="mt-1 font-sans text-sm text-ink-500">
+          {p.specialty}
+        </p>
+        <div className="mt-4 flex items-center justify-between font-sans text-sm">
+          <span className="inline-flex items-center gap-1 text-ink-900">
+            <Star
+              className="h-3.5 w-3.5 text-rust-500"
+              fill="currentColor"
+              strokeWidth={0}
+            />
+            {p.rating.toFixed(1)}
+          </span>
+          <span className="text-ink-500">{p.location}</span>
+        </div>
+      </div>
+    </>
   );
 }
 
