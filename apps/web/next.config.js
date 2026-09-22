@@ -1,8 +1,21 @@
+const path = require("path");
 const { withSentryConfig } = require("@sentry/nextjs");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@nailbook/db", "@nailbook/shared"],
+  // Monorepo: trace from the workspace root so files in the pnpm store are
+  // eligible for the serverless bundle.
+  outputFileTracingRoot: path.join(__dirname, "../../"),
+  // Prisma's query engine lives next to the generated client inside the pnpm
+  // store, which Next's tracer misses. Without this every DB call on Vercel
+  // fails with "could not locate the Query Engine for runtime rhel-openssl-3.0.x".
+  outputFileTracingIncludes: {
+    "/**": [
+      "../../node_modules/.pnpm/@prisma+client*/node_modules/.prisma/client/**/*",
+      "../../node_modules/.prisma/client/**/*",
+    ],
+  },
   images: {
     remotePatterns: [
       {
