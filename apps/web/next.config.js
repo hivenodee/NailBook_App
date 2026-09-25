@@ -67,14 +67,14 @@ const nextConfig = {
               "default-src 'self'",
               // Clerk dev mode uses raw `*.accounts.dev` (e.g. winning-moray-85.accounts.dev)
               // in addition to `*.clerk.accounts.dev` in prod — both must be whitelisted.
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.porobook.com",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.r2.dev https://*.r2.cloudflarestorage.com https://img.clerk.com https://*.tile.openstreetmap.org",
               // `*.sentry.io` covers regional subdomains like `*.ingest.us.sentry.io`.
               // `*.r2.cloudflarestorage.com` for PUT to presigned upload URLs;
               // `*.r2.dev` for serving public images back to the app.
-              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.nailbook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev wss://*.accounts.dev https://*.sentry.io https://*.r2.cloudflarestorage.com https://*.r2.dev",
+              "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev https://clerk.porobook.com https://api.clerk.dev https://*.upstash.io wss://*.clerk.accounts.dev wss://*.accounts.dev https://*.sentry.io https://*.r2.cloudflarestorage.com https://*.r2.dev",
               "frame-src https://js.stripe.com https://*.clerk.accounts.dev https://*.accounts.dev",
               "worker-src 'self' blob:",
               "object-src 'none'",

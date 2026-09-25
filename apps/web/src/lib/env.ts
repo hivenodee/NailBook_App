@@ -35,6 +35,8 @@ const OPTIONAL_VARS: Record<string, OptionalVarDef> = {
   TWILIO_FROM_NUMBER: { description: "SMS from number", feature: "SMS" },
   REDIS_URL: { description: "Redis cache (Upstash)", feature: "Cache" },
   REDIS_TOKEN: { description: "Redis auth token", feature: "Cache" },
+  QUEUE_REDIS_URL: { description: "BullMQ queue Redis (redis:// TCP URL shared with the worker)", feature: "Background jobs" },
+  STRIPE_CONNECT_WEBHOOK_SECRET: { description: "Signing secret of the Stripe Connect webhook endpoint", feature: "Payments" },
   R2_ACCOUNT_ID: { description: "Cloudflare account ID (R2)", feature: "Storage" },
   R2_ACCESS_KEY_ID: { description: "Storage access key (R2)", feature: "Storage" },
   R2_SECRET_ACCESS_KEY: { description: "Storage secret key (R2)", feature: "Storage" },

@@ -1,4 +1,4 @@
-import { Worker } from "../queue";
+import { Worker, connection } from "../queue";
 import { prisma, type MessageTemplateType, type NotificationChannel } from "@nailbook/db";
 import { REMINDER_HOURS } from "@nailbook/shared";
 import { Resend } from "resend";
@@ -318,10 +318,7 @@ export function startReminderWorker() {
       );
     },
     {
-      connection: {
-        host: new URL(process.env.REDIS_URL!).hostname,
-        port: Number(new URL(process.env.REDIS_URL!).port) || 6379,
-      },
+      connection,
     }
   );
 

@@ -1,4 +1,4 @@
-import { Worker } from "../queue";
+import { Worker, connection } from "../queue";
 import { prisma } from "@nailbook/db";
 import { Resend } from "resend";
 import twilio from "twilio";
@@ -201,10 +201,7 @@ export function startNotificationRetryWorker() {
       }
     },
     {
-      connection: {
-        host: new URL(process.env.REDIS_URL!).hostname,
-        port: Number(new URL(process.env.REDIS_URL!).port) || 6379,
-      },
+      connection,
     }
   );
 

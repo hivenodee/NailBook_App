@@ -1,0 +1,24 @@
+# Worker image is built from the repo root; keep the context small.
+.git
+.turbo
+.vercel
+.firecrawl
+.claude
+.mcp.json
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/.expo
+apps/web/public
+apps/mobile/ios
+apps/mobile/android
+docs
+plans
+public
+scripts
+*.md
+.env
+.env.*
+**/.env
+**/.env.*

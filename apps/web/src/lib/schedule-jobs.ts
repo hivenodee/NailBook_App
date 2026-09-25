@@ -2,15 +2,27 @@ import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import { REMINDER_HOURS } from "@nailbook/shared";
 
-// Lazy-init BullMQ connection — no-op when REDIS_URL not set
+// Lazy-init BullMQ connection. No-op when no queue Redis is configured.
+//
+// BullMQ needs a real Redis TCP connection (redis:// or rediss://). REDIS_URL is
+// the Upstash REST endpoint used by the cache and rate limiter, so the queue gets
+// its own QUEUE_REDIS_URL: the same Redis the worker (apps/worker) consumes from.
+// REDIS_URL is accepted as a fallback only when it is itself a redis:// URL.
 let _connection: IORedis | null = null;
 let _reminderQueue: Queue | null = null;
 let _followupQueue: Queue | null = null;
 
+function queueRedisUrl(): string | null {
+  const url = process.env.QUEUE_REDIS_URL || process.env.REDIS_URL;
+  if (!url || !/^rediss?:\/\//.test(url)) return null;
+  return url;
+}
+
 function getConnection(): IORedis | null {
-  if (!process.env.REDIS_URL) return null;
+  const url = queueRedisUrl();
+  if (!url) return null;
   if (!_connection) {
-    _connection = new IORedis(process.env.REDIS_URL, {
+    _connection = new IORedis(url, {
       maxRetriesPerRequest: null,
     });
   }

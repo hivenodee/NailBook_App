@@ -10,19 +10,27 @@ How to use this doc:
 
 ---
 
-## 📍 Current status (updated 2026-05-27)
+## 📍 Current status (updated 2026-09-25)
 
-- **Phase A — Code hygiene**: ✅ done (12 commits pushed to GitHub)
-- **Phase B — Test paths**: ✅ done (24 tasks, 8 bugs found + all fixed, see `BUGS.md`)
-- **Phase 0 — Name protection**: 🟢 **start here** (the 4 quick wins below, ~$700 total)
-- **Phase F1/F2 — LLC + EIN**: 🔴 **start in parallel today** (external clock, ~1 week)
-- **Phase C — Engineering gaps**: 🟢 begin once Phase 0 paperwork is submitted
-- **Phase D–H**: not started
+- **Phase A / B / C1**: ✅ done (code on GitHub, test paths walked, onboarding wizard + Stripe Connect payouts shipped)
+- **Phase D — Production infra**: 🟡 in progress
+  - ✅ D2 web on Vercel at https://porobook.com in landing-only mode (`NEXT_PUBLIC_LAUNCH_MODE=landing`)
+  - ✅ D4 domain (porobook.com registered through Vercel, DNS on vercel-dns)
+  - ✅ D3 worker deploy prepared: `apps/worker/Dockerfile` (Node 22, tsx runtime), root `.dockerignore` + `railway.json`, worker uses one authenticated Redis connection, Sentry wired (C4). Needs `railway login` + first `railway up`.
+  - ✅ Stripe webhook route verifies both the platform and the Connect endpoint secrets (`STRIPE_CONNECT_WEBHOOK_SECRET`)
+  - ✅ BullMQ queue split from the Upstash REST cache: web reads `QUEUE_REDIS_URL` (TCP) for reminders/follow-ups
+  - ✅ D8 CSP updated to `clerk.porobook.com`
+  - ⬜ D1 new Upstash Redis (the dev database `singular-goshawk-63316` no longer resolves; create a fresh one)
+  - ⬜ Prod env vars for Stripe (test keys), R2, Resend, Sentry, Twilio, Redis (Vercel CLI, see status notes in memory / session hand-off)
+  - ⬜ D5 R2: prod bucket optional; the current token is scoped to `nailbook-media` and cannot list/alter CORS, so add `https://porobook.com` to that bucket's CORS in the Cloudflare dashboard (or make a new bucket + account-level token)
+  - ⬜ D6 Resend: verify porobook.com (current API key is send-only, so the domain must be added in the Resend dashboard), then set `EMAIL_FROM=bookings@porobook.com`
+  - ⬜ D7 Twilio: stored credentials return 401; regenerate the auth token, upgrade the account, buy a number
+  - ⬜ D9 Clerk production instance for porobook.com (needs CNAME records on Vercel DNS)
+  - ⬜ GitHub auto-deploy: install the Vercel GitHub app on `hivenodee/NailBook_App`, then `npx vercel git connect`
+- **Phase E — Stripe live**: ⬜ Stripe account `acct_1SzrUQE9VK64eOz9` is not activated (needs LLC/EIN/bank from Phase F)
+- **Phase F / G / H**: not started
 
-**The order of operations for this week:**
-
-| Day | Task | Hours | Why now |
-|---|---|---|---|
+---|---|---|---|
 | Today | Phase 0 — buy domains, register social handles, file trademark | ~2.5 | Name squatting is the biggest risk; trademark protection starts on filing date |
 | Today | Phase F1 — submit LLC paperwork (Stripe Atlas or DIY) | ~1.5 | 1-week external clock; engineering can run while it processes |
 | Today | Phase F2 — EIN at irs.gov | 0.25 | Free, instant, required for the bank account in F3 |

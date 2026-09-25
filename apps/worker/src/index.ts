@@ -1,3 +1,12 @@
+import * as Sentry from "@sentry/node";
+
+// Error monitoring (no-op when SENTRY_DSN is unset).
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV ?? "development",
+  enabled: !!process.env.SENTRY_DSN,
+});
+
 import { startReminderWorker } from "./jobs/reminders";
 import { startFollowupWorker } from "./jobs/followups";
 import { startExportWorker } from "./jobs/exports";
@@ -8,6 +17,9 @@ import { cleanupQueue, pushReceiptQueue, notificationRetryQueue } from "./queue"
 
 async function main() {
   console.log("Starting Porobook worker...");
+  if (!process.env.REDIS_URL) {
+    throw new Error("REDIS_URL is required (redis:// or rediss:// URL of the queue Redis)");
+  }
 
   // Start all job workers
   const reminderWorker = startReminderWorker();
@@ -77,6 +89,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  Sentry.captureException(err);
   console.error("Worker failed to start:", err);
   process.exit(1);
 });

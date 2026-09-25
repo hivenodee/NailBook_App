@@ -1,4 +1,4 @@
-import { Worker } from "../queue";
+import { Worker, connection } from "../queue";
 import { prisma } from "@nailbook/db";
 
 export function startExportWorker() {
@@ -98,10 +98,7 @@ export function startExportWorker() {
       }
     },
     {
-      connection: {
-        host: new URL(process.env.REDIS_URL!).hostname,
-        port: Number(new URL(process.env.REDIS_URL!).port) || 6379,
-      },
+      connection,
     }
   );
 

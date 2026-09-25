@@ -1,19 +1,21 @@
-FROM node:20-slim AS base
-RUN corepack enable
+# Porobook background worker (BullMQ). Built from the REPO ROOT so workspace
+# packages (@nailbook/db, @nailbook/shared) are available:
+#   docker build -f apps/worker/Dockerfile .
+# Railway: railway.json at the repo root points here.
+FROM node:22-slim
+RUN corepack enable \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-FROM base AS builder
 WORKDIR /app
 COPY . .
-RUN pnpm install --frozen-lockfile
-RUN pnpm --filter worker build
+
+# Only the worker and its workspace deps (skips web + mobile).
+RUN pnpm install --frozen-lockfile --filter worker...
 RUN pnpm --filter @nailbook/db exec prisma generate
 
-FROM base AS runner
-WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
-COPY --from=builder /app/packages/db ./packages/db
-
 ENV NODE_ENV=production
-CMD ["node", "apps/worker/dist/index.js"]
+# @nailbook/db and @nailbook/shared resolve to TypeScript sources, so the
+# worker runs under tsx instead of a tsc build.
+CMD ["pnpm", "--filter", "worker", "start"]
