@@ -12,7 +12,9 @@ import {
 } from "framer-motion";
 import { Instagram, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { isLandingOnly } from "@/lib/launch-mode";
+import { isInviteOnly, isLandingOnly } from "@/lib/launch-mode";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { BETA_HINT_COOKIE } from "@/lib/beta";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Logo } from "@/components/ui/Logo";
@@ -102,6 +104,7 @@ export default function HomePage(): React.JSX.Element {
   return (
     <main className="min-h-screen bg-cream-50 text-ink-900">
       <SiteNav />
+      <InviteBanner />
       <Hero />
       <ValueProps />
       <FeaturedProviders />
@@ -119,7 +122,79 @@ export default function HomePage(): React.JSX.Element {
  * navigate to yet, so it renders as a static "launching soon" pill instead
  * of a link into the (gated) explore page.
  */
+type InviteParam = "accepted" | "invalid" | "required" | null;
+
+/**
+ * Client-side read of the beta state. The signed invite cookie is httpOnly,
+ * so the invite route also sets a plain hint cookie for UI purposes. The
+ * `?invite=` query param carries the result of visiting an invite link.
+ */
+function useBetaState(): { invited: boolean; param: InviteParam } {
+  const [state, setState] = React.useState<{ invited: boolean; param: InviteParam }>({
+    invited: false,
+    param: null,
+  });
+  React.useEffect(() => {
+    const invited = document.cookie.split("; ").some((c) => c.startsWith(`${BETA_HINT_COOKIE}=`));
+    const raw = new URLSearchParams(window.location.search).get("invite");
+    const param: InviteParam =
+      raw === "accepted" || raw === "invalid" || raw === "required" ? raw : null;
+    setState({ invited, param });
+  }, []);
+  return state;
+}
+
+function SignUpCta({ size = "lg", label = "Create your account" }: { size?: "sm" | "md" | "lg"; label?: string }): React.JSX.Element {
+  return (
+    <>
+      <SignedOut>
+        <SignUpButton mode="modal" forceRedirectUrl="/onboarding">
+          <Button variant="primary" size={size}>
+            {label}
+          </Button>
+        </SignUpButton>
+      </SignedOut>
+      <SignedIn>
+        <Link href="/dashboard">
+          <Button variant="primary" size={size}>
+            Go to your dashboard
+          </Button>
+        </Link>
+      </SignedIn>
+    </>
+  );
+}
+
+function InviteOnlyPill(): React.JSX.Element {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <span
+        className={cn(
+          "inline-flex items-center gap-2 rounded-pill border border-ink-200",
+          "px-5 py-3 font-sans text-sm text-ink-700",
+        )}
+      >
+        <span className="h-2 w-2 rounded-pill bg-rust-500" aria-hidden />
+        Private beta: invite only
+      </span>
+      <a
+        href="mailto:hello@porobook.com?subject=Porobook%20beta%20invite"
+        className="font-sans text-sm text-ink-500 underline-offset-4 hover:underline"
+      >
+        Request an invite
+      </a>
+    </div>
+  );
+}
+
+/**
+ * Main call to action.
+ * - landing mode: static "launching soon" pill, nothing to navigate to yet
+ * - invite mode: sign up for invited visitors, invite-only pill for everyone else
+ * - full mode: link into explore
+ */
 function PrimaryCta(): React.JSX.Element {
+  const { invited } = useBetaState();
   if (isLandingOnly) {
     return (
       <span
@@ -133,6 +208,9 @@ function PrimaryCta(): React.JSX.Element {
       </span>
     );
   }
+  if (isInviteOnly) {
+    return invited ? <SignUpCta /> : <InviteOnlyPill />;
+  }
   return (
     <Link href="/explore">
       <Button variant="primary" size="lg">
@@ -142,7 +220,53 @@ function PrimaryCta(): React.JSX.Element {
   );
 }
 
+/** Result banner shown after visiting an invite link or being bounced by the gate. */
+function InviteBanner(): React.JSX.Element | null {
+  const { param } = useBetaState();
+  if (!param) return null;
+  const copy: Record<Exclude<InviteParam, null>, { title: string; body: string }> = {
+    accepted: {
+      title: "You're invited.",
+      body: "Create your account to start setting up your booking page.",
+    },
+    invalid: {
+      title: "That invite link is no longer valid.",
+      body: "It may have expired or already been used. Ask us for a fresh one.",
+    },
+    required: {
+      title: "Porobook is in private beta.",
+      body: "You need an invite link to continue. If you have one, open it again on this device.",
+    },
+  };
+  const { title, body } = copy[param];
+  return (
+    <div className="mx-auto max-w-7xl px-6">
+      <div
+        role="status"
+        className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 rounded-md border border-ink-200 bg-cream-50 px-5 py-4"
+      >
+        <div className="flex-1">
+          <p className="font-sans text-sm font-medium text-ink-900">{title}</p>
+          <p className="font-sans text-sm text-ink-500">{body}</p>
+        </div>
+        {param === "accepted" ? (
+          <SignUpCta size="md" />
+        ) : (
+          <a
+            href="mailto:hello@porobook.com?subject=Porobook%20beta%20invite"
+            className="font-sans text-sm text-ink-700 underline-offset-4 hover:underline"
+          >
+            Request an invite
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SiteNav(): React.JSX.Element {
+  const { invited } = useBetaState();
+  const canSignUp = !isInviteOnly || invited;
   return (
     <nav className="mx-auto max-w-7xl px-6 py-8 flex items-center justify-between">
       <Logo />
@@ -156,12 +280,34 @@ function SiteNav(): React.JSX.Element {
           >
             Explore
           </Link>
-          <Link
-            href="/dashboard"
-            className="text-ink-700 hover:text-ink-900 transition-colors"
-          >
-            Sign in
-          </Link>
+          <SignedOut>
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button
+                type="button"
+                className="text-ink-700 hover:text-ink-900 transition-colors"
+              >
+                Sign in
+              </button>
+            </SignInButton>
+            {canSignUp ? (
+              <SignUpButton mode="modal" forceRedirectUrl="/onboarding">
+                <Button variant="primary" size="sm">
+                  Sign up
+                </Button>
+              </SignUpButton>
+            ) : (
+              <span className="text-label text-ink-500">Invite only</span>
+            )}
+          </SignedOut>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="text-ink-700 hover:text-ink-900 transition-colors"
+            >
+              Dashboard
+            </Link>
+            <UserButton />
+          </SignedIn>
         </div>
       )}
     </nav>

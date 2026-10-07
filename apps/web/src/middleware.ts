@@ -1,6 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { isAllowedInLandingMode, isLandingOnly } from "@/lib/launch-mode";
+import {
+  isAllowedInLandingMode,
+  isInviteOnly,
+  isLandingOnly,
+  isOpenInInviteMode,
+} from "@/lib/launch-mode";
+import { BETA_COOKIE, BETA_OK_COOKIE, verifyBetaCookie } from "@/lib/beta";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -52,6 +58,31 @@ export default clerkMiddleware(async (auth, request) => {
     url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // Invite-only beta: everything past the landing page needs a beta invite.
+  // Visitors with a valid invite cookie pass; signed-in users get bounced once
+  // through /api/beta/check, which records (or restores) their redemption and
+  // sets the confirmation cookie so later requests skip this block.
+  if (isInviteOnly && !isOpenInInviteMode(request.nextUrl.pathname)) {
+    const inviteCode = await verifyBetaCookie(request.cookies.get(BETA_COOKIE)?.value);
+    const confirmed = !!inviteCode && request.cookies.get(BETA_OK_COOKIE)?.value === "1";
+    if (!confirmed) {
+      const { userId: betaUserId } = await auth();
+      if (betaUserId) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/api/beta/check";
+        url.search = `?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
+        return NextResponse.redirect(url);
+      }
+      if (!inviteCode) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        url.search = "?invite=required";
+        return NextResponse.redirect(url);
+      }
+      // Invited but not signed in yet: continue to the normal public/protected flow.
+    }
   }
 
   if (isPublicRoute(request)) return;

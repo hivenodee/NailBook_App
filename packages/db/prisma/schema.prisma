@@ -755,3 +755,29 @@ model ReminderSetting {
   @@unique([providerId, hoursBefore])
   @@index([providerId])
 }
+
+// ─── Beta access ───────────────────────────────────────────
+// Invite-only launch mode (NEXT_PUBLIC_LAUNCH_MODE=invite). An invite link is
+// /invite/<code>; visiting it sets a signed cookie, and the first signed-in
+// request with that cookie records a redemption against the Clerk user.
+
+model BetaInvite {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  label       String           // who the link was made for ("Maya, Atlanta")
+  maxUses     Int              @default(1)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  redemptions BetaRedemption[]
+}
+
+model BetaRedemption {
+  id          String     @id @default(cuid())
+  inviteId    String
+  invite      BetaInvite @relation(fields: [inviteId], references: [id])
+  clerkUserId String     @unique
+  createdAt   DateTime   @default(now())
+
+  @@index([inviteId])
+}
